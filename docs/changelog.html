@@ -246,6 +246,7 @@ ul { list-style: none; padding: 0; }
 
 <div class="bar wrap">
   <nav class="jump" aria-label="Versions">
+    <a class="chip" href="#v1-5-0">1.5.0</a>
     <a class="chip" href="#v1-4-2">1.4.2</a>
     <a class="chip" href="#v1-4-1">1.4.1</a>
     <a class="chip" href="#v1-4-0">1.4.0</a>
@@ -277,11 +278,48 @@ ul { list-style: none; padding: 0; }
 
 <main id="main">
 
+<article class="rel" id="v1-5-0" data-v="1.5.0">
+  <div class="in wrap">
+    <div class="ver rv">
+      <h2><span class="sr">OpenFlow Vaani version </span>1.5.0</h2>
+      <div class="meta"><span class="chip static">25 November 2026</span><span class="chip static">Latest release</span></div>
+      <div style="margin-top: 14px;">
+        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/v1.5.0/Vaani-Setup.exe">Download Setup</a>
+      </div>
+    </div>
+    <div class="notes rv" style="--d:1">
+      <section class="group" data-g="new">
+        <h3>New</h3>
+        <ul>
+          <li><strong>A new look: OpenFlow Vaani.</strong> A new logo and app icon, deep violet and pink colours, and the Inter font across the dashboard, the capsule, the meeting bar and the setup window. Installing it over Vaani replaces the old program; your settings, history and models stay.</li>
+          <li><strong>Real subtitle files.</strong> Transcribing an audio or video file writes a <code>.srt</code> beside it (a video player loads it on its own), and captions of what's playing are saved to <code>Videos\OpenFlow Subtitles</code>. Each line ends when the voice stops, and long lines split into two-line subtitles.</li>
+          <li><strong>Subtitles for a whole folder.</strong> <code>python -m vaani.subtitle D:\podcasts --lang or</code> writes a <code>.srt</code> for every episode and picks up where it stopped.</li>
+          <li><strong>The writing model in the Model Library.</strong> See it, download it or delete it there like the speech models.</li>
+        </ul>
+      </section>
+      <section class="group" data-g="better">
+        <h3>Better</h3>
+        <ul>
+          <li><strong>Quiet voices are heard.</strong> Soft or whispered speech is raised to a normal level before the model listens, so you no longer have to speak up.</li>
+          <li><strong>Settings switch instantly.</strong> Turning an option on or off no longer restarts the speech engine; only changing the model, device or language does.</li>
+        </ul>
+      </section>
+      <section class="group" data-g="fixed">
+        <h3>Fixed</h3>
+        <ul>
+          <li><strong>Turning on Voice edits looked like a new download</strong> every time. It was the speech model reloading, and it no longer happens.</li>
+          <li><strong>The setup window cut off its title</strong> and the end of its longer lines.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</article>
+
 <article class="rel" id="v1-4-2" data-v="1.4.2">
   <div class="in wrap">
     <div class="ver rv">
       <h2><span class="sr">Vaani version </span>1.4.2</h2>
-      <div class="meta"><span class="chip static">24 November 2026</span><span class="chip static">Latest release</span></div>
+      <div class="meta"><span class="chip static">24 November 2026</span></div>
       <div style="margin-top: 14px;">
         <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/v1.4.2/Vaani-Setup.exe">Download Setup</a>
       </div>
