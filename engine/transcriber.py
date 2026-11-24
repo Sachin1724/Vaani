@@ -174,6 +174,16 @@ def _has_speech(audio: np.ndarray) -> bool:
     return not (loud < 0.02 and loud < 3.0 * soft)  # quiet AND flat: noise, not a voice
 
 
+def _boost(audio: np.ndarray) -> np.ndarray:
+    """Raise soft speech to a normal level (peak 0.5) before the model hears it. Whisper and its voice
+    detector were trained on normal-volume audio and drop a whisper or a far-away mic as silence.
+    Gain is capped at 20x (+26 dB) so room hiss isn't blown up into words; loud audio is left alone."""
+    peak = float(np.abs(audio).max()) if len(audio) else 0.0
+    if peak <= 0.0 or peak >= 0.5:
+        return audio
+    return (audio * min(20.0, 0.5 / peak)).astype(np.float32)
+
+
 def _loop_at(text: str):
     """Word index where a repeated phrase starts looping (a word 4x, a 2-4 word phrase 3x in a row), else None."""
     w = [re.sub(r"\W+", "", x.lower()) for x in text.split()]
@@ -535,7 +545,7 @@ class Transcriber:
             if self._current_loaded_name in ("parakeet", "odia"):
                 # CTC decodes 10 s greedily in ~300 ms, so the preview covers everything since the last
                 # committed phrase instead of flipping between 3-second fragments.
-                text = self._parakeet_text(audio[-16000 * 10:], beam=False)
+                text = self._parakeet_text(_boost(audio[-16000 * 10:]), beam=False)
                 if self.language in MIX_LANGS:  # English words show in English while still speaking
                     from .odia_mix import to_mixed
                     text = to_mixed(text, getattr(self.model, "lm", None))
@@ -543,7 +553,7 @@ class Transcriber:
             # Whisper: everything not yet committed (the caller cuts at the last committed phrase), up to 6 s.
             # Decoding only the last 3 s dropped whatever was said between the committed phrases and that
             # window, so the live text lost words and jumped. Phrases commit at pauses, so this stays short.
-            sample = audio[-16000 * 6:]
+            sample = _boost(audio[-16000 * 6:])
             segments, _ = self.model.transcribe(
                 sample,
                 **_whisper_args(self.language),
@@ -589,6 +599,7 @@ class Transcriber:
             return "", 0.0, 0, self.language
         if not _has_speech(audio):  # nothing was said: don't let the model make something up
             return "", len(audio) / 16000.0, 0, self.language
+        audio = _boost(audio)
 
         if self.model is None:  # unloaded while idle
             self._load_model()
