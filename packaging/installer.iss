@@ -3,6 +3,7 @@
 ; Installs per-user to {localappdata}\Vaani (no admin UAC elevation required)
 
 #define MyAppName "Vaani"
+#define MyDisplayName "OpenFlow Vaani"  ; shown in the wizard and Apps list; folder and shortcuts keep MyAppName
 #define MyAppVersion "1.3.3"
 #define MyAppPublisher "Vaani"
 #define MyAppURL "https://sachin1724.github.io/Vaani/"
@@ -10,9 +11,9 @@
 
 [Setup]
 AppId={{D1A3F5B8-7E92-4C61-B9D4-4328E0B5B721}
-AppName={#MyAppName}
+AppName={#MyDisplayName}
 AppVersion={#MyAppVersion}
-AppVerName={#MyAppName} v{#MyAppVersion}
+AppVerName={#MyDisplayName} v{#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL=https://github.com/Sachin1724/Vaani/issues
@@ -34,7 +35,7 @@ RestartApplications=no
 DisableDirPage=auto
 DisableProgramGroupPage=auto
 UninstallDisplayIcon={app}\{#MyAppExeName}
-UninstallDisplayName={#MyAppName}
+UninstallDisplayName={#MyDisplayName}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

@@ -33,7 +33,7 @@ W0, H0 = 380, 300          # window size at 1x; the shape inside it grows and sh
 PEEK = 5                   # px of the island left showing when it has tucked up
 SNOOZE_AFTER_MS = 3500
 INK, DIM = QColor("#ffffff"), QColor("#9a9fa9")
-REC, OK, WARN, INFO = QColor("#ff453a"), QColor("#30d158"), QColor("#ff9f0a"), QColor("#0a84ff")
+REC, OK, WARN, INFO = QColor("#EF4444"), QColor("#22C55E"), QColor("#F59E0B"), QColor("#5B4CF4")
 DIMS = {"idle": (92, 26, 14), "listen": (236, 40, 20), "write": (188, 40, 20), "done": (160, 40, 20),
         "note": (344, 62, 26), "msg": (260, 44, 22), "panel": (356, 284, 30)}
 LANG_SHORT = {"auto": "AUTO", "en-in": "EN-IN", "or-mix": "OR+EN", "or-auto": "OR/EN", "or-en": "OR→EN", "translate": "→EN"}

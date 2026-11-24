@@ -114,7 +114,7 @@ class HotkeyRecorder(QFrame):
         lay.addWidget(self._btn, 0, Qt.AlignmentFlag.AlignVCenter)
         self.setStyleSheet("""
             QFrame#HotkeyBox { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; }
-            QFrame#HotkeyBox[recording="true"] { border: 2px solid #0A84FF; background: rgba(10,132,255,0.08); }
+            QFrame#HotkeyBox[recording="true"] { border: 2px solid #5B4CF4; background: rgba(91, 76, 244,0.08); }
         """)
         self._render(pretty_hotkey(hotkey))
 
@@ -132,7 +132,7 @@ class HotkeyRecorder(QFrame):
                               "border-bottom: 2px solid rgba(0,0,0,0.35); padding: 2px 8px; font-size: 12px; font-weight: 600;")
             self._caps.addWidget(cap, 0, Qt.AlignmentFlag.AlignVCenter)
         self._hint.setText(hint)
-        self._hint.setStyleSheet(("color: #FF453A;" if error else "color: rgba(235,235,245,0.6);")
+        self._hint.setStyleSheet(("color: #EF4444;" if error else "color: rgba(248, 250, 252,0.6);")
                                  + " font-size: 12px; background: transparent; border: none;")
 
     def _set_recording(self, on: bool):
@@ -362,7 +362,7 @@ class MainWindow(QMainWindow):
         self.config = config
         self._model_progress_bars = {}
 
-        self.setWindowTitle("Vaani")
+        self.setWindowTitle("OpenFlow Vaani")
         self.setMinimumSize(760, 560)
         self.resize(1000, 720)
         self.setStyleSheet(main_qss())
@@ -431,7 +431,7 @@ class MainWindow(QMainWindow):
         logo = _logo_label(18, bar)
         if logo:
             brand.addWidget(logo)
-        brand.addWidget(_label("Vaani", "AppName"))
+        brand.addWidget(_label("OpenFlow Vaani", "AppName"))
         brand.addStretch()
         v.addLayout(brand)
 
@@ -812,7 +812,7 @@ class MainWindow(QMainWindow):
         g.addWidget(_label(m["description"], "RowSub", wrap=True), 1, 0)
         size = m["disk_size_str"] if m["is_downloaded"] else m["expected_size_str"]
         meta = _label(f"Speed {m['speed']}  ·  Accuracy {m['accuracy']}  ·  {size}", "RowSub")
-        meta.setStyleSheet("color: rgba(235,235,245,0.38);")
+        meta.setStyleSheet("color: rgba(248, 250, 252,0.38);")
         g.addWidget(meta, 2, 0)
 
         acts = QHBoxLayout()
@@ -823,7 +823,8 @@ class MainWindow(QMainWindow):
             b.setEnabled(False)
             acts.addWidget(b)
         elif m["is_downloaded"]:
-            acts.addWidget(_btn("Use", "primary", True, lambda _=False, i=mid: self._on_switch_model(i)))
+            if mid != "writer":  # the writing model works beside the speech model, it never replaces it
+                acts.addWidget(_btn("Use", "primary", True, lambda _=False, i=mid: self._on_switch_model(i)))
             acts.addWidget(_btn("Delete", "danger", True, lambda _=False, i=mid, n=m["name"]: self._on_delete_model(i, n)))
         else:
             acts.addWidget(_btn("Download", "primary", True, lambda _=False, i=mid: self._on_download_model(i)))
@@ -1046,7 +1047,7 @@ class MainWindow(QMainWindow):
         g = self.stack_group
         g.clear()
         stack = hardware.get_system_stack(self.config)
-        ok, info, off = "#30d158", "#0a84ff", "rgba(235,235,245,0.38)"
+        ok, info, off = "#22C55E", "#5B4CF4", "rgba(248, 250, 252,0.38)"
 
         def value(text, color):
             lbl = _label(text, "RowValue")
@@ -1279,7 +1280,7 @@ class MainWindow(QMainWindow):
             head.addWidget(logo, 0, Qt.AlignmentFlag.AlignTop)
         col = QVBoxLayout()
         col.setSpacing(2)
-        name = _label(f"Vaani  <span style='font-size:13px; color:rgba(235,235,245,0.6); font-weight:400;'>v{__version__}</span>", "PageTitle")
+        name = _label(f"OpenFlow Vaani  <span style='font-size:13px; color:rgba(248, 250, 252,0.6); font-weight:400;'>v{__version__}</span>", "PageTitle")
         name.setStyleSheet("font-size: 20px;")
         col.addWidget(name)
         col.addWidget(_label("Private, unlimited voice dictation and speech-to-writing. 100% on-device AI.", "PageSub", wrap=True))

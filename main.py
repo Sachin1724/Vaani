@@ -2,10 +2,12 @@ import sys
 import os
 import datetime
 import faulthandler
+import re
 import subprocess
 import threading
 import time
 import traceback
+from typing import Optional
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QFileDialog
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, Qt, QTimer, QRectF
 from PyQt6.QtNetwork import QLocalServer, QLocalSocket
@@ -33,7 +35,7 @@ try:
     from vaani.engine.sound_effects import play_start_sound, play_stop_sound, play_paste_sound
     from vaani.engine.context_detector import get_active_app_context, build_initial_prompt, get_text_before_cursor, AppContext
     from vaani.engine.updater import AppUpdater
-    from vaani.engine.meeting import MeetingSession, active_meeting_app, format_meeting_notes, transcript_text, watch_mic
+    from vaani.engine.meeting import MeetingSession, active_meeting_app, format_meeting_notes, transcript_text, srt_text, watch_mic
     from vaani.ui.floating_pill import FloatingPill, MeetingBar, ui_font_family
     from vaani.ui.island import IslandPill, CapsuleRouter
     from vaani.ui.main_window import MainWindow
@@ -58,7 +60,7 @@ except Exception:
         from .engine.sound_effects import play_start_sound, play_stop_sound, play_paste_sound
         from .engine.context_detector import get_active_app_context, build_initial_prompt, get_text_before_cursor, AppContext
         from .engine.updater import AppUpdater
-        from .engine.meeting import MeetingSession, active_meeting_app, format_meeting_notes, transcript_text, watch_mic
+        from .engine.meeting import MeetingSession, active_meeting_app, format_meeting_notes, transcript_text, srt_text, watch_mic
         from .ui.floating_pill import FloatingPill, MeetingBar, ui_font_family
         from .ui.island import IslandPill, CapsuleRouter
         from .ui.main_window import MainWindow
@@ -82,7 +84,7 @@ except Exception:
         from engine.sound_effects import play_start_sound, play_stop_sound, play_paste_sound
         from engine.context_detector import get_active_app_context, build_initial_prompt, get_text_before_cursor, AppContext
         from engine.updater import AppUpdater
-        from engine.meeting import MeetingSession, active_meeting_app, format_meeting_notes, transcript_text, watch_mic
+        from engine.meeting import MeetingSession, active_meeting_app, format_meeting_notes, transcript_text, srt_text, watch_mic
         from ui.floating_pill import FloatingPill, MeetingBar, ui_font_family
         from ui.island import IslandPill, CapsuleRouter
         from ui.main_window import MainWindow
@@ -186,6 +188,7 @@ class OpenFlowApp(QObject):
 
         # Config & DB
         self.config = load_config()
+        self._engine_key = tuple(self.config.get(k) for k in ("model_size", "device", "compute_type", "language"))
         if not self.config.get("setup_done"):
             dlg = SetupDialog(self.config)
             if not dlg.exec():
@@ -367,12 +370,12 @@ class OpenFlowApp(QObject):
                                             c.get("capsule_auto_scale", True))
 
     def _active_msg(self) -> str:
-        return f"Vaani Active · Hold {hotkey_label(self.config)} to Speak"
+        return f"OpenFlow Vaani · Hold {hotkey_label(self.config)} to Speak"
 
     def _init_tray(self):
         self.tray = QSystemTrayIcon(self.app)
         self.tray.setIcon(QIcon(create_tray_icon_pixmap()))
-        self.tray.setToolTip(f"Vaani — Hold {hotkey_label(self.config)} to Speak")
+        self.tray.setToolTip(f"OpenFlow Vaani — Hold {hotkey_label(self.config)} to Speak")
 
         menu = QMenu()
         act_hud = menu.addAction("Show Capsule HUD")
@@ -693,6 +696,10 @@ class OpenFlowApp(QObject):
         print(f"[Vaani] Switched active model to: {model_id}")
 
     def _on_request_download_model(self, model_id: str):
+        if model_id == "writer":  # not a speech model: fetch it, don't make it the active transcriber
+            threading.Thread(target=self._download_writer, daemon=True).start()
+            return
+
         def _bg_dl():
             try:
                 self.bridge.sig_status.emit(f"Downloading {model_id} model...")
@@ -719,7 +726,9 @@ class OpenFlowApp(QObject):
         threading.Thread(target=_bg_dl, daemon=True).start()
 
     def _on_request_delete_model(self, model_id: str):
-        curr = self.config.get("model_size", "base").replace(".en", "").lower()
+        if model_id == "writer":
+            self._writer_llm = None  # release the loaded copy so its files can be deleted
+        curr =self.config.get("model_size", "base").replace(".en", "").lower()
         if curr == model_id:
             fallback = "base" if model_id != "base" else "tiny"
             self.config["model_size"] = fallback
@@ -739,11 +748,16 @@ class OpenFlowApp(QObject):
         self.config = new_cfg
         self.hotkey_mgr.update_config(new_cfg.get("hotkey", "ctrl+shift"), new_cfg.get("trigger_mode", "push_to_talk"))
         if hasattr(self, "tray"):
-            self.tray.setToolTip(f"Vaani — Hold {hotkey_label(new_cfg)} to Speak")
+            self.tray.setToolTip(f"OpenFlow Vaani — Hold {hotkey_label(new_cfg)} to Speak")
         self.audio_recorder.set_device(new_cfg.get("input_device_index"))
         set_autostart(new_cfg.get("autostart", False))
         self.audio_recorder.set_auto_silence_duration(float(new_cfg.get("silence_duration", 1.1)))
-        self._reload_transcriber_async()
+        # any other switch (voice edits, sounds...) must not restart the engine and reload the speech model.
+        # The settings window edits this same dict in place, so compare with a snapshot, not the old dict.
+        engine_key = tuple(new_cfg.get(k) for k in ("model_size", "device", "compute_type", "language"))
+        if engine_key != getattr(self, "_engine_key", None):
+            self._engine_key = engine_key
+            self._reload_transcriber_async()
         self.formatter.set_dictionary(self.db.get_dictionary())
         if new_cfg.get("voice_edits") and not model_manager.cached_path("writer"):
             # turning Voice edits on is the user asking for the writing model: fetch it once
@@ -863,13 +877,29 @@ class OpenFlowApp(QObject):
         self.meeting_bar.finish()
         self.act_playing.setChecked(False)
         self.floating_pill.show_message("Writing meeting notes…", duration_ms=4000)
-        threading.Thread(target=lambda: self._save_notes(session.stop(), app, time.time() - session.started),
+        # captions of what's playing are subtitles too: also write a real .srt beside the notes
+        srt = None if session.mic else self._subtitle_path(f"{app} {datetime.datetime.now():%Y-%m-%d %H-%M}")
+        threading.Thread(target=lambda: self._save_notes(session.stop(), app, time.time() - session.started, srt),
                          daemon=True).start()
 
-    def _save_notes(self, lines, app: str, seconds: float):
+    @staticmethod
+    def _subtitle_path(name: str) -> str:
+        folder = os.path.join(os.path.expanduser("~"), "Videos", "OpenFlow Subtitles")
+        os.makedirs(folder, exist_ok=True)
+        return os.path.join(folder, re.sub(r'[<>:"/\\|?*\']+', "", name).strip() + ".srt")
+
+    def _save_notes(self, lines, app: str, seconds: float, srt_path: Optional[str] = None):
         if not lines:
             self.bridge.sig_meeting_saved.emit("")
             return
+        if srt_path:
+            try:
+                with open(srt_path, "w", encoding="utf-8-sig") as fh:  # BOM: older players read Odia/Hindi right
+                    fh.write(srt_text(lines))
+                print(f"[Vaani] Subtitles saved: {srt_path}")
+                self.bridge.sig_status.emit(f"Subtitles saved · {os.path.basename(srt_path)}")
+            except OSError as e:
+                print(f"[Vaani] Could not write subtitles {srt_path}: {e}")
         raw = transcript_text(lines)
         title = f"{app} · {datetime.datetime.now():%d %b %H:%M}"
         self.db.add_meeting_note(title, app, raw, format_meeting_notes(raw, app, llm=self._writer()), seconds)
@@ -904,7 +934,13 @@ class OpenFlowApp(QObject):
                 print(f"[Vaani] Could not transcribe {path}: {e}")
                 self.bridge.sig_error.emit("Couldn't read that file")
                 return
-            self._save_notes(lines, name, lines[-1][0] if lines else 0.0)
+            # movie.mp4 -> movie.srt beside it, so video players load the subtitles on their own
+            srt = os.path.splitext(path)[0] + ".srt"
+            if os.path.exists(srt):  # never overwrite subtitles the user already has; players load movie.*.srt too
+                srt = os.path.splitext(path)[0] + ".openflow.srt"
+            if not os.access(os.path.dirname(path) or ".", os.W_OK):
+                srt = self._subtitle_path(os.path.splitext(name)[0])
+            self._save_notes(lines, name, lines[-1][0] if lines else 0.0, srt)
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -1325,7 +1361,7 @@ class OpenFlowApp(QObject):
             self.bridge.sig_error.emit("Download failed")
         tray = getattr(self, "tray", None)
         if tray is not None:
-            tray.showMessage("Vaani", message, QSystemTrayIcon.MessageIcon.Information, 3000)
+            tray.showMessage("OpenFlow Vaani", message, QSystemTrayIcon.MessageIcon.Information, 3000)
         print(f"[Vaani] {message}")
 
     @pyqtSlot(int, str)
@@ -1397,7 +1433,7 @@ class OpenFlowApp(QObject):
     def _on_no_update(self, version: str):
         self.main_window.show_up_to_date(version)
         self.tray.showMessage(
-            "Vaani",
+            "OpenFlow Vaani",
             f"Vaani is up to date (v{version}).",
             QSystemTrayIcon.MessageIcon.Information,
             2500
@@ -1406,7 +1442,7 @@ class OpenFlowApp(QObject):
     def _on_update_ready(self, installer_path: str):
         self.floating_pill.show_message("Update ready · Restarting...")
         self.tray.showMessage(
-            "Vaani",
+            "OpenFlow Vaani",
             "Update downloaded. Launching installer and restarting...",
             QSystemTrayIcon.MessageIcon.Information,
             3000
@@ -1424,7 +1460,7 @@ class OpenFlowApp(QObject):
     def run(self):
         print(f"[Vaani] Started! Hold {hotkey_label(self.config)} anywhere to speak — release to paste.")
         # the capsule is the app; the dashboard opens only from the tray or the capsule menu
-        self.floating_pill.show_message(f"Vaani Ready · Hold {hotkey_label(self.config)} to Speak", duration_ms=4500)
+        self.floating_pill.show_message(f"OpenFlow Vaani · Hold {hotkey_label(self.config)} to Speak", duration_ms=4500)
         sys.exit(self.app.exec())
 
 

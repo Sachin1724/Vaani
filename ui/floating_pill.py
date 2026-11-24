@@ -67,9 +67,9 @@ FG_DIM = "rgba(255, 255, 255, 0.55)"
 FG_FAINT = "rgba(255, 255, 255, 0.32)"
 HAIRLINE = "rgba(255, 255, 255, 0.10)"
 FILL = "rgba(255, 255, 255, 0.07)"
-ACCENT = "#0A84FF"  # Apple systemBlue (dark)
-GREEN = "#30D158"
-RED = "#FF453A"
+ACCENT = "#5B4CF4"  # Vaani primary violet
+GREEN = "#22C55E"
+RED = "#EF4444"
 
 
 def screen_scale(screen) -> float:
@@ -125,10 +125,11 @@ SNAP_EASE = _bezier(0.05, 0.6, 0.4, 0.95)  # sharp ease-out for size changes: mo
 
 @lru_cache(maxsize=1)
 def ui_font_family() -> str:
-    """Bundled General Sans (Inter as fallback), so every PC looks the same. Never calls QFontDatabase.families():
-    enumerating system fonts takes seconds on machines with many fonts installed."""
+    """Bundled Inter (the brand face; General Sans as fallback), so every PC looks the same. Never calls
+    QFontDatabase.families(): enumerating system fonts takes seconds on machines with many fonts installed."""
     family = ""
-    for f in sorted(glob.glob(os.path.join(get_asset_path("fonts"), "*.ttf"))):  # GeneralSans-* sorts before Inter-*
+    fonts = sorted(glob.glob(os.path.join(get_asset_path("fonts"), "*.ttf")))
+    for f in sorted(fonts, key=lambda p: not os.path.basename(p).startswith("Inter")):  # Inter-* first
         families = QFontDatabase.applicationFontFamilies(QFontDatabase.addApplicationFont(f))
         family = family or (families[0] if families else "")
     return family or "Segoe UI"
@@ -623,11 +624,11 @@ class ValueRow(QWidget):
         )
         menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         menu.setStyleSheet(f"""
-            QMenu {{ background: rgba(40,40,42,0.98); border: 1px solid rgba(255,255,255,0.10);
+            QMenu {{ background: rgba(18,11,34,0.98); border: 1px solid rgba(255,255,255,0.10);
                      border-radius: 10px; padding: 5px; color: #fff; }}
             QMenu::item {{ padding: 6px 22px 6px 30px; border-radius: 6px; margin: 0; }}
             QMenu::item:selected {{ background: {ACCENT}; color: #ffffff; }}
-            QMenu::item:disabled {{ color: rgba(235,235,245,0.30); background: transparent; }}
+            QMenu::item:disabled {{ color: rgba(248, 250, 252,0.30); background: transparent; }}
             QMenu::indicator {{ width: 14px; height: 14px; left: 9px; }}
             QMenu::indicator:checked {{ image: url({_ASSETS}/check_white.svg); }}
         """)
@@ -919,12 +920,12 @@ class MeetingBar(QWidget):
         frame = QFrame(self)
         frame.setObjectName("meetingFrame")
         frame.setStyleSheet(
-            "#meetingFrame { background: rgba(12, 12, 12, 0.94); border: 1px solid rgba(255,255,255,0.12);"
+            "#meetingFrame { background: rgba(11, 7, 20, 0.95); border: 1px solid rgba(168, 85, 247, 0.28);"
             " border-radius: 16px; }"
-            "QLabel { color: #ffffff; background: transparent; }"
-            "QPushButton { color: #000000; background: #ffffff; border: none; border-radius: 11px;"
-            " padding: 4px 12px; font-weight: 600; }"
-            "QPushButton#ghost { color: rgba(255,255,255,0.7); background: transparent; padding: 4px 6px; }"
+            "QLabel { color: #F8FAFC; background: transparent; }"
+            "QPushButton { color: #ffffff; background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #5B4CF4, stop:1 #EC4899);"
+            " border: none; border-radius: 11px; padding: 4px 12px; font-weight: 600; }"
+            "QPushButton#ghost { color: rgba(248, 250, 252, 0.7); background: transparent; padding: 4px 6px; }"
         )
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -1645,7 +1646,7 @@ class FloatingPill(QWidget):
         self.hud_logo.setPixmap(get_squircle_pixmap(logo_path, size=26, radius=6.5))
         header.addWidget(self.hud_logo, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        title = QLabel("Vaani", self)
+        title = QLabel("OpenFlow Vaani", self)
         title.setFont(self._font(12, QFont.Weight.DemiBold))
         header.addWidget(title, 0, Qt.AlignmentFlag.AlignVCenter)
 
@@ -1656,8 +1657,8 @@ class FloatingPill(QWidget):
         self.btn_minimize.setFont(self._font(10, QFont.Weight.DemiBold))
         self.btn_minimize.setStyleSheet(f"""
             QPushButton {{ background: transparent; color: {ACCENT}; border: none; padding: 4px 6px; border-radius: 6px; }}
-            QPushButton:hover {{ background: rgba(10, 132, 255, 0.14); }}
-            QPushButton:pressed {{ background: rgba(10, 132, 255, 0.24); }}
+            QPushButton:hover {{ background: rgba(91, 76, 244, 0.14); }}
+            QPushButton:pressed {{ background: rgba(91, 76, 244, 0.24); }}
         """)
         self.btn_minimize.clicked.connect(self.collapse_to_capsule)
         header.addWidget(self.btn_minimize, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -1771,9 +1772,9 @@ class FloatingPill(QWidget):
         self.btn_update.setFont(self._font(10, QFont.Weight.DemiBold))
         self.btn_update.setStyleSheet(f"""
             QPushButton {{ background: {ACCENT}; color: #ffffff; border: none; border-radius: 10px; }}
-            QPushButton:hover {{ background: #3395FF; }}
-            QPushButton:pressed {{ background: #0063CC; }}
-            QPushButton:disabled {{ background: rgba(10,132,255,0.45); color: rgba(255,255,255,0.7); }}
+            QPushButton:hover {{ background: #7D70F7; }}
+            QPushButton:pressed {{ background: #4A3BD9; }}
+            QPushButton:disabled {{ background: rgba(91, 76, 244,0.45); color: rgba(255,255,255,0.7); }}
         """)
         self.btn_update.hide()
         self.btn_update.clicked.connect(self._on_update_clicked)
