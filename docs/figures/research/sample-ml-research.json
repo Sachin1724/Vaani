@@ -134,12 +134,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କା କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ"
+    "Vaani Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କା କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 24.7
+    "Vaani Odia": 24.7
    }
   },
   {
@@ -147,12 +147,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳା ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତା ଥାା ହାତୀ"
+    "Vaani Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳା ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତା ଥାା ହାତୀ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 21.0
+    "Vaani Odia": 21.0
    }
   },
   {
@@ -160,12 +160,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ା ଜିରାଫ୍"
+    "Vaani Odia": "ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ା ଜିରାଫ୍"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 23.2
+    "Vaani Odia": 23.2
    }
   },
   {
@@ -173,12 +173,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
+    "Vaani Odia": "ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 29.7
+    "Vaani Odia": 29.7
    }
   },
   {
@@ -186,12 +186,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଓ ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କା କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
+    "Vaani Odia": "ଓ ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କା କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 23.5
+    "Vaani Odia": 23.5
    }
   },
   {
@@ -199,12 +199,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭା ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ଓ"
+    "Vaani Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭା ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ଓ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 14.4
+    "Vaani Odia": 14.4
    }
   },
   {
@@ -212,12 +212,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
+    "Vaani Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 17.8
+    "Vaani Odia": 17.8
    }
   },
   {
@@ -225,12 +225,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଓ ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ଓ ଜିରାଫ୍"
+    "Vaani Odia": "ଓ ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ଓ ଜିରାଫ୍"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 19.4
+    "Vaani Odia": 19.4
    }
   },
   {
@@ -238,12 +238,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ"
+    "Vaani Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 26.1
+    "Vaani Odia": 26.1
    }
   },
   {
@@ -251,12 +251,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବା ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାର ପ୍ରବୃତ୍ତା ଥାଏ ହାତୀ ା"
+    "Vaani Odia": "ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବା ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାର ପ୍ରବୃତ୍ତା ଥାଏ ହାତୀ ା"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 22.6
+    "Vaani Odia": 22.6
    }
   },
   {
@@ -264,12 +264,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବା ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାର ପ୍ରବୃତ୍ତି ଥାା"
+    "Vaani Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବା ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାର ପ୍ରବୃତ୍ତି ଥାା"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 18.3
+    "Vaani Odia": 18.3
    }
   },
   {
@@ -277,12 +277,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭା ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ଓ ଜିରାଫ୍"
+    "Vaani Odia": "ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭା ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ଓ ଜିରାଫ୍"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 20.9
+    "Vaani Odia": 20.9
    }
   },
   {
@@ -290,12 +290,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଓ ଜିରାଫ୍ ଭଳା ପଶୁମାନଙ୍କା କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
+    "Vaani Odia": "ଓ ଜିରାଫ୍ ଭଳା ପଶୁମାନଙ୍କା କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 17.9
+    "Vaani Odia": 17.9
    }
   },
   {
@@ -303,12 +303,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କା କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାା"
+    "Vaani Odia": "ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କା କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାା"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 19.1
+    "Vaani Odia": 19.1
    }
   },
   {
@@ -316,12 +316,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତା ଥାଏ"
+    "Vaani Odia": "ହାତୀ ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତା ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 23.0
+    "Vaani Odia": 23.0
    }
   },
   {
@@ -329,12 +329,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଓ ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବା ଭା ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
+    "Vaani Odia": "ଓ ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବା ଭା ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 20.0
+    "Vaani Odia": 20.0
    }
   },
   {
@@ -342,12 +342,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ ଜିରାଫା"
+    "Vaani Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ ଜିରାଫା"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 22.2
+    "Vaani Odia": 22.2
    }
   },
   {
@@ -355,12 +355,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ"
+    "Vaani Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 28.4
+    "Vaani Odia": 28.4
    }
   },
   {
@@ -368,12 +368,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତୀ ା ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ ଜିରାଫା"
+    "Vaani Odia": "ହାତୀ ା ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ ଜିରାଫା"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 14.7
+    "Vaani Odia": 14.7
    }
   },
   {
@@ -381,12 +381,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ା ଜିରାଫ୍ ଭଳା ପଶୁମାନଙ୍କର କାର୍ ଏବା ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାା ହାତୀ ଓ ଜିରାଫା"
+    "Vaani Odia": "ା ଜିରାଫ୍ ଭଳା ପଶୁମାନଙ୍କର କାର୍ ଏବା ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକା ନିକଟରୁ ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାା ହାତୀ ଓ ଜିରାଫା"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 20.9
+    "Vaani Odia": 20.9
    }
   },
   {
@@ -394,12 +394,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଭଳା ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାା ହାତୀ ଓ"
+    "Vaani Odia": "ଭଳା ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାା ହାତୀ ଓ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 25.5
+    "Vaani Odia": 25.5
    }
   },
   {
@@ -407,12 +407,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ା ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କା କାର୍ ଏବା ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ"
+    "Vaani Odia": "ା ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କା କାର୍ ଏବା ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକା ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 25.8
+    "Vaani Odia": 25.8
    }
   },
   {
@@ -420,12 +420,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତା ଥାଏ"
+    "Vaani Odia": "ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତା ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 15.6
+    "Vaani Odia": 15.6
    }
   },
   {
@@ -433,12 +433,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତା ା ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭା ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ"
+    "Vaani Odia": "ହାତା ା ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭା ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 29.2
+    "Vaani Odia": 29.2
    }
   },
   {
@@ -446,12 +446,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ା"
+    "Vaani Odia": "ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ ହାତୀ ା"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 22.5
+    "Vaani Odia": 22.5
    }
   },
   {
@@ -459,12 +459,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତା ଓ ଜିରାଫ୍ ଭଳା ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭା ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତା ଥାଏ ହାତୀ ା ଜିରାଫା"
+    "Vaani Odia": "ହାତା ଓ ଜିରାଫ୍ ଭଳା ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭା ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତା ଥାଏ ହାତୀ ା ଜିରାଫା"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 29.9
+    "Vaani Odia": 29.9
    }
   },
   {
@@ -472,12 +472,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବା ଭା ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
+    "Vaani Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବା ଭା ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରୁ ଦେଖିବା ପାଇଁ ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 20.4
+    "Vaani Odia": 20.4
    }
   },
   {
@@ -485,12 +485,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇା ପାଖକା ଆସିବାା ପ୍ରବୃତ୍ତି ଥାା ହାତା ା ଜିରାଫା"
+    "Vaani Odia": "ଓ ଜିରାଫ୍ ଭଳି ପଶୁମାନଙ୍କର କାର୍ ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇା ପାଖକା ଆସିବାା ପ୍ରବୃତ୍ତି ଥାା ହାତା ା ଜିରାଫା"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 21.8
+    "Vaani Odia": 21.8
    }
   },
   {
@@ -498,12 +498,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ହାତୀ ଓ ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
+    "Vaani Odia": "ହାତୀ ଓ ଜିରାଫା ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନକ ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାର ପ୍ରବୃତ୍ତି ଥାଏ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 29.7
+    "Vaani Odia": 29.7
    }
   },
   {
@@ -511,12 +511,12 @@
    "engines": {
     "Whisper base": "Hati ho jira, boli, posu manankoro. Kare bhang bholo dekha jau tha bha mano ko, saran jamu ru, nikotru ruki dhikhe bhai bha kho kwaase bha ra, prabhruti tha.",
     "Whisper small": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai.",
-    "OpenFlow Odia": "ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ"
+    "Vaani Odia": "ଭଳି ପଶୁମାନଙ୍କର କାରା ଏବଂ ଭଲ ଦେଖାଯାଉଥିବା ମାନା ସରଞ୍ଜାମକୁ ନିକଟରା ଦେଖିବା ପାଇା ପାଖକୁ ଆସିବାା ପ୍ରବୃତ୍ତି ଥାଏ ହାତା ଓ"
    },
    "wer": {
     "Whisper base": 100.0,
     "Whisper small": 100.0,
-    "OpenFlow Odia": 19.3
+    "Vaani Odia": 19.3
    }
   }
  ]

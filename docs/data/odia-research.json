@@ -223,7 +223,7 @@
    ],
    "example": "Hati o jeera bholi posu manang karo, kaare bang bhala dekhah jao thuba manaka saran ja mo ru nikotru dekhibapain bakho ko asibara prabhruti tha hai."
   },
-  "OpenFlow Odia": {
+  "Vaani Odia": {
    "wer": 21.7,
    "cer": 5.6,
    "odia_script": 100.0,
@@ -345,7 +345,7 @@
    "bleu": 2.3,
    "example": "The land of the elephant is protected by the nature. The land of the elephant is protected by the nature."
   },
-  "OpenFlow Odia + IndicTrans2": {
+  "Vaani Odia + IndicTrans2": {
    "chrf": 60.1,
    "bleu": 29.3,
    "example": "Animals such as elephants and giraffes tend to come closer for a closer look than cars and good-looking equipment."
