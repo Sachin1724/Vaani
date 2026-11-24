@@ -1,12 +1,12 @@
 {
-  "name": "openflow",
+  "name": "vaani",
   "version": "1.3.0",
   "description": "Free, private, offline voice dictation for Windows. Installs the latest OpenFlow release.",
-  "bin": { "openflow": "bin/openflow.js" },
+  "bin": { "vaani": "bin/vaani.js" },
   "files": ["bin"],
   "os": ["win32"],
   "engines": { "node": ">=16" },
-  "repository": "github:Sachin1724/OpenFlow",
+  "repository": "github:Sachin1724/Vaani",
   "license": "MIT",
   "author": "Sachidananda"
 }

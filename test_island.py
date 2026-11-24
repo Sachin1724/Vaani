@@ -5,8 +5,8 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtTest import QTest
 
 app = QApplication.instance() or QApplication([])
-from openflow.ui.floating_pill import FloatingPill
-from openflow.ui.island import IslandPill, CapsuleRouter, DIMS
+from vaani.ui.floating_pill import FloatingPill
+from vaani.ui.island import IslandPill, CapsuleRouter, DIMS
 
 ARGS = dict(current_mic_name="Mic", current_language="en", current_model="base", hide_when_idle=False, follow_mouse_screen=True)
 

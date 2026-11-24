@@ -69,6 +69,23 @@
                 <span>WS Connected</span>
             </div>
 
+            <label class="text-[11px] text-gray-400 flex items-center gap-1 whitespace-nowrap" title="Speaking speed">
+                🐢<input type="range" id="speed-range" min="0.8" max="1.3" step="0.05" value="1.0" class="w-20"
+                    oninput="document.getElementById('speed-val').innerText = (+this.value).toFixed(2) + '×'"
+                    onchange="fetch('/api/speed?value=' + this.value, {method: 'POST'})">🐇 <span id="speed-val" class="font-mono w-10">1.00×</span>
+            </label>
+            <select id="voice-select" onchange="fetch('/api/voice?name=' + this.value, {method: 'POST'})" class="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded-lg px-2 py-1.5">
+                <option value="male">Male voice</option>
+                <option value="female" selected>Female voice</option>
+            </select>
+            <select id="mic-select" class="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded-lg px-2 py-1.5 max-w-[170px]"></select>
+            <label class="text-[11px] text-gray-400 flex items-center gap-1 whitespace-nowrap" title="With headphones you can interrupt Mira mid-sentence">
+                <input type="checkbox" id="barge-box"> 🎧 interrupt
+            </label>
+            <button id="mic-btn" onclick="toggleMic()" class="text-xs text-white bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg border border-emerald-500 transition whitespace-nowrap">
+                🎤 Start Live Mic
+            </button>
+            <span id="mic-status" class="text-xs text-gray-400 font-mono min-w-[140px]"></span>
             <button onclick="resetOrder()" class="text-xs text-gray-400 hover:text-white bg-gray-800/60 hover:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-700 transition">
                 New Customer Call
             </button>
@@ -293,13 +310,22 @@
                 const data = JSON.parse(event.data);
                 if (data.type === 'state_update') {
                     updateCartUI(data.cart, data.diffs);
+                    showStage(data.stage, data.address, data.name, data.name_roman);
                 } else if (data.type === 'new_turn') {
                     appendDialogue(data.turn);
                     if (data.audio_url) {
                         playMiraAudio(data.audio_url);
                     }
                 } else if (data.type === 'kot_dispatched') {
-                    alert('🎉 Kitchen Ticket Dispatched to Chefs!');
+                    showStage('placed');  // no alert(): it would freeze the live demo
+                } else if (data.type === 'audio_chunk') {
+                    queueMiraAudio(data);
+                } else if (data.type === 'stop_audio') {
+                    stopMiraAudio(data.gen);
+                } else if (data.type === 'mic') {
+                    showMic(data);
+                } else if (data.type === 'otp_sms') {
+                    document.getElementById('cart-state-badge').innerText = `SMS OTP (demo): ${data.otp}`;
                 }
             };
 
@@ -308,6 +334,35 @@
                 document.getElementById('ws-badge').className = "flex items-center space-x-1.5 text-xs bg-rose-950/60 text-rose-400 border border-rose-800/40 px-2.5 py-1 rounded-md";
                 setTimeout(connectWebSocket, 2000);
             };
+        }
+
+        const STAGES = {ordering: 'ORDERING', readback: 'CONFIRM ORDER', name: 'ASK NAME', name_pick: 'PICK NAME SPELLING', name_confirm: 'CONFIRM NAME', address: 'ASK ADDRESS', address_confirm: 'CONFIRM ADDRESS',
+                        otp: 'WAITING FOR OTP', placed: '✅ ORDER PLACED · KOT SENT', cancelled: 'CANCELLED'};
+        function showStage(stage, address, name, roman) {
+            if (!stage) return;
+            const el = document.getElementById('cart-state-badge');
+            el.innerText = (STAGES[stage] || stage) + (name ? ` · ${name}${roman ? ' (' + roman + ')' : ''}` : '') + (address ? ` · ${address}` : '');
+        }
+
+        let micOn = false;
+        async function toggleMic() {
+            micOn = !micOn;
+            const dev = document.getElementById('mic-select').value;
+            await fetch(micOn ? `/api/mic/start?device=${dev}&barge=${document.getElementById('barge-box').checked}` : '/api/mic/stop', { method: 'POST' });
+            if (!micOn) showMic({state: 'off'});
+        }
+        (async () => {
+            const r = await (await fetch('/api/mic/devices')).json();
+            document.getElementById('mic-select').innerHTML = r.devices.map(
+                d => `<option value="${d.id}" ${d.id === r.default ? 'selected' : ''}>${d.name}</option>`).join('');
+        })();
+        function showMic(m) {
+            const label = {loading: '⏳ loading model', listening: '👂 listening', mira: '🔊 Mira speaking', speaking: '🎙️ hearing you',
+                           transcribing: '✍️ understanding', error: '⚠️ mic error', off: ''}[m.state] || m.state;
+            const bars = m.level ? ' ' + '█'.repeat(Math.round(m.level * 8)) : '';
+            document.getElementById('mic-status').innerText = (m.text && m.state !== 'speaking' ? m.text : label) + bars;
+            micOn = m.state !== 'off' && m.state !== 'error';
+            document.getElementById('mic-btn').innerText = micOn ? '⏹ Stop Live Mic' : '🎤 Start Live Mic';
         }
 
         // Update Cart UI
@@ -383,6 +438,30 @@
         }
 
         // Play 24kHz Audio
+        // Mira's reply arrives sentence by sentence; a newer generation id cancels whatever is still queued
+        let audioQueue = [], latestGen = 0, miraPlaying = false;
+        function stopMiraAudio(gen) {
+            latestGen = Math.max(latestGen, gen || 0);
+            audioQueue = [];
+            miraPlaying = false;
+            document.getElementById('mira-audio-player').pause();
+        }
+        function queueMiraAudio(c) {
+            if (c.gen < latestGen) return;           // stale reply from an older turn
+            if (c.gen > latestGen) stopMiraAudio(c.gen);
+            audioQueue.push(c.url);
+            if (!miraPlaying) playNextChunk();
+        }
+        function playNextChunk() {
+            const url = audioQueue.shift();
+            if (!url) { miraPlaying = false; return; }
+            miraPlaying = true;
+            const player = document.getElementById('mira-audio-player');
+            player.onended = playNextChunk;
+            player.src = url;
+            player.play().catch(e => { console.log('Audio autoplay prevented:', e); miraPlaying = false; });
+        }
+
         function playMiraAudio(url) {
             const player = document.getElementById('mira-audio-player');
             player.src = url;

@@ -1,19 +1,19 @@
 """Accuracy of 'Odia + English words' on real code-mixed speech (odia_mix_gold.tsv).
 
 The words are what the Odia model wrote for 5 clips of an Odia-English business podcast, each
-labelled with what mixed output should show. Run:  python -m openflow.test_odia_mix
+labelled with what mixed output should show. Run:  python -m vaani.test_odia_mix
 """
 import os
 
-from openflow.engine import model_manager
-from openflow.engine.odia_mix import english
+from vaani.engine import model_manager
+from vaani.engine.odia_mix import english
 
 GOLD = os.path.join(os.path.dirname(__file__), "odia_mix_gold.tsv")
 
 
 def _lm():
     from huggingface_hub import try_to_load_from_cache
-    from openflow.engine.indic_asr import WordLM
+    from vaani.engine.indic_asr import WordLM
     path = try_to_load_from_cache(model_manager._repo("odia"), "or/lm.npz")
     return WordLM(path) if isinstance(path, str) else None
 

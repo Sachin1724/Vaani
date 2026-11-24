@@ -1,5 +1,5 @@
 """
-setup.py — Package configuration and build script for OpenFlow
+setup.py — Package configuration and build script for Vaani
 ==============================================================
 Enables standard Python packaging, editable developer installs (`pip install -e .`),
 and automated Windows installer creation.
@@ -39,7 +39,7 @@ def get_requirements() -> list:
 
 class BuildInstallerCommand(Command):
     """Custom setup.py command to build the Windows standalone installer."""
-    description = "Build the OpenFlow Windows installer (OpenFlow-Setup.exe)"
+    description = "Build the Vaani Windows installer (Vaani-Setup.exe)"
     user_options = [
         ("skip-pyinstaller", None, "Skip PyInstaller build and only recompile Inno Setup"),
     ]
@@ -68,39 +68,41 @@ class BuildInstallerCommand(Command):
 
 
 setup(
-    name="openflow",
+    name="vaani",
     version=get_version(),
     description="Minimal, privacy-first local voice typing capsule for Windows",
     author="Sachidananda",
     license="MIT",
-    url="https://github.com/Sachin1724/OpenFlow",
+    url="https://github.com/Sachin1724/Vaani",
     packages=[
-        "openflow",
-        "openflow.engine",
-        "openflow.ui",
-        "openflow.packaging",
+        "vaani",
+        "vaani.engine",
+        "vaani.ui",
+        "vaani.packaging",
     ],
     package_dir={
-        "openflow": ".",
-        "openflow.engine": "engine",
-        "openflow.ui": "ui",
-        "openflow.packaging": "packaging",
+        "vaani": ".",
+        "vaani.engine": "engine",
+        "vaani.ui": "ui",
+        "vaani.packaging": "packaging",
     },
     include_package_data=True,
     package_data={
-        "openflow": [
+        "vaani": [
             "assets/*",
             "assets/fonts/*",
             "packaging/*",
         ],
+        # Odia-script -> English word table for "Odia + English" modes; without it they fail to load
+        "vaani.engine": ["*.tsv.gz"],
     },
     install_requires=get_requirements(),
     entry_points={
         "console_scripts": [
-            "openflow = openflow.main:main",
+            "openflow = vaani.main:main",
         ],
         "gui_scripts": [
-            "openflow-gui = openflow.main:main",
+            "openflow-gui = vaani.main:main",
         ],
     },
     cmdclass={

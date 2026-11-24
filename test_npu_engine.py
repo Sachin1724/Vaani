@@ -1,9 +1,9 @@
-"""Self-check for the NPU engine path: python -m openflow.test_npu_engine (from the repo's parent).
+"""Self-check for the NPU engine path: python -m vaani.test_npu_engine (from the repo's parent).
 Runs the same OpenVINO pipeline on the CPU device so it works on PCs without an NPU.
 Downloads whisper-tiny-int8-ov (~40 MB) on first run."""
 import numpy as np
 
-from openflow.engine import hardware, transcriber as tr
+from vaani.engine import hardware, transcriber as tr
 
 
 def test_names_and_resolve():

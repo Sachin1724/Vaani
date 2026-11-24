@@ -19,10 +19,11 @@ PREROLL_SAMPLES = int(SAMPLE_RATE * 0.25)  # 250 ms @ 16 kHz
 # any 20 ms frame that falls more than GATE_DB dB below that level.
 # No enrolment needed: the nearest, loudest voice wins automatically.
 # ---------------------------------------------------------------------------
-GATE_DB     = 14.0        # dB below dominant speaker -> silence
+GATE_DB     = 20.0        # dB below dominant speaker -> silence
 GATE_HOLD_S = 0.35        # seconds to hold gate open after dominant speech ends
 GATE_FRAME  = 320         # 20 ms frames @ 16 kHz
 GATE_INIT_S = 0.60        # seconds of audio to calibrate from
+GATE_MIN_CLIP_S = 15.0    # gate only long recordings (meetings, rooms); short dictation is passed through
 
 
 def apply_dominant_speaker_gate(
@@ -38,8 +39,8 @@ def apply_dominant_speaker_gate(
     Clips shorter than GATE_INIT_S are returned untouched.
     """
     import numpy as _np
-    if len(audio) < int(SAMPLE_RATE * GATE_INIT_S):
-        return audio
+    if len(audio) < int(SAMPLE_RATE * GATE_MIN_CLIP_S):
+        return audio  # short dictation: one speaker; gating only ate the user's own quieter words
 
     n_frames = len(audio) // GATE_FRAME
     if n_frames < 4:
@@ -71,6 +72,20 @@ def apply_dominant_speaker_gate(
 
     return out
 
+
+
+# Microphones whose audio is already cleaned or rerouted by other software (the same list Wispr Flow
+# checks). Their output has no room noise left to gate, and gating it again only cuts the user's words.
+PROCESSED_MIC_HINTS = (
+    "krisp", "nvidia broadcast", "rtx voice", "voicemeeter", "steelseries sonar", "sonar",
+    "blackhole", "vb-audio", "vb-cable", "cable output", "zoom audio device", "nahimic",
+    "elgato wave link", "wave link", "broadcast voice",
+)
+
+
+def is_processed_mic(name: str) -> bool:
+    n = (name or "").lower()
+    return any(h in n for h in PROCESSED_MIC_HINTS)
 
 
 def clean_device_name(raw: str) -> str:
@@ -140,6 +155,12 @@ class AudioRecorder:
     @property
     def is_recording(self) -> bool:
         return self._is_recording
+
+    def peak_so_far(self) -> float:
+        """Loudest sample recorded since start_recording (the pre-roll chunk excluded)."""
+        with self._lock:
+            chunks = self._audio_chunks[1:]
+        return max((float(np.abs(c).max()) for c in chunks if len(c)), default=0.0)
 
     def set_device(self, device_index: Optional[int]):
         if device_index != self.device_index:
@@ -305,7 +326,8 @@ class AudioRecorder:
                 return np.empty((0,), dtype=np.float32)
             audio_data = np.concatenate(self._audio_chunks, axis=0)
             self._audio_chunks = []
-            audio_data = apply_dominant_speaker_gate(audio_data)
+            if not is_processed_mic(self.get_current_device_name()):
+                audio_data = apply_dominant_speaker_gate(audio_data)
             return audio_data
 
 
@@ -407,6 +429,6 @@ def list_microphones() -> List[Dict]:
                 devices.append(c)
 
     except Exception as e:
-        print(f"[OpenFlow] Error querying devices: {e}")
+        print(f"[Vaani] Error querying devices: {e}")
     return devices
 

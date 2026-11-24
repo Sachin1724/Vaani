@@ -1,7 +1,7 @@
 """
 bench_odia_dialects.py — Benchmark Real Odia Audio across Dialects, Background Music, and Code-Mixing
 =====================================================================================================
-Evaluates OpenFlow's Odia speech pipeline on authentic podcast speech:
+Evaluates Vaani's Odia speech pipeline on authentic podcast speech:
 1. Standard / Coastal Odia (Kataki)
 2. Conversational Code-Mixed Odia (English loanwords: charm, response, second, etc.)
 3. Sambalpuri / Western Odia (Kosali folk song rhythm & dialect)
@@ -73,7 +73,7 @@ def load_audio(wav_path):
 
 def main():
     print("=" * 85)
-    print("OPENFLOW REAL ODIA AUDIO BENCHMARK (MULTI-DIALECT & BACKGROUND MUSIC)")
+    print("VAANI REAL ODIA AUDIO BENCHMARK (MULTI-DIALECT & BACKGROUND MUSIC)")
     print("=" * 85)
 
     if not os.path.exists(ODIA_M4A):

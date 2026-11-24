@@ -38,7 +38,7 @@ def format_timestamp(seconds: float) -> str:
     return f"{m:02d}:{s:02d}"
 
 
-def transcribe_full_file(audio_path: str, output_dir: str = "openflow/data/harvested_scripts", chunk_sec: float = 15.0):
+def transcribe_full_file(audio_path: str, output_dir: str = "vaani/data/harvested_scripts", chunk_sec: float = 15.0):
     os.makedirs(output_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(audio_path))[0]
     txt_out = os.path.join(output_dir, f"{base_name}_full_script.txt")
@@ -50,7 +50,7 @@ def transcribe_full_file(audio_path: str, output_dir: str = "openflow/data/harve
     print("=" * 80)
 
     # 1. Convert to 16kHz mono WAV via ffmpeg pipe
-    temp_wav = f"openflow/scratch/{base_name}_16k.wav"
+    temp_wav = f"vaani/scratch/{base_name}_16k.wav"
     print(f"[Step 1] Converting {audio_path} to 16kHz mono PCM...")
     cmd = [
         "ffmpeg", "-i", audio_path,

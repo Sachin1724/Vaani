@@ -1,4 +1,4 @@
-// "How OpenFlow hears Odia": a bench with a desk microphone, three modules and a laptop, all on one plate.
+// "How Vaani hears Odia": a bench with a desk microphone, three modules and a laptop, all on one plate.
 // node docs/figures/odia-desk/build.mjs [--light]  -> odia-desk.html (standalone, for checks)
 //                                                 -> injects the figure into docs/index.html between its markers
 import { readFileSync, writeFileSync } from "node:fs";
@@ -11,7 +11,7 @@ const theme = process.argv.includes("--light") ? "light" : "dark";
 
 // Truth: the numbers the figure shows come from docs/data/odia-research.json (research_odia.py).
 const R = JSON.parse(readFileSync(process.env.OF_RESEARCH || join(HERE, "..", "..", "data", "odia-research.json"), "utf-8"));
-const ODIA_MS = R.asr["OpenFlow Odia"].ms_per_clip;
+const ODIA_MS = R.asr["Vaani Odia"].ms_per_clip;
 const PHRASE = { or: "ମୁଁ ଆଜି ଅଫିସ ଆସିପାରିବି ନାହିଁ", en: "I can't come to the office today" };
 
 const WIDTH = 760;
@@ -97,10 +97,10 @@ function plate() {
   const ticks = k.topTicks(strip.x + 4, strip.x + strip.w - 4, 4, 5, strip.y + 0.8, 0.6, [2, 3.6], P);
   out.push(L(ticks.minor, { tone: "lo" }), L(ticks.major, { tone: "mid" }));
   out.push(D([at([strip.x + 2, strip.y + 3.5, 0.6]), at([strip.x + strip.w - 2, strip.y + 3.5, 0.6])], { size: 0.45 }));
-  // name plate: OPENFLOW · ON-DEVICE
+  // name plate: VAANI · ON-DEVICE
   const name = { x: 130, y: PLATE.y + PLATE.d - 16, w: 52, d: 9, r: 1.2 };
   out.push(S(k.slabOf(name, 0, 0.8, P, 3), { tone: "lo", crease: "none" }));
-  out.push(k.faceTextSvg(k.topMatrix([name.x + name.w / 2, name.y + 6], 0.8, P, "x"), "OPENFLOW · ON-DEVICE", { size: 3, tone: "mid", anchor: "middle" }));
+  out.push(k.faceTextSvg(k.topMatrix([name.x + name.w / 2, name.y + 6], 0.8, P, "x"), "VAANI · ON-DEVICE", { size: 3, tone: "mid", anchor: "middle" }));
   out.push(D([at([name.x + 2.4, name.y + name.d / 2, 0.8]), at([name.x + name.w - 2.4, name.y + name.d / 2, 0.8])], { size: 0.4 }));
   return out.join("");
 }
@@ -368,7 +368,7 @@ draw(still.matches ? 6 : 0);
 const toggle = `<div class="of-toggle" role="group" aria-label="Write as"><button type="button" data-of-mode="or" aria-pressed="true">Odia</button><button type="button" data-of-mode="en" aria-pressed="false">Odia → English</button></div>`;
 const figure = k.plateHtml({
   fig: "Fig 1",
-  title: "How OpenFlow hears Odia",
+  title: "How Vaani hears Odia",
   hint: "Click to switch Odia / English",
   readout: "Odia · listening · offline",
   keys: [
@@ -380,7 +380,7 @@ const figure = k.plateHtml({
 });
 
 const fragment = `<div class="iso of-wrap" data-theme="${theme}"><style>${k.ISO_CSS}${FIG_CSS}</style>${figure}<script>${live}</script></div>`;
-const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>How OpenFlow hears Odia</title><style>body{margin:0;background:${theme === "light" ? "#f2f2ef" : "#000"};font:14px/1.6 'General Sans',system-ui,sans-serif}.of-page{width:min(820px,100% - 32px);margin:48px auto}</style></head><body><main class="of-page">${fragment}</main></body></html>`;
+const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>How Vaani hears Odia</title><style>body{margin:0;background:${theme === "light" ? "#f2f2ef" : "#000"};font:14px/1.6 'General Sans',system-ui,sans-serif}.of-page{width:min(820px,100% - 32px);margin:48px auto}</style></head><body><main class="of-page">${fragment}</main></body></html>`;
 writeFileSync(join(HERE, theme === "light" ? "odia-desk-light.html" : "odia-desk.html"), page);
 
 if (theme === "light") { // the Story section is light, so the page embeds the light build

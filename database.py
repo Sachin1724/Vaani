@@ -3,7 +3,7 @@ import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-DB_DIR = Path.home() / ".openflow"
+DB_DIR = Path.home() / ".vaani"
 DB_PATH = DB_DIR / "openflow.db"
 
 
@@ -70,7 +70,7 @@ class Database:
             cursor.execute("SELECT COUNT(*) FROM dictionary")
             if cursor.fetchone()[0] == 0:
                 default_terms = [
-                    ("open flow", "OpenFlow", 0, "branding"),
+                    ("open flow", "Vaani", 0, "branding"),
                     ("whisper flow", "Wispr Flow", 0, "branding"),
                     ("git hub", "GitHub", 0, "tech"),
                     ("vs code", "VS Code", 0, "tech"),

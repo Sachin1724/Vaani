@@ -29,11 +29,18 @@ DEFAULT_CONFIG = {
     "setup_done": False,                 # first-run model download completed
     "autostart": False,                  # launch at Windows sign-in
     "voice_edits": False,                # select text + say "make this formal": local Qwen2.5-1.5B rewrites it
+    "ai_polish": True,                   # LLM correction pass after each dictation (needs the writing model)
+    "ai_polish_budget_ms": 1200,         # slower than this: paste the rule-based text instead
+    "use_cursor_context": True,          # read the text before the cursor to guide spelling (never password fields)
+    "learn_from_edits": True,            # a word you fix right after pasting joins the dictionary
+    "paste_last_hotkey": "<alt>+<shift>+v",  # paste the last dictation again
+    "instruct_hotkey": "<alt>+<shift>+i",    # next dictation is an instruction for the selected text
+    "app_tones": {},                     # per-app tone override, e.g. {"slack.exe": "chat", "outlook.exe": "email"}
     "keep_model_in_memory": True,        # Keep AI model resident in RAM/VRAM; eliminates 10-min idle warm-up delays
     "font_family": "Poppins",
 }
 
-CONFIG_DIR = Path.home() / ".openflow"
+CONFIG_DIR = Path.home() / ".vaani"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
 
@@ -54,7 +61,7 @@ def load_config() -> dict:
             save_config(merged)
         return merged
     except Exception as e:
-        print(f"[OpenFlow] Error loading config: {e}")
+        print(f"[Vaani] Error loading config: {e}")
         return DEFAULT_CONFIG.copy()
 
 
@@ -64,7 +71,7 @@ def save_config(cfg: dict):
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=4)
     except Exception as e:
-        print(f"[OpenFlow] Error saving config: {e}")
+        print(f"[Vaani] Error saving config: {e}")
 
 
 def get_asset_path(*parts: str) -> str:
@@ -75,7 +82,7 @@ def get_asset_path(*parts: str) -> str:
         p = os.path.join(base, "assets", *parts)
         if os.path.exists(p):
             return p
-        p_sub = os.path.join(base, "openflow", "assets", *parts)
+        p_sub = os.path.join(base, "vaani", "assets", *parts)
         if os.path.exists(p_sub):
             return p_sub
         return p

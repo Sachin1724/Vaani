@@ -39,8 +39,11 @@ _SENT = re.compile(r'(?<=[।?!.])\s+')
 # Fine-tuning the duration predictor on the same references was tried and is 6x worse
 # (CER 10.48%, pace 21.5 ch/s) -- MAS alignment does not survive 7.8 min of reverberant,
 # ASR-transcribed podcast audio. Pace is one scalar; it does not need gradients.
-# Female is uncalibrated (1.0): only the male voice has been measured against references.
-_PACE_CALIBRATION = {"male": 1.10, "female": 1.0}
+# Female, measured the same way against the harvested female podcast clips (median 14.0 ch/s, 1,276 clips):
+# the booth voice renders 10.2 ch/s at 1.0 -- 27% slower than real speakers, which reads as dragging and robotic.
+# 1.35 matched the median (13.9 ch/s) but listeners found it too fast for phone ordering; 1.15 = 11.8 ch/s,
+# the slower quarter of real speakers (p25 11.6), CER unchanged at 0.95%.
+_PACE_CALIBRATION = {"male": 1.10, "female": 1.15}
 
 def _equal_power_crossfade(a: np.ndarray, b: np.ndarray, fade_len: int = 1200) -> np.ndarray:
     """Seamless equal-power cross-fade (cosine/sine) preventing any drop in RMS energy."""
@@ -131,9 +134,9 @@ class StudioVoiceEngine:
             for fn in fn_list:
                 candidates = [
                     _REPO_ROOT / "models" / fn,
-                    _REPO_ROOT / "openflow" / "models" / fn,
+                    _REPO_ROOT / "vaani" / "models" / fn,
                     Path("models") / fn,
-                    Path("openflow/models") / fn,
+                    Path("vaani/models") / fn,
                 ]
                 target = next((p for p in candidates if p.exists()), None)
                 if target:

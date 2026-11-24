@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 from torch.utils.data import Dataset, DataLoader
 
-from openflow.alm.text_tokenizer import MiraTextTokenizer
-from openflow.alm.prosody_tags import extract_prosody_spans
+from vaani.alm.text_tokenizer import MiraTextTokenizer
+from vaani.alm.prosody_tags import extract_prosody_spans
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 TOKEN_DIR = SCRIPT_DIR / "tokens"

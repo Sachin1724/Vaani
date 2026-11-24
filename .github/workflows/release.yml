@@ -1,4 +1,4 @@
-name: Build & Release OpenFlow Windows Setup
+name: Build & Release Vaani Windows Setup
 
 on:
   push:
@@ -28,28 +28,28 @@ jobs:
           pip install pyinstaller
           pip install -r requirements.txt
           pip install . --no-deps
-          cmd /c "if not exist ..\openflow mklink /J ..\openflow ."
+          cmd /c "if not exist ..\vaani mklink /J ..\vaani ."
 
       - name: Install Inno Setup
         run: |
           choco install innosetup --no-progress
 
-      - name: Build OpenFlow Windows Setup Executable
+      - name: Build Vaani Windows Setup Executable
         run: |
           python packaging/make_installer.py
 
       - name: Upload Installer Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OpenFlow-Setup-exe
-          path: dist/OpenFlow-Setup.exe
+          name: Vaani-Setup-exe
+          path: dist/Vaani-Setup.exe
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist/OpenFlow-Setup.exe
-          name: OpenFlow ${{ github.ref_name }}
+          files: dist/Vaani-Setup.exe
+          name: Vaani ${{ github.ref_name }}
           draft: false
           prerelease: false
           generate_release_notes: true

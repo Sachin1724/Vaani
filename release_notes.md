@@ -1,4 +1,4 @@
-# OpenFlow v1.3.3 — Standalone Windows Release
+# Vaani v1.3.3 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -15,7 +15,7 @@
 
 ---
 
-# OpenFlow v1.3.2 — Standalone Windows Release
+# Vaani v1.3.2 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -23,11 +23,11 @@
 ---
 
 ### Fixes in v1.3.2
-- **Zero cold-start delay on first dictation**: After OpenFlow loads the Whisper model into VRAM, CTranslate2/CUDA was JIT-compiling its compute kernels on the first word — causing a 1–3 second stall right when you start speaking. The model now runs a silent 0.5s dummy transcription immediately after loading, pre-compiling kernels in the background.
+- **Zero cold-start delay on first dictation**: After Vaani loads the Whisper model into VRAM, CTranslate2/CUDA was JIT-compiling its compute kernels on the first word — causing a 1–3 second stall right when you start speaking. The model now runs a silent 0.5s dummy transcription immediately after loading, pre-compiling kernels in the background.
 
 ---
 
-# OpenFlow v1.3.1 — Standalone Windows Release
+# Vaani v1.3.1 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -39,7 +39,7 @@
 
 ---
 
-# OpenFlow v1.3.0 — Standalone Windows Release
+# Vaani v1.3.0 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -62,7 +62,7 @@
 
 ---
 
-# OpenFlow v1.2.0 — Standalone Windows Release
+# Vaani v1.2.0 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -71,12 +71,12 @@
 
 ### Fixes in v1.2.0
 - **No more frozen app**: the tray, taskbar and Start menu stopped responding after a while because idle model unload, mic refresh and stream close could block the UI thread. They now run in the background.
-- **Self-recovery**: if the UI ever stops responding for 20 s, OpenFlow saves every thread's stack to `~/.openflow/freeze.log` and restarts itself.
+- **Self-recovery**: if the UI ever stops responding for 20 s, Vaani saves every thread's stack to `~/.vaani/freeze.log` and restarts itself.
 - **Faster after idle**: the model is kept loaded on CPU and NPU, and unloaded from the GPU only after 1 hour idle (was 10 minutes).
 
 ---
 
-# OpenFlow v1.1.9 — Standalone Windows Release
+# Vaani v1.1.9 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -86,13 +86,13 @@
 ### Fixes in v1.1.9
 - **Hotkey works after idle**: after 10 minutes idle the model is unloaded, and the next press touched the capsule from a worker thread, which froze dictation. The capsule is now updated on the main thread.
 - **Intel NPU is used on Core Ultra PCs**: auto mode now picks the NPU on a first run (PCs without NVIDIA) instead of staying on the CPU, and logs why when no NPU is visible.
-- **A GPU that froze stays off**: if CUDA hangs, OpenFlow remembers it and starts on the NPU or CPU next time instead of stalling 10 s again. Delete `~/.openflow/cuda_hung` to retry.
-- **Install with npm**: `npx github:Sachin1724/OpenFlow` downloads and runs the latest installer.
+- **A GPU that froze stays off**: if CUDA hangs, Vaani remembers it and starts on the NPU or CPU next time instead of stalling 10 s again. Delete `~/.vaani/cuda_hung` to retry.
+- **Install with npm**: `npx github:Sachin1724/Vaani` downloads and runs the latest installer.
 - **Landing page on phones**: the demo no longer runs off the right edge.
 
 ---
 
-# OpenFlow v1.1.8 — Standalone Windows Release
+# Vaani v1.1.8 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -105,7 +105,7 @@
 
 ---
 
-# OpenFlow v1.1.7 — Standalone Windows Release
+# Vaani v1.1.7 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -114,14 +114,14 @@
 
 ### Fixes in v1.1.7
 - **Dictation pastes again**: Ctrl+V sent as one batched input was silently dropped on some Windows builds, leaving the text only in the clipboard. Keys are now sent one by one.
-- **No more endless spinner**: a live-preview call on the GPU could freeze and block every dictation after it. OpenFlow now gives up on a stuck call after 10 s and finishes on the CPU; the capsule always returns to idle and the hotkey keeps working.
+- **No more endless spinner**: a live-preview call on the GPU could freeze and block every dictation after it. Vaani now gives up on a stuck call after 10 s and finishes on the CPU; the capsule always returns to idle and the hotkey keeps working.
 - **Mis-pressed hotkey**: a tap under 0.35 s (or a Ctrl shortcut) is discarded instead of starting a recording that never ended. Hands-free dictation is the Toggle mode in Settings.
 - **Dashboard no longer opens at boot**: the installer stops adding a Startup shortcut (it doubled the app's own autostart) and removes the old one; a second launch only shows the capsule.
 - **Capsule opacity**: new Settings slider, 30–100%, applied live.
 
 ---
 
-# OpenFlow v1.1.6 — Standalone Windows Release
+# Vaani v1.1.6 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -149,7 +149,7 @@
 
 ---
 
-# OpenFlow v1.1.5 — Standalone Windows Release
+# Vaani v1.1.5 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -160,19 +160,19 @@
 - **Resolved Startup Crash (`attempted relative import` & `No module named 'main'`)**:
   - Re-architected all module imports across `main.py`, `ui/floating_pill.py`, `ui/main_window.py`, `ui/setup_dialog.py`, and `ui/styles.py` with dual-mode packaging fallbacks.
   - Removed faulty runtime dummy module registration in `packaging/entry.py` that conflicted with PyInstaller's `PyiFrozenImporter`.
-  - Added multi-tiered fallback importing with detailed diagnostic logging into `%USERPROFILE%\.openflow\crash.log`.
+  - Added multi-tiered fallback importing with detailed diagnostic logging into `%USERPROFILE%\.vaani\crash.log`.
 - **Bulletproof CI/CD Windows Packaging**:
-  - Resolved GitHub Actions runner folder capitalization discrepancy (`OpenFlow` vs `openflow`) with non-recursive parent directory junction and standard non-editable wheel installation (`pip install . --no-deps`).
-  - Guaranteed 100% static collection of all 32+ OpenFlow submodules into `PYZ.pyz`.
+  - Resolved GitHub Actions runner folder capitalization discrepancy (`Vaani` vs `openflow`) with non-recursive parent directory junction and standard non-editable wheel installation (`pip install . --no-deps`).
+  - Guaranteed 100% static collection of all 32+ Vaani submodules into `PYZ.pyz`.
 - **Low-End Hardware Inference Acceleration**:
   - Fully tested fast greedy CPU transcription (`beam_size=1`, `temperature=0.0`) cutting processing latency by >65% on AMD Ryzen 5 & Intel laptops.
   - SMT/hyperthreading core-pinning preventing CPU cache thrashing.
 - **Installer Auto-Relaunch on Background Update**:
-  - Silent updater runs post-install relaunch (`WizardSilent` check) so OpenFlow comes back online immediately after silent update.
+  - Silent updater runs post-install relaunch (`WizardSilent` check) so Vaani comes back online immediately after silent update.
 
 ---
 
-# OpenFlow v1.1.4 — Standalone Windows Release
+# Vaani v1.1.4 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -184,15 +184,15 @@
   - Optimized CPU inference for devices like Acer Aspire Lite (AMD Ryzen 5, integrated Radeon graphics) with 65%+ latency reduction.
   - Implemented dynamic beam sizing (`beam_size=1` greedy search on CPU with `temperature=0.0`) to avoid costly autoregressive decoding passes and thermal throttling.
   - Physical-core aware threading (`_physical_cores`) to prevent OpenMP hyperthread cache thrashing.
-- **Fixed `ModuleNotFoundError: No module named 'openflow'` Startup Crash**:
+- **Fixed `ModuleNotFoundError: No module named 'vaani'` Startup Crash**:
   - Replaced problematic filesystem junction recursion with official Python `setup.py` editable packaging (`pip install -e . --no-deps`).
-  - Added robust multi-tiered fallback imports in `packaging/entry.py` ensuring `openflow.main` is always resolved in frozen executables.
+  - Added robust multi-tiered fallback imports in `packaging/entry.py` ensuring `vaani.main` is always resolved in frozen executables.
 - **Installer Auto-Relaunch on Update**:
-  - Added `Check: WizardSilent` in Inno Setup script so OpenFlow automatically relaunches immediately after silent background updates complete.
+  - Added `Check: WizardSilent` in Inno Setup script so Vaani automatically relaunches immediately after silent background updates complete.
 
 ---
 
-# OpenFlow v1.1.3 — Standalone Windows Release
+# Vaani v1.1.3 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -201,13 +201,13 @@
 
 ### Highlights in v1.1.3
 - **Robust Package Resolution for Standalone Windows Build**:
-  - Implemented automated package junction resolution (`mklink /J openflow .`) ensuring all root modules and subpackages (`openflow.main`, `openflow.config`, `openflow.engine.*`, `openflow.ui.*`) are statically bundled into the frozen executable without namespace conflicts.
-  - Eliminated `ModuleNotFoundError: No module named 'openflow'` on boot.
+  - Implemented automated package junction resolution (`mklink /J openflow .`) ensuring all root modules and subpackages (`vaani.main`, `vaani.config`, `vaani.engine.*`, `vaani.ui.*`) are statically bundled into the frozen executable without namespace conflicts.
+  - Eliminated `ModuleNotFoundError: No module named 'vaani'` on boot.
   - Hardened packaging pipeline with recursive artifact cleanup before compilation.
 
 ---
 
-# OpenFlow v1.1.2 — Standalone Windows Release
+# Vaani v1.1.2 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -216,13 +216,13 @@
 
 ### Highlights in v1.1.2
 - **Fix Frozen Executable Package Resolution**:
-  - Fixed PyInstaller module search path conflict that caused `ModuleNotFoundError: No module named 'openflow'` on startup in v1.1.1.
+  - Fixed PyInstaller module search path conflict that caused `ModuleNotFoundError: No module named 'vaani'` on startup in v1.1.1.
   - Ensured `openflow` package structure is properly packaged in standalone frozen builds.
   - Clean installer lifecycle and auto-update flow.
 
 ---
 
-# OpenFlow v1.1.1 — Maintenance & In-App Auto-Update Fix
+# Vaani v1.1.1 — Maintenance & In-App Auto-Update Fix
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -241,7 +241,7 @@
 
 ---
 
-# OpenFlow v1.1.0 — Standalone Windows Release
+# Vaani v1.1.0 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -264,13 +264,13 @@
   - Replaced manual text hotkey entry with a dedicated press-to-record input box in Settings.
   - Safely pauses global hooks during key recording to prevent hotkey capture collisions.
 - **Deterministic User-Controlled Model Management**:
-  - OpenFlow now strictly downloads only what the user explicitly selects.
+  - Vaani now strictly downloads only what the user explicitly selects.
   - Resolves cached variant aliases (`base` ⇄ `base.en`) without triggering unwanted background downloads.
   - Status feedback guides users directly to the Model Library when a variant isn't cached.
 
 ---
 
-# OpenFlow v1.0.0 — Standalone Windows Release
+# Vaani v1.0.0 — Standalone Windows Release
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 **Architected and Created by Sachidananda**
@@ -278,9 +278,9 @@
 ---
 
 ### Highlights in v1.0.0
-- **Standalone Windows Installer (`OpenFlow-Setup.exe`)**:
+- **Standalone Windows Installer (`Vaani-Setup.exe`)**:
   - Single-file 94.7 MB installer with automatic Start Menu and Desktop shortcuts.
-  - Installs cleanly to `{localappdata}\OpenFlow` without requiring Administrator/UAC elevation.
+  - Installs cleanly to `{localappdata}\Vaani` without requiring Administrator/UAC elevation.
 - **Hardware-Accelerated Realtime Inference**:
   - Sub-150ms transcription latency powered by CTranslate2 `float16` kernels on NVIDIA GeForce RTX GPUs.
   - Dynamic GPU hardware detection for all NVIDIA RTX/GTX GPUs with automatic DirectML and AVX2 CPU fallback.
@@ -309,22 +309,22 @@
 ---
 
 ### Installation & Verification
-1. Download **`OpenFlow-Setup.exe`** below.
+1. Download **`Vaani-Setup.exe`** below.
 2. Run the installer and click **Install**.
 3. Hold **`Ctrl + Shift`** in any application to dictate and release to insert.
 
 #### Windows SmartScreen / Edge Download Notice
-Because OpenFlow is a newly compiled open-source tool without an enterprise $500/year code-signing certificate, Microsoft Edge or Windows Defender SmartScreen may display:
-> *"OpenFlow-Setup.exe isn't commonly downloaded. Make sure you trust OpenFlow-Setup.exe before you open it."*
+Because Vaani is a newly compiled open-source tool without an enterprise $500/year code-signing certificate, Microsoft Edge or Windows Defender SmartScreen may display:
+> *"Vaani-Setup.exe isn't commonly downloaded. Make sure you trust Vaani-Setup.exe before you open it."*
 
 - **In Microsoft Edge / Chrome**: Click `...` next to the download > Click **Keep** > Click **Show more** > Click **Keep anyway**.
 - **In Windows SmartScreen**: Click **More info** > Click **Run anyway**.
 - **Verify File Integrity (SHA-256)**:
   ```powershell
-  Get-FileHash OpenFlow-Setup.exe -Algorithm SHA256
+  Get-FileHash Vaani-Setup.exe -Algorithm SHA256
   ```
   Expected SHA-256: `D3B7514CCA021E5A4FFB9737B5D69C261A06B1D7C41530FE5A77314EB5C418DB`
 
 ---
-**Full Documentation & Collaboration Guide**: [https://github.com/Sachin1724/OpenFlow](https://github.com/Sachin1724/OpenFlow)
+**Full Documentation & Collaboration Guide**: [https://github.com/Sachin1724/Vaani](https://github.com/Sachin1724/Vaani)
 

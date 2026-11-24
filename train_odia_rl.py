@@ -11,9 +11,9 @@ IndicTTS alone, the model improved on those 2 voices and got worse on everyone e
 Model selection on FLEURS Odia dev; FLEURS test stays untouched until the end.
 
 Run from the repo's parent:
-  python -m openflow.train_odia_rl prep <indictts parquet dir> <fleurs or_in dir> <work dir>
-  python -m openflow.train_odia_rl train <fp32 model.onnx> <work dir>
-  python -m openflow.train_odia_rl export <work dir>          # best.pt -> int8 model.onnx
+  python -m vaani.train_odia_rl prep <indictts parquet dir> <fleurs or_in dir> <work dir>
+  python -m vaani.train_odia_rl train <fp32 model.onnx> <work dir>
+  python -m vaani.train_odia_rl export <work dir>          # best.pt -> int8 model.onnx
 """
 import glob
 import io
@@ -26,8 +26,8 @@ import csv
 
 import numpy as np
 
-from openflow.bench_odia import edits, norm
-from openflow.engine.indic_asr import ctc_greedy, features, odia_only
+from vaani.bench_odia import edits, norm
+from vaani.engine.indic_asr import ctc_greedy, features, odia_only
 
 SR = 16000
 SAMPLES, ALPHA_PG = 4, 0.05   # transcripts sampled per clip; weight of the RL loss next to CTC
@@ -221,7 +221,7 @@ def greedy_ids(model, clips, mask):
 
 def transcribe(model, clips, mask, vocab, lm=None):
     import torch
-    from openflow.engine.indic_asr import ctc_beam_lm
+    from vaani.engine.indic_asr import ctc_beam_lm
     model.train(False)
     texts = []
     with torch.no_grad():

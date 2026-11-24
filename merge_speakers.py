@@ -19,7 +19,7 @@ import soundfile as sf
 from sklearn.cluster import AgglomerativeClustering
 
 OUT = Path("data/podcasts/user_harvest")
-SPK_MODEL = Path.home() / ".openflow" / "models" / "speaker-eres2net.onnx"
+SPK_MODEL = Path.home() / ".vaani" / "models" / "speaker-eres2net.onnx"
 SPEAKERS_PER_VIDEO = 4  # host + 1-2 guests; a threshold needs tuning, a count does not
 F0_TOL_HZ = 25.0        # drop clips whose own pitch strays from the cluster median
 FEMALE_F0_HZ = 165.0

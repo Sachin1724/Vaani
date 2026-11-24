@@ -10,7 +10,7 @@ import psutil
 
 CUDA_FIX = "pip install nvidia-cublas-cu12 nvidia-cudnn-cu12"
 # written when CUDA froze mid-call; auto mode then uses the NPU/CPU. Delete it, or pick CUDA in Settings, to retry.
-CUDA_HUNG_MARK = Path.home() / ".openflow" / "cuda_hung"
+CUDA_HUNG_MARK = Path.home() / ".vaani" / "cuda_hung"
 
 
 def _nvidia_smi() -> Dict[str, Any]:
@@ -115,7 +115,7 @@ def npu_name() -> str:
         name, devices = "", "probe crashed"
     proc.kill()
     if not name:
-        print(f"[OpenFlow] No Intel NPU visible to OpenVINO ({devices}). "
+        print(f"[Vaani] No Intel NPU visible to OpenVINO ({devices}). "
               "On a Core Ultra PC, update the Intel NPU driver.")
     return name
 
@@ -135,7 +135,7 @@ def resolve(cfg: dict) -> dict:
     hw = detect()
     device = cfg.get("device", "auto")
     if device == "npu" and not npu_name():
-        print("[OpenFlow] NPU selected but no usable Intel NPU found; using automatic device.")
+        print("[Vaani] NPU selected but no usable Intel NPU found; using automatic device.")
         device = "auto"
     if device == "auto":
         device, compute = hw["device"], hw["compute_type"]
@@ -176,7 +176,7 @@ def resolve(cfg: dict) -> dict:
             device = "npu"
         elif not getattr(resolve, "_hinted", False):
             resolve._hinted = True
-            print("[OpenFlow] Intel NPU available: choose Device > NPU in Settings to use it (downloads its model build).")
+            print("[Vaani] Intel NPU available: choose Device > NPU in Settings to use it (downloads its model build).")
     return {"device": device, "compute_type": compute, "model_size": size, "hw": hw}
 
 

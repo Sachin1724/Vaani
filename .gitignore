@@ -8,7 +8,7 @@ pyrefly.toml
 *.zip
 *.apk
 scratch/
-/openflow
+/vaani
 *.egg-info/
 
 

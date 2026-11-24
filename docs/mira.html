@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MIRA model card: OpenFlow's Odia engine</title>
-<meta name="description" content="MIRA, OpenFlow's Odia speech engine: architecture, parameters, weights on disk, decoding settings, and benchmarks on Google FLEURS against OpenAI Whisper, measured on one laptop CPU.">
+<title>MIRA model card: Vaani's Odia engine</title>
+<meta name="description" content="MIRA, Vaani's Odia speech engine: architecture, parameters, weights on disk, decoding settings, and benchmarks on Google FLEURS against OpenAI Whisper, measured on one laptop CPU.">
 <meta name="theme-color" content="#F5EFE6">
 <meta name="color-scheme" content="dark">
-<link rel="canonical" href="https://sachin1724.github.io/OpenFlow/mira.html">
+<link rel="canonical" href="https://sachin1724.github.io/Vaani/mira.html">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://sachin1724.github.io/OpenFlow/mira.html">
-<meta property="og:title" content="MIRA model card: OpenFlow's Odia engine">
-<meta property="og:description" content="118M parameters, 200 MB on disk, 21.7% word error rate on Google FLEURS Odia. The full specification and benchmarks.">
-<meta property="og:image" content="https://sachin1724.github.io/OpenFlow/img/icon.png">
+<meta property="og:url" content="https://sachin1724.github.io/Vaani/mira.html">
+<meta property="og:title" content="MIRA model card: Vaani's Odia engine">
+<meta property="og:description" content="118M parameters, 200 MB on disk, 21.3% word error rate on Google FLEURS Odia. The full specification and benchmarks.">
+<meta property="og:image" content="https://sachin1724.github.io/Vaani/img/icon.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MIRA model card: OpenFlow's Odia engine">
-<meta name="twitter:description" content="118M parameters, 200 MB on disk, 21.7% word error rate on Google FLEURS Odia. The full specification and benchmarks.">
-<meta name="twitter:image" content="https://sachin1724.github.io/OpenFlow/img/icon.png">
+<meta name="twitter:title" content="MIRA model card: Vaani's Odia engine">
+<meta name="twitter:description" content="118M parameters, 200 MB on disk, 21.3% word error rate on Google FLEURS Odia. The full specification and benchmarks.">
+<meta name="twitter:image" content="https://sachin1724.github.io/Vaani/img/icon.png">
 <link rel="icon" href="img/icon.png">
 <link rel="preconnect" href="https://api.fontshare.com">
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500&display=swap">
@@ -89,6 +89,16 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
 .cap video { width: 100%; max-width: 560px; height: auto; border-radius: 999px; }
 .vidbtn { justify-self: start; height: 44px; font-size: 15px; }
 
+/* latest results: plan status rows */
+.phases { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.phases li { display: grid; grid-template-columns: minmax(0, 4fr) auto minmax(0, 6fr); gap: 16px; align-items: baseline; background: var(--surface-3); border-radius: 14px; padding: 12px 16px; }
+.phases b { font-weight: 500; }
+.phases span { justify-self: start; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 500; white-space: nowrap; background: var(--surface-4); color: var(--ink); }
+.phases span.done { background: var(--ink); color: var(--bg); }
+.phases span.part { background: var(--accent); color: var(--accent-ink); }
+.phases small { color: var(--soft); font-size: 14px; }
+.latest-stats { padding: 0; margin-bottom: 16px; }
+@media (max-width: 760px) { .phases li { grid-template-columns: 1fr; gap: 4px; } }
 </style>
 <script>document.documentElement.classList.add('js'); if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('motion');</script>
 </head>
@@ -96,14 +106,14 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
 
 <a class="skip" href="#main">Skip to content</a>
 <nav class="sn" aria-label="Main"><div class="sn-in">
-  <a class="sn-brand" href="index.html"><span class="sn-mark" aria-hidden="true"><i style="--h:40"></i><i style="--h:80"></i><i style="--h:100"></i><i style="--h:60"></i><i style="--h:85"></i></span>OpenFlow</a>
+  <a class="sn-brand" href="index.html"><span class="sn-mark" aria-hidden="true"><i style="--h:40"></i><i style="--h:80"></i><i style="--h:100"></i><i style="--h:60"></i><i style="--h:85"></i></span>Vaani</a>
   <ul>
     <li><a href="app.html">Windows</a></li>
     <li><a href="android.html">Android</a></li>
     <li><a href="research.html">Research</a></li>
     <li><a href="mira.html" aria-current="page">MIRA</a></li>
     <li><a href="changelog.html">Changelog</a></li>
-    <li><a class="sn-cta" href="https://github.com/Sachin1724/OpenFlow/releases/latest/download/OpenFlow-Setup.exe">Download</a></li>
+    <li><a class="sn-cta" href="https://github.com/Sachin1724/Vaani/releases/latest/download/Vaani-Setup.exe">Download</a></li>
   </ul>
 </div></nav>
 
@@ -129,6 +139,7 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
     <p class="lead rv" style="--d:2">The model card for MIRA: the speech model in the app today, and the conversation model being trained for what comes next.</p>
     <div class="actions rv" style="--d:3">
       <a class="btn" href="#bench">See the benchmarks</a>
+      <a class="btn quiet" href="#latest">Latest results</a>
       <a class="btn quiet" href="#talk">The conversation model</a>
     </div>
   </div>
@@ -136,7 +147,7 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
 
 <section class="stats wrap" aria-label="Key numbers">
   <ul>
-    <li class="stat hot rv"><b>21.7%</b><p>of words wrong on Google FLEURS Odia. <strong>OpenAI Whisper base: 125.7%, small: 136.5%.</strong></p></li>
+    <li class="stat hot rv"><b>21.3%</b><p>of words wrong on Google FLEURS Odia. <strong>OpenAI Whisper base: 125.7%, small: 136.5%.</strong></p></li>
     <li class="stat rv" style="--d:1"><b>118M</b><p>parameters, 98.8 million of them stored as 8-bit integers.</p></li>
     <li class="stat rv" style="--d:2"><b>200 MB</b><p>on disk: the speech model plus a 12 MB Odia word model.</p></li>
     <li class="stat rv" style="--d:3"><b>17×</b><p>faster than real time on a laptop CPU, with the word model on.</p></li>
@@ -153,7 +164,7 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
     </div>
     <div class="look">
       <div class="cap rv" style="--d:1">
-        <video id="capvid" src="img/mira-capsule.mp4" width="720" height="88" autoplay muted loop playsinline poster="img/mira-capsule-poster.png" aria-label="The OpenFlow capsule: English with the plain indicator, then Odia with MIRA showing, the badge changing to SAMBALPURI mid-sentence, Refining, and the pasted result"></video>
+        <video id="capvid" src="img/mira-capsule.mp4" width="720" height="88" autoplay muted loop playsinline poster="img/mira-capsule-poster.png" aria-label="The Vaani capsule: English with the plain indicator, then Odia with MIRA showing, the badge changing to SAMBALPURI mid-sentence, Refining, and the pasted result"></video>
         <img id="capstill" src="img/mira-capsule-sambalpuri.png" width="720" height="88" alt="The capsule with MIRA's face, the Odia words କେନ୍ତା ଅଛ and a SAMBALPURI badge">
         <button class="btn quiet vidbtn" type="button" id="vidbtn" aria-controls="capvid">Pause the recording</button>
         <p><strong>Recorded from the app.</strong> English keeps the plain indicator. Switch to Odia and MIRA appears; speak Sambalpuri and the badge changes mid-sentence; let go and it refines, then pastes.</p>
@@ -229,9 +240,10 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
       <div class="bars">
         <div class="brow" style="--d:0"><div class="name">Whisper base<small>OpenAI, 74 M</small></div><div class="track"><div class="fill" style="--v:83.8"></div></div><div class="val">125.7%</div></div>
         <div class="brow" style="--d:1"><div class="name">Whisper small<small>OpenAI, 244 M</small></div><div class="track"><div class="fill" style="--v:91"></div></div><div class="val">136.5%</div></div>
-        <div class="brow hot" style="--d:2"><div class="name">MIRA<small>IndicConformer, 118 M</small></div><div class="track"><div class="fill" style="--v:14.5"></div></div><div class="val">21.7%</div></div>
+        <div class="brow hot" style="--d:2"><div class="name">MIRA<small>IndicConformer, 118 M</small></div><div class="track"><div class="fill" style="--v:14.2"></div></div><div class="val">21.3%</div></div>
       </div>
       <p class="note" id="fl-note" aria-live="polite"><strong>Word error rate, lower is better; bars end at 150%.</strong> Above 100% means the engine wrote more wrong words than the sentence had. Whisper writes Odia in Latin or Bengali letters, so almost nothing matches.</p>
+      <p class="note"><strong>Re-measured on 24 November 2026 with Vaani 1.4.2</strong>, same 100 clips, same laptop CPU: MIRA 21.3% word errors (was 21.7%) and 5.4% character errors (was 5.6%), 348–394 ms a clip across two runs (371 ms shown; it was 283 ms before). The 1.4.2 changes to listening, the speaker filter and the live text do not lower MIRA's accuracy. The Whisper rows are from the earlier run and were not measured again.</p>
     </div>
     <div class="cols" style="margin-top:16px">
       <div class="panel rv">
@@ -313,7 +325,58 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
   </div>
 </section>
 
-<section class="sec alt" id="limits" aria-labelledby="x-h">
+<section class="sec alt" id="latest" aria-labelledby="n-h">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="n-h" class="rv">Latest results</h2>
+      <p class="rv" style="--d:1">MIRA taking a food order by voice from a live microphone, measured on 19 November 2026 on the same laptop. <strong>Numbers are measurements; everything else is status.</strong></p>
+    </div>
+    <div class="stats latest-stats" aria-label="Measured in the live voice-order call">
+      <ul>
+        <li class="stat hot rv"><b data-count="19">19/19</b><p>real spoken orders understood. <strong>17/19 on the first run.</strong></p></li>
+        <li class="stat rv" style="--d:1"><b>0.78–1.06 s</b><p>from the caller going quiet to MIRA's first reply. The target was under 0.8 s: close, not met.</p></li>
+        <li class="stat rv" style="--d:2"><b data-count="0.95" data-dp="2">0.95%</b><p>of characters wrong in MIRA's female voice at 1.15× speed, 11.8 characters a second.</p></li>
+        <li class="stat rv" style="--d:3"><b data-count="1226">1,226</b><p>training steps of an Odia voice clone. <strong>It does not speak clear Odia yet.</strong></p></li>
+      </ul>
+    </div>
+    <div class="sheet">
+      <div class="panel rv">
+        <h3>The live order call</h3>
+        <dl>
+          <div class="r"><dt>Flow</dt><dd>Order, read-back, name, address, OTP, placed<small>edits work at every question; “scratch that” undoes the last change</small></dd></div>
+          <div class="r"><dt>Hearing</dt><dd>IndicConformer Odia, on the PC<small>noise-adaptive trigger, microphone picker</small></dd></div>
+          <div class="r"><dt>Test set</dt><dd>20 clips recorded by a real speaker<small>19 scored; clip 20 is two people talking at once</small></dd></div>
+          <div class="r"><dt>Voice pace</dt><dd>1.15×, 11.8 characters a second<small>real female podcast speakers: 14.0, median of 1,276 clips</small></dd></div>
+          <div class="r"><dt>Weakest part</dt><dd>Names<small>final vowels get dropped: ସ୍ମିତା comes out as ସ୍ମିତ</small></dd></div>
+          <div class="r"><dt>Not yet</dt><dd>Phone lines, real SMS, saved orders<small>one customer at a time, orders kept in memory</small></dd></div>
+        </dl>
+      </div>
+      <div class="panel rv" style="--d:1">
+        <h3>Tried and dropped</h3>
+        <dl>
+          <div class="r"><dt>Small LLM fixing sentences</dt><dd>0 of 12 right, 1.1–3.2 s each<small>Qwen2.5-0.5B on the RTX 4050; the rule matcher takes about 2 ms</small></dd></div>
+          <div class="r"><dt>Hot-word boost</dt><dd>No effect, from bonus 2 to 20<small>the audio really said “biryani”, not “burger”</small></dd></div>
+          <div class="r"><dt>Overlap detector</dt><dd>Flagged all 19 single-speaker clips<small>not wired in; one overlap sample is too few to build one</small></dd></div>
+          <div class="r"><dt>Odia voice clone</dt><dd>Loss 12.7 to about 5.0, still unclear<small>Chatterbox 0.5B with 77 new Odia letters; zero-shot cloning in Odia does not work</small></dd></div>
+          <div class="r"><dt>Retraining voice rhythm</dt><dd>6× worse character errors<small>not repeated</small></dd></div>
+        </dl>
+      </div>
+    </div>
+    <div class="panel rv" style="margin-top:16px">
+      <h3>Where the plan stands</h3>
+      <ul class="phases" style="margin-top:18px">
+        <li><b>Real test set</b><span class="done">Done</span><small>20 recorded clips, 19 of 19 understood</small></li>
+        <li><b>Name and spelling</b><span class="done">Done</span><small>spelling choice and English letters on the ticket; tested on typed text only</small></li>
+        <li><b>Reply speed</b><span class="part">Partly</span><small>0.78–1.06 s measured live; early end-of-turn not compared before and after</small></li>
+        <li><b>Natural voice</b><span class="part">Partly</span><small>speed slider and varied wording; whether it sounds natural is not confirmed</small></li>
+        <li><b>Two people at once</b><span>Investigated</span><small>no working detector; MIRA asks for one person at a time after two misses</small></li>
+        <li><b>Odia, English and Hindi</b><span>Not started</span><small>there is no English or Hindi voice yet</small></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="limits" aria-labelledby="x-h">
   <div class="wrap">
     <div class="sec-head">
       <h2 id="x-h" class="rv">Conditions and limits</h2>
@@ -337,11 +400,11 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
     <span class="dev-mark" aria-hidden="true">S</span>
     <div>
       <h2 id="dev-h">Made by Sachidananda</h2>
-      <p>OpenFlow is designed, built and maintained by Sachidananda: free, private dictation for Windows and Android, with Odia written properly. Questions, ideas and bug reports are welcome.</p>
+      <p>Vaani is designed, built and maintained by Sachidananda: free, private dictation for Windows and Android, with Odia written properly. Questions, ideas and bug reports are welcome.</p>
       <ul class="dev-links">
         <li><a href="https://github.com/Sachin1724">GitHub · @Sachin1724</a></li>
-        <li><a href="https://github.com/Sachin1724/OpenFlow/issues">Report an issue</a></li>
-        <li><a href="mailto:fakesachin.19@gmail.com?subject=OpenFlow">Email the developer</a></li>
+        <li><a href="https://github.com/Sachin1724/Vaani/issues">Report an issue</a></li>
+        <li><a href="mailto:fakesachin.19@gmail.com?subject=Vaani">Email the developer</a></li>
       </ul>
     </div>
   </div>
@@ -358,9 +421,9 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
     <a href="research.html">Research</a>
     <a href="mira.html">MIRA</a>
     <a href="changelog.html">Changelog</a>
-    <a href="https://github.com/Sachin1724/OpenFlow">Source</a>
+    <a href="https://github.com/Sachin1724/Vaani">Source</a>
   </div>
-  <p class="small">OpenFlow is free and open source under the MIT license. Made by Sachidananda. IndicConformer and IndicTrans2 by AI4Bharat. Speech data: Google FLEURS (CC-BY-4.0).</p>
+  <p class="small">Vaani is free and open source under the MIT license. Made by Sachidananda. IndicConformer and IndicTrans2 by AI4Bharat. Speech data: Google FLEURS (CC-BY-4.0).</p>
 </footer>
 
 <script>
@@ -371,13 +434,13 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
 
   // FLEURS Odia, 100 clips (research.html data): Whisper base, Whisper small, MIRA
   var B = {
-    wer: { max: 150, fmt: function (v) { return v.toFixed(1) + '%'; }, vals: [125.7, 136.5, 21.7],
+    wer: { max: 150, fmt: function (v) { return v.toFixed(1) + '%'; }, vals: [125.7, 136.5, 21.3],
       note: '<strong>Word error rate, lower is better; bars end at 150%.</strong> Above 100% means the engine wrote more wrong words than the sentence had. Whisper writes Odia in Latin or Bengali letters, so almost nothing matches.' },
-    cer: { max: 130, fmt: function (v) { return v.toFixed(1) + '%'; }, vals: [119.7, 116.2, 5.6],
+    cer: { max: 130, fmt: function (v) { return v.toFixed(1) + '%'; }, vals: [119.7, 116.2, 5.4],
       note: '<strong>Character error rate, lower is better.</strong> Roughly 94 of every 100 letters come out right.' },
     script: { max: 100, fmt: function (v) { return v.toFixed(0) + '%'; }, vals: [0, 0, 100],
       note: '<strong>Share of the output written in Odia script.</strong> Neither Whisper model wrote a single clip in Odia.' },
-    ms: { max: 5000, fmt: function (v) { return v.toLocaleString('en') + ' ms'; }, vals: [1318, 4916, 283],
+    ms: { max: 5000, fmt: function (v) { return v.toLocaleString('en') + ' ms'; }, vals: [1318, 4916, 371],
       note: '<strong>Time per clip, lower is better.</strong> Clips average 11.8 seconds. MIRA is 4.7× faster than Whisper base and 17× faster than Whisper small.' }
   };
   var host = $('#fl');
@@ -432,6 +495,13 @@ table.lat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
   if (!window.gsap || !window.ScrollTrigger) return;
   gsap.registerPlugin(ScrollTrigger);
   gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+    // latest results: the measured numbers count up once as they scroll in
+    document.querySelectorAll('#latest [data-count]').forEach(b => {
+      const end = +b.dataset.count, dp = +(b.dataset.dp || 0), txt = b.textContent, o = { v: 0 };
+      const fmt = v => txt.replace(/^[\d.,]+/, v.toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp }));
+      gsap.to(o, { v: end, duration: 1.4, ease: 'power3.out', onUpdate: () => { b.textContent = fmt(o.v); }, onComplete: () => { b.textContent = txt; },
+        scrollTrigger: { trigger: b, start: 'top 85%', once: true } });
+    });
     const disc = document.querySelector('.mhero .disc'), still = document.getElementById('capstill');
     let m = { x: 0, y: 0, s: 1, end: 600 };
     const measure = () => {

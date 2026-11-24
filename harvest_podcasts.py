@@ -83,7 +83,7 @@ def main():
     clips_manifest = []
 
     print("=" * 80)
-    print("OPENFLOW PODCAST HARVESTING & BENCHMARK PIPELINE")
+    print("VAANI PODCAST HARVESTING & BENCHMARK PIPELINE")
     print(f"Target Directory: {DATA_DIR}")
     print("=" * 80)
 

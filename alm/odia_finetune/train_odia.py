@@ -50,8 +50,8 @@ class Config:
     local_model_dir: str = "./model_odia_init"
     new_vocab_size: int = 781
     manifest_path: str = "./data/manifest.json"
-    cache_path: str = "./data/cache_t3.pt"
-    output_dir: str = "./checkpoints"
+    cache_path: str = __import__("os").environ.get("CACHE", "./data/cache_t3.pt")
+    output_dir: str = "./checkpoints_v2"
     batch_size: int = 8
     grad_accum: int = 2
     # ponytail: backbone frozen, only text_emb/text_head train. ~5s/micro-batch full fine-tune on a
@@ -61,14 +61,14 @@ class Config:
     # LoRA on the frozen backbone: S3 tokenizer round-trips Odia at CER 0.02 and embeddings-only
     # plateaued at loss 7.6, so T3 itself must learn Odia. Full fine-tune is 25 h/epoch here.
     lora_r: int = 16
-    lr_lora: float = 2e-4
+    lr_lora: float = 2e-4 * float(__import__("os").environ.get("LR_SCALE", 1))
     lr: float = 1e-5
-    lr_new_vocab: float = 1e-4  # text_emb/text_head: 77 near-identical new rows need to move
-    num_epochs: int = 1
+    lr_new_vocab: float = 1e-4 * float(__import__("os").environ.get("LR_SCALE", 1))  # text_emb/text_head: 77 near-identical new rows need to move
+    num_epochs: int = int(__import__('os').environ.get('EPOCHS', 2))
     max_text_len: int = 256
     max_speech_len: int = 800
     log_every: int = 1
-    save_every_steps: int = 200  # optimizer updates, not micro-batches
+    save_every_steps: int = 300  # optimizer updates, not micro-batches
 
 
 def load_manifest(path: str):
@@ -105,7 +105,9 @@ def main():
         p.requires_grad = True
 
     # init from the latest checkpoint of any earlier stage (embeddings-only or merged LoRA)
-    prev = sorted(Path(cfg.output_dir).glob("t3_odia_*upd*.safetensors"), key=lambda p: p.stat().st_mtime)
+    # INIT env pins a specific checkpoint (e.g. the best-CER one) instead of the newest
+    init = __import__("os").environ.get("INIT")
+    prev = [Path(init)] if init else sorted(Path(cfg.output_dir).glob("t3_odia_*upd*.safetensors"), key=lambda p: p.stat().st_mtime)
     if prev:
         from safetensors.torch import load_file
         logger.info(f"Init weights from {prev[-1]}: {t3_model.load_state_dict(load_file(str(prev[-1])), strict=False).unexpected_keys}")
@@ -176,6 +178,7 @@ def main():
 
     Path(cfg.output_dir).mkdir(parents=True, exist_ok=True)
     step = 0
+    tag = int(time.time())  # unique per run so a restarted run never overwrites earlier checkpoints
     # ponytail: resumes weights only, not optimizer state or exact step count -- good enough
     # to not throw away GPU time already spent; add full optimizer checkpointing if a crash
     # mid-run ever needs to resume losslessly.
@@ -214,14 +217,14 @@ def main():
 
             if step % cfg.save_every_steps == 0:
                 from safetensors.torch import save_file
-                out_path = Path(cfg.output_dir) / f"t3_odia_{'lora_' if cfg.lora_r else ''}upd{step}.safetensors"
+                out_path = Path(cfg.output_dir) / f"t3_odia_{'lora_' if cfg.lora_r else ''}upd{tag}_{step:05d}.safetensors"
                 save_file(ckpt_state(), str(out_path))
                 logger.info(f"Checkpoint saved: {out_path}")
 
         logger.info(f"Epoch {epoch} complete.")
 
     from safetensors.torch import save_file
-    final_path = Path(cfg.output_dir) / f"t3_odia_{'lora_' if cfg.lora_r else ''}final.safetensors"
+    final_path = Path(cfg.output_dir) / f"t3_odia_{'lora_' if cfg.lora_r else ''}upd{tag}_{step:05d}f.safetensors"
     save_file(ckpt_state(), str(final_path))
     logger.info(f"Final model saved: {final_path}")
 

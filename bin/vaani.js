@@ -1,23 +1,23 @@
 #!/usr/bin/env node
-// Downloads the latest OpenFlow-Setup.exe from GitHub Releases and runs it.
+// Downloads the latest Vaani-Setup.exe from GitHub Releases and runs it.
 const https = require("https");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { spawn } = require("child_process");
 
-const URL = "https://github.com/Sachin1724/OpenFlow/releases/latest/download/OpenFlow-Setup.exe";
+const URL = "https://github.com/Sachin1724/Vaani/releases/latest/download/Vaani-Setup.exe";
 
 if (process.platform !== "win32") {
-  console.error("OpenFlow is a Windows app (Windows 10/11, 64-bit).");
+  console.error("Vaani is a Windows app (Windows 10/11, 64-bit).");
   process.exit(1);
 }
 
-const dest = path.join(os.tmpdir(), "OpenFlow-Setup.exe");
+const dest = path.join(os.tmpdir(), "Vaani-Setup.exe");
 
 function get(url, hops = 0) {
   if (hops > 5) return fail("too many redirects");
-  https.get(url, { headers: { "User-Agent": "openflow-npm" } }, (res) => {
+  https.get(url, { headers: { "User-Agent": "vaani-npm" } }, (res) => {
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       res.resume();
       return get(res.headers.location, hops + 1);
@@ -27,7 +27,7 @@ function get(url, hops = 0) {
     let got = 0;
     res.on("data", (c) => {
       got += c.length;
-      if (total) process.stdout.write(`\rDownloading OpenFlow ${Math.round((got / total) * 100)}%`);
+      if (total) process.stdout.write(`\rDownloading Vaani ${Math.round((got / total) * 100)}%`);
     });
     const out = fs.createWriteStream(dest);
     res.pipe(out);
@@ -45,5 +45,5 @@ function fail(msg) {
   process.exit(1);
 }
 
-console.log("Fetching the latest OpenFlow release...");
+console.log("Fetching the latest Vaani release...");
 get(URL);

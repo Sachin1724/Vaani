@@ -1,4 +1,4 @@
-# OpenFlow for Android: design decisions
+# Vaani for Android: design decisions
 
 Style: the same Apple-like, dark, minimal look as the web and the Windows app. Pill is the one motif.
 (From the ui-ux-pro-max pass: "AI-native" voice UI, minimal chrome, Inter, red recording dot + blue waveform.)

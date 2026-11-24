@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="assets/app_icon_square.png" alt="OpenFlow Emblem" width="88" height="88" style="border-radius: 20px; box-shadow: 0 12px 36px rgba(0,0,0,0.4);" />
+<img src="assets/app_icon_square.png" alt="Vaani Emblem" width="88" height="88" style="border-radius: 20px; box-shadow: 0 12px 36px rgba(0,0,0,0.4);" />
 
-# OPENFLOW
+# VAANI
 
 ### Zero-Limit · 100% Offline · Local AI Voice Dictation & Meeting Intelligence for Windows
 
@@ -10,9 +10,9 @@
 
 <br />
 
-[![Release](https://img.shields.io/badge/Release-v1.3.3-000000?style=for-the-badge&logoColor=white)](https://github.com/Sachin1724/OpenFlow)
-[![Platform](https://img.shields.io/badge/Platform-Windows_10_%2F_11_x64-000000?style=for-the-badge&logoColor=white)](https://github.com/Sachin1724/OpenFlow)
-[![Runtime](https://img.shields.io/badge/Runtime-NVIDIA_CUDA_%7C_NPU_%7C_CPU-000000?style=for-the-badge&logoColor=white)](https://github.com/Sachin1724/OpenFlow)
+[![Release](https://img.shields.io/badge/Release-v1.3.3-000000?style=for-the-badge&logoColor=white)](https://github.com/Sachin1724/Vaani)
+[![Platform](https://img.shields.io/badge/Platform-Windows_10_%2F_11_x64-000000?style=for-the-badge&logoColor=white)](https://github.com/Sachin1724/Vaani)
+[![Runtime](https://img.shields.io/badge/Runtime-NVIDIA_CUDA_%7C_NPU_%7C_CPU-000000?style=for-the-badge&logoColor=white)](https://github.com/Sachin1724/Vaani)
 [![License](https://img.shields.io/badge/License-MIT-000000?style=for-the-badge&logoColor=white)](LICENSE)
 
 <br />
@@ -25,7 +25,7 @@
 
 ## Cinematic Product Walkthrough
 
-OpenFlow replaces legacy cloud-tethered dictation services with a standalone, hardware-accelerated local engine built directly on Windows low-level APIs.
+Vaani replaces legacy cloud-tethered dictation services with a standalone, hardware-accelerated local engine built directly on Windows low-level APIs.
 
 ```
        [ HOLD CTRL + SHIFT ]
@@ -119,15 +119,15 @@ Engineered to resolve phonetic ambiguities in Indic and European languages. Spec
                  │                               │
                  ▼                               ▼
        Win32 WindowInjector           Local SQLite Archive
- (Preserves clipboard, Ctrl+V)        (~/.openflow/openflow.db)
+ (Preserves clipboard, Ctrl+V)        (~/.vaani/openflow.db)
 ```
 
 ---
 
 ## Hardware Mic Auto-Detection & Live Hotplug
 
-OpenFlow interfaces directly with the Windows `winmm` audio kernel via `waveInGetNumDevs` and `waveInGetDevCapsW`. When you attach or disconnect a microphone:
-1. OpenFlow detects the change without restarting the application.
+Vaani interfaces directly with the Windows `winmm` audio kernel via `waveInGetNumDevs` and `waveInGetDevCapsW`. When you attach or disconnect a microphone:
+1. Vaani detects the change without restarting the application.
 2. Spawns an animated companion pill notifying you of the newly connected device.
 3. Automatically switches to the primary active device and recalculates live audio level channels.
 4. Filters out inactive Bluetooth artifacts and disconnected hardware aliases.
@@ -150,14 +150,14 @@ OpenFlow interfaces directly with the Windows `winmm` audio kernel via `waveInGe
 
 ### Option 1: Standalone Windows Binary (Recommended)
 Download the standalone release package without installing Python or build tools:
-1. Download `OpenFlow-v1.0-Windows-x64.zip` from [Releases](https://github.com/Sachin1724/OpenFlow/releases).
-2. Extract the archive to any directory (e.g. `C:\OpenFlow`).
-3. Launch `OpenFlow.exe` (or use `Launch-OpenFlow.bat`).
+1. Download `Vaani-v1.0-Windows-x64.zip` from [Releases](https://github.com/Sachin1724/Vaani/releases).
+2. Extract the archive to any directory (e.g. `C:\Vaani`).
+3. Launch `Vaani.exe` (or use `Launch-Vaani.bat`).
 
 ### Option 1b: One command with npm
-Needs Node 16+. Downloads the latest `OpenFlow-Setup.exe` and runs it:
+Needs Node 16+. Downloads the latest `Vaani-Setup.exe` and runs it:
 ```
-npx github:Sachin1724/OpenFlow
+npx github:Sachin1724/Vaani
 ```
 
 ### Option 2: Running from Source
@@ -169,25 +169,25 @@ npx github:Sachin1724/OpenFlow
 
 ```powershell
 # 1. Clone the repository
-git clone https://github.com/Sachin1724/OpenFlow.git
-cd OpenFlow
+git clone https://github.com/Sachin1724/Vaani.git
+cd Vaani
 
 # 2. Install dependencies
 uv pip install -r requirements.txt --system
 # Or with standard pip:
 python -m pip install -r requirements.txt
 
-# 3. Launch OpenFlow
-python -m openflow.main
+# 3. Launch Vaani
+python -m vaani.main
 ```
 
-*To launch silently in the background without a command window, double-click `launch_openflow_silent.vbs`.*
+*To launch silently in the background without a command window, double-click `launch_vaani_silent.vbs`.*
 
 ---
 
 ## Building the Standalone Executable
 
-OpenFlow includes a one-command build pipeline configured with PyInstaller:
+Vaani includes a one-command build pipeline configured with PyInstaller:
 
 ```powershell
 # Run the automated build script
@@ -195,21 +195,21 @@ python build_exe.py
 ```
 
 This compiles:
-- Standalone portable binary directory at `dist/OpenFlow/OpenFlow.exe`
-- Distributable portable archive at `dist/OpenFlow-v1.0-Windows-x64.zip`
+- Standalone portable binary directory at `dist/Vaani/Vaani.exe`
+- Distributable portable archive at `dist/Vaani-v1.0-Windows-x64.zip`
 
 ---
 
 ## File and Package Hierarchy
 
 ```
-openflow/
-├── OpenFlow.spec                 # PyInstaller standalone compilation manifest
+vaani/
+├── Vaani.spec                 # PyInstaller standalone compilation manifest
 ├── build_exe.py                  # One-click Windows distribution builder
 ├── run_app.py                    # Standalone application entry wrapper
-├── run_openflow.bat              # Quick developer launcher
-├── launch_openflow_silent.vbs    # Background Windows launcher
-├── config.py                     # Persistent settings (~/.openflow/config.json)
+├── run_vaani.bat              # Quick developer launcher
+├── launch_vaani_silent.vbs    # Background Windows launcher
+├── config.py                     # Persistent settings (~/.vaani/config.json)
 ├── database.py                   # SQLite history & meeting notes store
 ├── main.py                       # Main process loop, tray coordinator & single instance lock
 ├── bench_odia.py / research_odia.py  # FLEURS Odia benchmarks behind the landing page
@@ -235,7 +235,7 @@ openflow/
 
 ## Collaboration & Contribution Guide
 
-OpenFlow is built for the global community. Anyone is welcome to contribute, customize, and extend the engine.
+Vaani is built for the global community. Anyone is welcome to contribute, customize, and extend the engine.
 
 ### How to Contribute
 1. **Fork the Repository**: Create your personal branch (`git checkout -b feature/amazing-feature`).

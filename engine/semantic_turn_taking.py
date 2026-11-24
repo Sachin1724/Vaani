@@ -9,7 +9,7 @@ Solves the two biggest voice-to-voice problems:
 from typing import Dict, Any, Tuple, Optional
 
 try:
-    from openflow.engine.conversational_rl import get_conversational_rl_agent
+    from vaani.engine.conversational_rl import get_conversational_rl_agent
 except ImportError:
     get_conversational_rl_agent = None
 

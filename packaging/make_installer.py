@@ -1,12 +1,12 @@
 """
-make_installer.py — Complete Build & Setup EXE Packaging Pipeline for OpenFlow
+make_installer.py — Complete Build & Setup EXE Packaging Pipeline for Vaani
 =============================================================================
-1. Builds the PyInstaller bundle in dist/OpenFlow/
+1. Builds the PyInstaller bundle in dist/Vaani/
 2. Compiles packaging/installer.iss with Inno Setup 6 (ISCC.exe)
-3. Outputs dist/OpenFlow-Setup.exe (the final Windows installer setup file)
+3. Outputs dist/Vaani-Setup.exe (the final Windows installer setup file)
 
 Run from repository root:
-    python -m openflow.packaging.make_installer
+    python -m vaani.packaging.make_installer
 or from packaging folder:
     python make_installer.py
 """
@@ -18,9 +18,9 @@ import shutil
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # .../openflow
 DIST_DIR = os.path.join(ROOT, "dist")
-APP_EXE = os.path.join(DIST_DIR, "OpenFlow", "OpenFlow.exe")
+APP_EXE = os.path.join(DIST_DIR, "Vaani", "Vaani.exe")
 ISS_SCRIPT = os.path.join(ROOT, "packaging", "installer.iss")
-FINAL_SETUP_EXE = os.path.join(DIST_DIR, "OpenFlow-Setup.exe")
+FINAL_SETUP_EXE = os.path.join(DIST_DIR, "Vaani-Setup.exe")
 
 
 def find_iscc() -> str:
@@ -78,12 +78,12 @@ def step1_pyinstaller(rebuild: bool = True):
 
 
 def step2_inno_setup():
-    """Compile the installer script into OpenFlow-Setup.exe."""
+    """Compile the installer script into Vaani-Setup.exe."""
     iscc = find_iscc()
     print(f"[2/2] Compiling Windows Setup EXE with Inno Setup: {iscc}")
     print(f"       Script: {ISS_SCRIPT}")
 
-    cmd = [iscc, f"/O{DIST_DIR}", "/FOpenFlow-Setup", ISS_SCRIPT]
+    cmd = [iscc, f"/O{DIST_DIR}", "/FVaani-Setup", ISS_SCRIPT]
     res = subprocess.run(cmd, cwd=os.path.dirname(ISS_SCRIPT))
     if res.returncode != 0:
         raise RuntimeError(f"Inno Setup compilation failed with exit code {res.returncode}")
@@ -93,7 +93,7 @@ def step2_inno_setup():
 
     size_mb = os.path.getsize(FINAL_SETUP_EXE) / (1024 * 1024)
     print("\n" + "=" * 64)
-    print(" SUCCESS! OpenFlow Windows Setup File Created")
+    print(" SUCCESS! Vaani Windows Setup File Created")
     print("=" * 64)
     print(f" Setup File: {FINAL_SETUP_EXE}")
     print(f" File Size : {size_mb:.2f} MB")
@@ -103,7 +103,7 @@ def step2_inno_setup():
 def main():
     rebuild = "--no-rebuild" not in sys.argv
     print("================================================================")
-    print("            OpenFlow Windows Installer Builder                  ")
+    print("            Vaani Windows Installer Builder                  ")
     print("================================================================")
     try:
         step1_pyinstaller(rebuild=rebuild)

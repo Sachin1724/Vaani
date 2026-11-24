@@ -1,4 +1,4 @@
-package app.openflow
+package app.vaani
 
 import android.Manifest
 import android.app.Activity
@@ -83,7 +83,7 @@ class AppState(val ctx: Context) {
     fun resetPosition() { prefs.edit().remove("offRight").remove("offUp").apply(); say("Button is back at the right edge") }
     fun say(msg: String) { toast = msg; ui.postDelayed({ if (toast == msg) toast = null }, 1800) }
     fun copy(text: String) {
-        (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("OpenFlow", text))
+        (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Vaani", text))
         say("Copied")
     }
 
@@ -289,7 +289,7 @@ fun HistoryScreen(s: AppState) {
         if (!s.serviceOn) item {
             Group(Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
                 Column(Modifier.padding(16.dp)) {
-                    T("Turn on the OpenFlow button", 17, FontWeight.SemiBold)
+                    T("Turn on the Vaani button", 17, FontWeight.SemiBold)
                     T("It shows a small button next to any text box. Android asks you to allow it once.", 14, c = C.text2, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
                     PillButton("Open accessibility settings", small = true) { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
                 }
@@ -304,7 +304,7 @@ fun HistoryScreen(s: AppState) {
             }
         }
         if (shown.isEmpty()) item {
-            T(if (s.history.isEmpty()) "Nothing yet. Tap into a text box in any app, tap the OpenFlow button and speak."
+            T(if (s.history.isEmpty()) "Nothing yet. Tap into a text box in any app, tap the Vaani button and speak."
               else "No match.", 15, c = C.text2, modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp), line = 22)
         }
         items(shown, key = { it.id }) { e ->
@@ -399,7 +399,7 @@ fun SettingsScreen(s: AppState) {
         item { SectionLabel("Set up") }
         item {
             Group(Modifier.padding(horizontal = 16.dp)) {
-                SettingRow("OpenFlow button", if (s.serviceOn) "On" else "Off", s.serviceOn) {
+                SettingRow("Vaani button", if (s.serviceOn) "On" else "Off", s.serviceOn) {
                     if (!s.serviceOn) PillButton("Turn on", small = true) { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
                 }
                 Sep()
@@ -452,7 +452,7 @@ fun SettingsScreen(s: AppState) {
         item { SectionLabel("Privacy") }
         item {
             Group(Modifier.padding(horizontal = 16.dp)) {
-                T("Speech is recognised on this phone. The only time OpenFlow uses the internet is when you tap Download on a model. " +
+                T("Speech is recognised on this phone. The only time Vaani uses the internet is when you tap Download on a model. " +
                     "The accessibility permission is used to notice a focused text box and to type your words; nothing on your screen is stored or sent.",
                     14, c = C.text2, modifier = Modifier.padding(16.dp), line = 21)
             }

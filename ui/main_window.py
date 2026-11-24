@@ -362,7 +362,7 @@ class MainWindow(QMainWindow):
         self.config = config
         self._model_progress_bars = {}
 
-        self.setWindowTitle("OpenFlow")
+        self.setWindowTitle("Vaani")
         self.setMinimumSize(760, 560)
         self.resize(1000, 720)
         self.setStyleSheet(main_qss())
@@ -431,7 +431,7 @@ class MainWindow(QMainWindow):
         logo = _logo_label(18, bar)
         if logo:
             brand.addWidget(logo)
-        brand.addWidget(_label("OpenFlow", "AppName"))
+        brand.addWidget(_label("Vaani", "AppName"))
         brand.addStretch()
         v.addLayout(brand)
 
@@ -707,7 +707,7 @@ class MainWindow(QMainWindow):
     # -- vocabulary ---------------------------------------------------------
 
     def _create_dictionary_tab(self) -> QWidget:
-        root, body, _ = self._page("Vocabulary", "Add names, acronyms and terms. OpenFlow corrects them as you speak.", scroll=False)
+        root, body, _ = self._page("Vocabulary", "Add names, acronyms and terms. Vaani corrects them as you speak.", scroll=False)
 
         form = Group()
         self.dict_phrase = QLineEdit(self)
@@ -1071,7 +1071,7 @@ class MainWindow(QMainWindow):
         device_choice = self.device_combo.currentData()
         if device_choice == "npu" and not hardware.npu_name():
             QMessageBox.warning(self, "No NPU found",
-                                "This PC has no Intel NPU that OpenFlow can use. It will keep running on the GPU or CPU.")
+                                "This PC has no Intel NPU that Vaani can use. It will keep running on the GPU or CPU.")
         compute_type = "auto" if device_choice == "auto" else ("float16" if device_choice == "cuda" else "int8")
         dev_idx = self.mic_combo.currentData()
         hotkey = self.hotkey_input.hotkey() or "ctrl+shift"
@@ -1193,7 +1193,7 @@ class MainWindow(QMainWindow):
 
         hw_info = hardware.detect()
         gpu_label = hw_info.get("gpu_name") or ("NVIDIA GPU" if hw_info.get("cuda_ok") else "CPU / Local Hardware")
-        g, _ = self._section(body, "Why OpenFlow")
+        g, _ = self._section(body, "Why Vaani")
         for title, detail in [
             ("No usage limits", f"Runs 100% locally on your computer with your {gpu_label}. No monthly minute quotas or tier limits."),
             ("Fully private", "Zero audio or clipboard data is sent over the internet. Everything stays on your local disk."),
@@ -1239,7 +1239,7 @@ class MainWindow(QMainWindow):
 
     def show_up_to_date(self, version: str = ""):
         self.btn_check_update.setEnabled(True)
-        self.update_status_label.setText("OpenFlow is up to date.")
+        self.update_status_label.setText("Vaani is up to date.")
         self.update_status_label.show()
         self.btn_install_update.hide()
 
@@ -1279,7 +1279,7 @@ class MainWindow(QMainWindow):
             head.addWidget(logo, 0, Qt.AlignmentFlag.AlignTop)
         col = QVBoxLayout()
         col.setSpacing(2)
-        name = _label(f"OpenFlow  <span style='font-size:13px; color:rgba(235,235,245,0.6); font-weight:400;'>v{__version__}</span>", "PageTitle")
+        name = _label(f"Vaani  <span style='font-size:13px; color:rgba(235,235,245,0.6); font-weight:400;'>v{__version__}</span>", "PageTitle")
         name.setStyleSheet("font-size: 20px;")
         col.addWidget(name)
         col.addWidget(_label("Private, unlimited voice dictation and speech-to-writing. 100% on-device AI.", "PageSub", wrap=True))
@@ -1293,16 +1293,16 @@ class MainWindow(QMainWindow):
             body, "Developer",
             "Developed by Sachidananda as a private, offline alternative to cloud dictation tools: "
             "dictate into any app with no cloud latency and no subscription.")
-        g.add("GitHub repository", _btn("Open", small=True, slot=link("https://github.com/Sachin1724/OpenFlow")))
-        g.add("Project website", _btn("Open", small=True, slot=link("https://sachin1724.github.io/OpenFlow/")))
+        g.add("GitHub repository", _btn("Open", small=True, slot=link("https://github.com/Sachin1724/Vaani")))
+        g.add("Project website", _btn("Open", small=True, slot=link("https://sachin1724.github.io/Vaani/")))
         g.add("Contact or report an issue", _btn("Email", "primary", True, link(
-            "mailto:fakesachin.19@gmail.com?subject=OpenFlow%20Feedback%20%2F%20Issue%20Report")))
+            "mailto:fakesachin.19@gmail.com?subject=Vaani%20Feedback%20%2F%20Issue%20Report")))
 
         g, _ = self._section(body, "Privacy")
         for title, detail in [
             ("On-device transcription", "Every word is processed locally via Whisper and CTranslate2. No audio leaves your device."),
-            ("No telemetry", "OpenFlow has no cloud tracking, analytics, or external API dependencies."),
-            ("Local database", "Your history and vocabulary live on this PC in %USERPROFILE%\\.openflow\\openflow.db."),
+            ("No telemetry", "Vaani has no cloud tracking, analytics, or external API dependencies."),
+            ("Local database", "Your history and vocabulary live on this PC in %USERPROFILE%\\.vaani\\openflow.db."),
             ("You are in control", "Delete models, purge vocabulary, or clear your history at any time."),
         ]:
             g.add(title, None, detail)

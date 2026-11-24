@@ -6,4 +6,4 @@
     android:canRetrieveWindowContent="true"
     android:description="@string/service_description"
     android:notificationTimeout="100"
-    android:settingsActivity="app.openflow.MainActivity" />
+    android:settingsActivity="app.vaani.MainActivity" />

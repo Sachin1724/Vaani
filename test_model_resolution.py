@@ -1,7 +1,7 @@
 """Self-check: a cached base.en counts as "base", so auto never picks a bigger model to download.
-Run from the repo's parent: python -m openflow.test_model_resolution"""
+Run from the repo's parent: python -m vaani.test_model_resolution"""
 import numpy as np
-from openflow.engine import hardware, model_manager as mm
+from vaani.engine import hardware, model_manager as mm
 
 
 def _voice(n):
@@ -27,7 +27,7 @@ def test_only_base_en_cached():
 def test_slow_preview_turns_itself_off():
     import time
     import numpy as np
-    from openflow.engine import transcriber as tr
+    from vaani.engine import transcriber as tr
 
     class SlowModel:
         calls = 0
@@ -47,7 +47,7 @@ def test_slow_preview_turns_itself_off():
 
 def test_streaming_cuts_at_pauses():
     import numpy as np
-    from openflow.engine import transcriber as tr
+    from vaani.engine import transcriber as tr
     loud, gap = np.full(16000 * 3, 0.1, np.float32), np.zeros(16000, np.float32)
     audio = np.concatenate([loud, gap, loud])  # 3 s speech, 1 s pause, 3 s speech
     cut = tr.find_pause(audio, 0)
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
 
 def test_odia_routes_to_indicconformer():
-    from openflow.engine import transcriber as tr
+    from vaani.engine import transcriber as tr
     assert tr.resolve_model_name("odia", "or") == "odia"
     assert tr.resolve_model_name("odia", "en") == "base"  # other languages keep Whisper
     assert tr.resolve_model_name("small", "or") == "odia"  # Odia speech never goes to Whisper
@@ -88,7 +88,7 @@ def test_hung_gpu_call_falls_back_to_cpu(tmp_path):
     import threading
     import time
     import numpy as np
-    from openflow.engine import transcriber as tr
+    from vaani.engine import transcriber as tr
     hardware.CUDA_HUNG_MARK = tmp_path / "cuda_hung"  # the hang is simulated: never touch the user's real marker
 
     stuck = threading.Event()
@@ -127,7 +127,7 @@ def test_word_lm_picks_the_real_word():
     import os
     import tempfile
     import numpy as np
-    from openflow.engine import indic_asr as ia
+    from vaani.engine import indic_asr as ia
 
     vocab = ["▁କ", "ା", "ମ", "▁ଭ", "ଲ"]  # blank = 5
     words = ["ଭଲ", "କାମ"]
@@ -152,12 +152,12 @@ def test_word_lm_picks_the_real_word():
 
 
 def test_odia_mix_keeps_odia_words():
-    from openflow.engine.odia_mix import to_mixed
+    from vaani.engine.odia_mix import to_mixed
     assert to_mixed("ବିଜନେସ ଫ୍ରେଣ୍ଡଲି ନଥିଲା ଆଉ ମୋର ଫୁଲ ଅଫ ଦ ୱର୍ଲ୍ଡ") == "business friendly ନଥିଲା ଆଉ ମୋର ଫୁଲ of the world"
 
 
 def test_auto_odia_english_routing():
-    from openflow.engine.transcriber import _mostly_english, resolve_model_name
+    from vaani.engine.transcriber import _mostly_english, resolve_model_name
     assert resolve_model_name("small", "or-auto") == "odia"  # Odia model hears every sentence first
     # real Odia-model output after odia_mix, from the measurement in _mostly_english's docstring
     assert _mostly_english("before ବି ସଷ୍ଟାର୍ to does episode as ଏସ୍ a one request please subscribe ଅବ channel")
@@ -167,6 +167,6 @@ def test_auto_odia_english_routing():
 
 
 def test_brand_names_stay_english():
-    from openflow.engine.odia_mix import to_mixed
+    from vaani.engine.odia_mix import to_mixed
     assert to_mixed("ମୁଁ ୟୁଟ୍ୟୁବ ରେ ଦେଖୁଛି") == "ମୁଁ YouTube ରେ ଦେଖୁଛି"
     assert to_mixed("ହ୍ୱାଟସଆପ ରେ ପଠାଅ") == "WhatsApp ରେ ପଠାଅ"

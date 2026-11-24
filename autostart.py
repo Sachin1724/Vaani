@@ -2,16 +2,16 @@ import os
 import sys
 
 _KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
-_NAME = "OpenFlow"
+_NAME = "Vaani"
 
 
 def _command() -> str:
-    if getattr(sys, "frozen", False):  # installed OpenFlow.exe: start quietly into the tray
+    if getattr(sys, "frozen", False):  # installed Vaani.exe: start quietly into the tray
         return f'"{sys.executable}" --background'
     parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     py = sys.executable
     pyw = py[:-4] + "w.exe" if py.lower().endswith("python.exe") else py  # no console window
-    code = f"import sys;sys.path.insert(0,r'{parent}');from openflow.main import main;main()"
+    code = f"import sys;sys.path.insert(0,r'{parent}');from vaani.main import main;main()"
     return f'"{pyw}" -c "{code}"'
 
 
@@ -20,6 +20,10 @@ def set_autostart(enabled: bool):
         return
     import winreg
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _KEY, 0, winreg.KEY_SET_VALUE) as k:
+        try:
+            winreg.DeleteValue(k, "OpenFlow")  # pre-rename entry would start a second copy
+        except FileNotFoundError:
+            pass
         if enabled:
             winreg.SetValueEx(k, _NAME, 0, winreg.REG_SZ, _command())
         else:

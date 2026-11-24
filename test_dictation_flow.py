@@ -1,11 +1,11 @@
-"""Self-check for the hotkey -> record -> write flow: python -m openflow.test_dictation_flow (from the repo's parent)."""
+"""Self-check for the hotkey -> record -> write flow: python -m vaani.test_dictation_flow (from the repo's parent)."""
 import threading
 import time
 from types import SimpleNamespace
 
 import numpy as np
 
-from openflow.main import OpenFlowApp
+from vaani.main import OpenFlowApp
 
 
 class _Recorder:

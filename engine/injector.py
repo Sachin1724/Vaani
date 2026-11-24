@@ -151,7 +151,7 @@ class WindowInjector:
         else:
             success = self._paste_clipboard(text, restore_clipboard=restore_clipboard)
             if not success:
-                print("[OpenFlow Injector] Clipboard paste failed, falling back to direct Unicode typing...")
+                print("[Vaani Injector] Clipboard paste failed, falling back to direct Unicode typing...")
                 self._type_unicode(text)
 
     def _paste_clipboard(self, text: str, restore_clipboard: bool = True) -> bool:

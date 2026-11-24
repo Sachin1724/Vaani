@@ -6,11 +6,11 @@ even with background music, transcribes it in real-time, and displays live subti
 either on a sleek floating overlay window or directly in the terminal.
 
 Usage:
-  python openflow/live_subtitles.py --lang odia            # Live Odia subtitles (IndicCTC, 26x real-time)
-  python openflow/live_subtitles.py --lang odia --translate # Live Odia audio -> English subtitles!
-  python openflow/live_subtitles.py --lang en              # Live English subtitles
-  python openflow/live_subtitles.py --lang hi              # Live Hindi subtitles
-  python openflow/live_subtitles.py --cli                  # Pure terminal streaming mode
+  python vaani/live_subtitles.py --lang odia            # Live Odia subtitles (IndicCTC, 26x real-time)
+  python vaani/live_subtitles.py --lang odia --translate # Live Odia audio -> English subtitles!
+  python vaani/live_subtitles.py --lang en              # Live English subtitles
+  python vaani/live_subtitles.py --lang hi              # Live Hindi subtitles
+  python vaani/live_subtitles.py --cli                  # Pure terminal streaming mode
 """
 
 import os
@@ -170,7 +170,7 @@ def create_subtitle_overlay(q_subtitles, lang="odia", translate=False):
     layout = QVBoxLayout(window)
     layout.setContentsMargins(20, 10, 20, 10)
 
-    label = QLabel("OpenFlow Live Subtitles — Ready")
+    label = QLabel("Vaani Live Subtitles — Ready")
     label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     label.setWordWrap(True)
 
@@ -207,14 +207,14 @@ def create_subtitle_overlay(q_subtitles, lang="odia", translate=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="OpenFlow Live YouTube Subtitles")
+    parser = argparse.ArgumentParser(description="Vaani Live YouTube Subtitles")
     parser.add_argument("--lang", choices=["odia", "hi", "en", "auto"], default="odia")
     parser.add_argument("--translate", action="store_true", help="Translate Odia speech into live English subtitles")
     parser.add_argument("--cli", action="store_true", help="Run in terminal without GUI overlay")
     args = parser.parse_args()
 
     print("=" * 80)
-    print("OPENFLOW LIVE SUBTITLES & AUDIO TRANSCRIBER")
+    print("VAANI LIVE SUBTITLES & AUDIO TRANSCRIBER")
     print(f"Target Language: {args.lang.upper()} {'(Translating to English)' if args.translate else ''}")
     print(f"Mode: {'Terminal CLI' if args.cli else 'Floating Desktop Overlay'}")
     print("Play any YouTube video with background music on your PC.")

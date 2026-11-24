@@ -15,7 +15,7 @@ echo ===========================================================================
 echo.
 
 cd /d "%~dp0.."
-python openflow\gateway\demo_advanced_voice_crm.py
+python vaani\gateway\demo_advanced_voice_crm.py
 
 echo.
 echo ==============================================================================

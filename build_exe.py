@@ -1,7 +1,7 @@
 """
-OpenFlow Build & Distribution Script
+Vaani Build & Distribution Script
 Created by Sachidananda
-Builds the standalone OpenFlow Windows executable and creates a distributable ZIP package.
+Builds the standalone Vaani Windows executable and creates a distributable ZIP package.
 """
 import os
 import sys
@@ -13,12 +13,12 @@ def build():
     root = os.path.abspath(os.path.dirname(__file__))
     os.chdir(root)
     print("=" * 60)
-    print("OpenFlow Windows Standalone Build Pipeline")
+    print("Vaani Windows Standalone Build Pipeline")
     print("Creator: Sachidananda")
     print("=" * 60)
 
     # 1. Run PyInstaller
-    spec_path = os.path.join(root, "OpenFlow.spec")
+    spec_path = os.path.join(root, "Vaani.spec")
     cmd = [sys.executable, "-m", "PyInstaller", "--noconfirm", spec_path]
     print(f"\n[1/3] Running PyInstaller: {' '.join(cmd)}\n")
     res = subprocess.run(cmd)
@@ -26,21 +26,21 @@ def build():
         print("\n[ERROR] PyInstaller build failed!")
         sys.exit(res.returncode)
 
-    dist_dir = os.path.join(root, "dist", "OpenFlow")
-    exe_path = os.path.join(dist_dir, "OpenFlow.exe")
+    dist_dir = os.path.join(root, "dist", "Vaani")
+    exe_path = os.path.join(dist_dir, "Vaani.exe")
     if not os.path.exists(exe_path):
         print(f"\n[ERROR] Output binary {exe_path} not found!")
         sys.exit(1)
 
     print(f"\n[2/3] Built executable verified: {exe_path}")
 
-    # Copy convenient launcher batch into dist/OpenFlow
-    bat_content = "@echo off\r\nstart \"\" \"%~dp0OpenFlow.exe\"\r\n"
-    with open(os.path.join(dist_dir, "Launch-OpenFlow.bat"), "w", encoding="utf-8") as f:
+    # Copy convenient launcher batch into dist/Vaani
+    bat_content = "@echo off\r\nstart \"\" \"%~dp0Vaani.exe\"\r\n"
+    with open(os.path.join(dist_dir, "Launch-Vaani.bat"), "w", encoding="utf-8") as f:
         f.write(bat_content)
 
     # 2. Package into portable ZIP
-    zip_name = "OpenFlow-v1.0-Windows-x64.zip"
+    zip_name = "Vaani-v1.0-Windows-x64.zip"
     zip_dest = os.path.join(root, "dist", zip_name)
     print(f"\n[3/3] Creating distribution ZIP: {zip_dest} ...")
 

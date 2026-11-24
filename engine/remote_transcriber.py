@@ -168,6 +168,6 @@ class RemoteTranscriber:
         try:
             return self._call("transcribe", (audio, language, initial_prompt), limit)
         except TimeoutError:
-            print("[OpenFlow] Engine stopped responding; restarting it")
+            print("[Vaani] Engine stopped responding; restarting it")
             self._kill()
             raise

@@ -1,4 +1,4 @@
-"""Builds dist/OpenFlow/OpenFlow.exe. Run from anywhere: python openflow/packaging/build.py"""
+"""Builds dist/Vaani/Vaani.exe. Run from anywhere: python vaani/packaging/build.py"""
 import os
 import sys
 import shutil
@@ -10,11 +10,11 @@ import PyInstaller.__main__ as pyi
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # .../openflow
 PARENT = os.path.dirname(ROOT)                                        # folder containing the package
 
-# Ensure openflow is importable as lowercase openflow even when folder is capitalized (e.g. CI runner OpenFlow)
+# Ensure openflow is importable as lowercase openflow even when folder is capitalized (e.g. CI runner Vaani)
 if sys.platform == "win32":
     try:
         import subprocess
-        parent_openflow = os.path.join(PARENT, "openflow")
+        parent_openflow = os.path.join(PARENT, "vaani")
         if not os.path.exists(parent_openflow) and ROOT != parent_openflow:
             subprocess.run(["cmd", "/c", "mklink", "/J", parent_openflow, ROOT], check=False)
     except Exception:
@@ -38,15 +38,15 @@ for d in [os.path.join(ROOT, "dist"), os.path.join(ROOT, "build")]:
 pyi.run([
     os.path.join(ROOT, "packaging", "entry.py"),
     "--noconfirm", "--clean", "--windowed",
-    "--name", "OpenFlow",
-    "--icon", os.path.join(ROOT, "packaging", "OpenFlow.ico"),
+    "--name", "Vaani",
+    "--icon", os.path.join(ROOT, "packaging", "Vaani.ico"),
     "--paths", ROOT,
     "--paths", PARENT,
     "--distpath", os.path.join(ROOT, "dist"),
     "--workpath", os.path.join(ROOT, "build"),
     "--specpath", os.path.join(ROOT, "build"),
     "--add-data", os.path.join(ROOT, "assets") + os.pathsep + "assets",
-    "--collect-all", "openflow",
+    "--collect-all", "vaani",
     "--collect-all", "faster_whisper",
     "--collect-all", "ctranslate2",
     "--collect-all", "sounddevice",
@@ -62,7 +62,9 @@ pyi.run([
     # the dev machine has large unrelated ML packages installed; keep them out of the exe
     *[a for m in ("torch", "torchaudio", "torchvision", "tensorflow", "transformers", "sklearn", "scipy",
                   "pandas", "matplotlib", "IPython", "notebook", "jupyter", "sentence_transformers",
-                  "speechbrain", "librosa", "cv2", "PIL", "tkinter", "pytest", "polars", "pyarrow", "datasets", "numba", "sympy", "llama_cpp")
+                  "speechbrain", "librosa", "cv2", "PIL", "tkinter", "pytest", "polars", "pyarrow", "datasets", "numba", "sympy", "llama_cpp",
+                  # the Jupyter stack: unused, and PyInstaller crashes importing its jsonschema
+                  "jsonschema", "traitlets", "nbformat", "jupyter_core", "jupyter_client", "chromadb")
       for a in ("--exclude-module", m)],
     "--hidden-import", "pynput.keyboard._win32",
     "--hidden-import", "pynput.mouse._win32",

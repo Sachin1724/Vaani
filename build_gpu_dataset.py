@@ -52,7 +52,7 @@ for u, a in conversational_dialogues:
     })
 
 # Add existing mira_train samples if present
-mira_train_path = "openflow/data/mira_train.jsonl"
+mira_train_path = "vaani/data/mira_train.jsonl"
 if os.path.exists(mira_train_path):
     with open(mira_train_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -63,7 +63,7 @@ if os.path.exists(mira_train_path):
                 except Exception:
                     pass
 
-out_path = "openflow/data/conversational_odia_gpu.jsonl"
+out_path = "vaani/data/conversational_odia_gpu.jsonl"
 with open(out_path, "w", encoding="utf-8") as f:
     for s in all_samples:
         f.write(json.dumps(s, ensure_ascii=False) + "\n")

@@ -67,11 +67,11 @@ def app_for(process: str, titles: List[str]) -> Optional[str]:
 
 _MIC_KEY = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone"
 # Our own process holds the mic for dictation and meeting capture; never mistake it for a call.
-_SELF = {"python.exe", "pythonw.exe", "py.exe", "openflow.exe", os.path.basename(sys.executable).lower()}
+_SELF = {"python.exe", "pythonw.exe", "py.exe", "vaani.exe", "vaani.exe", "openflow.exe", os.path.basename(sys.executable).lower()}
 
 
 def _is_self(exe: str) -> bool:
-    return exe in _SELF or "openflow" in exe or "antigravity" in exe
+    return exe in _SELF or "vaani" in exe or "antigravity" in exe
 
 
 def _mic_process_names() -> set:
@@ -143,7 +143,7 @@ def active_meeting_app() -> Optional[str]:
             if app:
                 return app
     except Exception as e:
-        print(f"[OpenFlow Meeting] Detection error: {e}")
+        print(f"[Vaani Meeting] Detection error: {e}")
     return None
 
 
@@ -219,17 +219,20 @@ class _Segmenter:
 
 _SPEAKER_MODEL_URL = ("https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/"
                       "3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx")
-_SPEAKER_MODEL = Path.home() / ".openflow" / "models" / "speaker-eres2net.onnx"
+_SPEAKER_MODEL = Path.home() / ".vaani" / "models" / "speaker-eres2net.onnx"
 
 
 class _Speakers:
     """Labels call voices Person 1, Person 2... by comparing voice fingerprints."""
 
     MATCH = 0.55  # ERes2Net cosine threshold for distinct speaker clusters
+    # 1.5 s windows score lower than whole clips; a clip is cut only after three windows (3 s) of a voice
+    # this far from the 3 s before it. ponytail: calibration knob, tune on real calls if turns still merge or split.
+    SPLIT = 0.45
 
     def __init__(self):
         self._extractor = None
-        self._centroids: List[np.ndarray] = []
+        self._sums: List[np.ndarray] = []  # sum of every clip's embedding per speaker: no drift to the latest clip
         self._last = "Person 1"
         try:
             import sherpa_onnx
@@ -241,24 +244,52 @@ class _Speakers:
             self._extractor = sherpa_onnx.SpeakerEmbeddingExtractor(
                 sherpa_onnx.SpeakerEmbeddingExtractorConfig(model=str(_SPEAKER_MODEL), num_threads=2))
         except Exception as e:
-            print(f"[OpenFlow Meeting] Speaker labels unavailable ({e}); call audio will be one speaker")
+            print(f"[Vaani Meeting] Speaker labels unavailable ({e}); call audio will be one speaker")
 
-    def label(self, audio: np.ndarray) -> str:
-        if self._extractor is None or len(audio) < SR:  # under a second is too little to fingerprint
-            return self._last
+    def _embed(self, audio: np.ndarray) -> np.ndarray:
         stream = self._extractor.create_stream()
         stream.accept_waveform(SR, audio)
         stream.input_finished()
         emb = np.array(self._extractor.compute(stream), dtype=np.float32)
-        emb /= np.linalg.norm(emb) + 1e-9
-        scores = [float(c @ emb) for c in self._centroids]
+        return emb / (np.linalg.norm(emb) + 1e-9)
+
+    def split(self, audio: np.ndarray, at: int = 0) -> List[Tuple[int, np.ndarray]]:
+        """(sample offset, piece) per voice. Back-to-back turns with no pause between them reach us as
+        one clip; labelled whole, the second person's words went under the first person's name."""
+        win, hop = int(1.5 * SR), int(0.75 * SR)
+        if self._extractor is None or len(audio) < 2 * win:
+            return [(at, audio)]
+        starts = range(0, len(audio) - win + 1, hop)
+        rms = [float(np.sqrt(np.mean(audio[i:i + win] ** 2))) for i in starts]
+        floor = 0.3 * float(np.median(rms))  # a pause or trailing silence fingerprints as "someone else"
+        embs = [self._embed(audio[i:i + win]) if r >= floor else None for i, r in zip(starts, rms)]
+        voiced = [k for k, e in enumerate(embs) if e is not None]
+        if len(voiced) < 6:  # 3 s of one voice, then 3 s of another: shorter turns cost more in false cuts
+            return [(at, audio)]
+        ref = sum(embs[k] for k in voiced[:3])
+        for i, k in enumerate(voiced[3:-2], start=3):
+            r = ref / np.linalg.norm(ref)
+            if all(r @ embs[j] < self.SPLIT for j in voiced[i:i + 3]):
+                # window k is the new voice, k-1 was not: cut at the quietest 0.1 s around k's start,
+                # where people take a breath between turns
+                lo, hi = max(SR // 2, (k - 1) * hop), min(len(audio) - SR // 2, (k + 1) * hop)
+                frames = audio[lo:lo + max(0, hi - lo) // 1600 * 1600].reshape(-1, 1600)
+                cut = lo + int(np.argmin((frames ** 2).mean(axis=1))) * 1600 + 800 if len(frames) else k * hop
+                return [(at, audio[:cut])] + self.split(audio[cut:], at + cut)
+            ref = ref + embs[k]
+        return [(at, audio)]
+
+    def label(self, audio: np.ndarray) -> str:
+        if self._extractor is None or len(audio) < SR:  # under a second is too little to fingerprint
+            return self._last
+        emb = self._embed(audio)
+        scores = [float(s @ emb) / float(np.linalg.norm(s)) for s in self._sums]
         if scores and max(scores) >= self.MATCH:
             i = int(np.argmax(scores))
-            c = self._centroids[i] + emb
-            self._centroids[i] = c / np.linalg.norm(c)
+            self._sums[i] = self._sums[i] + emb
         else:
-            self._centroids.append(emb)
-            i = len(self._centroids) - 1
+            self._sums.append(emb)
+            i = len(self._sums) - 1
         self._last = f"Person {i + 1}"
         return self._last
 
@@ -340,7 +371,7 @@ class MeetingSession:
         try:
             self._open_call_audio()
         except Exception as e:
-            print(f"[OpenFlow Meeting] Call audio unavailable ({e}); recording mic only")
+            print(f"[Vaani Meeting] Call audio unavailable ({e}); recording mic only")
 
     def transcribe_file(self, path: str) -> List[Tuple[float, str, str]]:
         """An audio or video file (podcast, recording): same utterance cuts and speaker labels as a call."""
@@ -379,24 +410,28 @@ class MeetingSession:
             if item is None:
                 return
             src, audio, t0 = item
-            try:
-                # Prime Whisper with anti-Urdu / Indic biasing prompt so Hindi/Odia speech is never misclassified
-                text = self.transcriber.transcribe(
-                    audio,
-                    language=self.language,
-                    initial_prompt=INDIC_MEETING_PROMPT
-                )[0].strip()
-            except Exception as e:
-                print(f"[OpenFlow Meeting] Transcription failed: {e}")
-                continue
-            if not text:
-                continue
-            who = "You" if src == "mic" else speakers.label(audio)
-            self.lines.append((t0 - self.started, who, text))
-            try:
-                self.on_line(who, text)
-            except Exception:
-                pass
+            for start, piece in (speakers.split(audio) if src == "call" else [(0, audio)]):
+                self._caption(src, piece, t0 + start / SR, speakers)
+
+    def _caption(self, src: str, audio: np.ndarray, t0: float, speakers: "_Speakers"):
+        try:
+            # Prime Whisper with anti-Urdu / Indic biasing prompt so Hindi/Odia speech is never misclassified
+            text = self.transcriber.transcribe(
+                audio,
+                language=self.language,
+                initial_prompt=INDIC_MEETING_PROMPT
+            )[0].strip()
+        except Exception as e:
+            print(f"[Vaani Meeting] Transcription failed: {e}")
+            return
+        if not text:
+            return
+        who = "You" if src == "mic" else speakers.label(audio)
+        self.lines.append((t0 - self.started, who, text))
+        try:
+            self.on_line(who, text)
+        except Exception:
+            pass
 
     def stop(self) -> List[Tuple[float, str, str]]:
         """Stops recording, finishes transcribing what is queued, returns (seconds, speaker, text) lines."""
@@ -414,6 +449,8 @@ class MeetingSession:
         self._q.put(None)
         if self._worker:
             self._worker.join()
+        # mic and call clips finish out of order (a 15 s call clip lands after a later mic one): sort by start
+        self.lines.sort(key=lambda line: line[0])
         return self.lines
 
 
@@ -492,7 +529,7 @@ def format_meeting_notes(transcript: str, app_name: str = "Meeting", llm=None) -
         try:
             notes = llm.chat("You write concise, accurate meeting notes.", prompt, max_tokens=700)
         except Exception as e:
-            print(f"[OpenFlow] Local notes model failed ({e})")
+            print(f"[Vaani] Local notes model failed ({e})")
     notes = notes or _ollama(prompt)
     if not notes or "## Action Items" not in notes:
         # Keyword rules when no local LLM; clean offline and instant

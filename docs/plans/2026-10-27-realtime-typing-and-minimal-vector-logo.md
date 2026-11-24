@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Fix the real-time typing review in the Capsule and direct text typing/injection into target applications, while replacing raster assets with a cohesive, Apple-grade minimalist vector brand identity across OpenFlow.
+**Goal:** Fix the real-time typing review in the Capsule and direct text typing/injection into target applications, while replacing raster assets with a cohesive, Apple-grade minimalist vector brand identity across Vaani.
 
 **Architecture:**
 1. **Audio VAD & Streaming Pipeline (`engine/audio_recorder.py`, `main.py`)**: Calibrate `_speech_energy_threshold` from an unreachable 0.04 RMS down to an adaptive 0.008 RMS so normal speech reliably triggers `_has_spoken`, enabling real-time streaming chunks (`on_stream_chunk`) and pause-based auto-writing (`on_auto_silence`). Decouple real-time CTranslate2 partial inference from the PortAudio callback to a non-blocking background queue.
@@ -262,7 +262,7 @@ Run: `python -m pytest scratch/` or run the consolidated checkout test suite.
 
 **Step 3: Rebuild final Windows setup executable**
 Run: `python packaging/make_installer.py --rebuild`
-Verify: `dist/OpenFlow-Setup.exe` builds cleanly and runs without errors.
+Verify: `dist/Vaani-Setup.exe` builds cleanly and runs without errors.
 
 **Step 4: Commit**
 ```bash

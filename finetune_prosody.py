@@ -81,9 +81,9 @@ def _resolve_path(p: str | Path) -> Path:
     p = Path(p)
     if p.exists():
         return p
-    if (Path("openflow") / p).exists():
-        return Path("openflow") / p
-    if p.parts and p.parts[0] == "openflow":
+    if (Path("vaani") / p).exists():
+        return Path("vaani") / p
+    if p.parts and p.parts[0] == "vaani":
         stripped = Path(*p.parts[1:])
         if stripped.exists():
             return stripped

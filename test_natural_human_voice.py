@@ -12,7 +12,7 @@ from transformers import VitsModel, VitsTokenizer
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
-SCRIPT_DIR = Path(r"c:\Users\sachi\Music\rea\openflow")
+SCRIPT_DIR = Path(r"c:\Users\sachi\Music\rea\vaani")
 sys.path.insert(0, str(SCRIPT_DIR))
 from engine.phonetic_translit import prepare_text_for_tts
 
@@ -146,6 +146,6 @@ for i, comp in enumerate(comparisons):
     print(f"   Saved: {out_path.name} ({dur:.2f}s)")
 
 print("\n" + "="*70)
-print("SUCCESS: Human voice prototypes generated in openflow/data/voice_comparison/")
+print("SUCCESS: Human voice prototypes generated in vaani/data/voice_comparison/")
 print("="*70)
 

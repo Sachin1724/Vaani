@@ -182,8 +182,11 @@ def sanitize_cache_symlinks(model_dir: Path):
                             target = os.readlink(str(item))
                             abs_target = os.path.normpath(os.path.join(str(snap), target))
                             if os.path.isfile(abs_target):
-                                os.remove(str(item))
-                                shutil.copyfile(abs_target, str(item))
+                                # copy aside then swap in: UI and engine processes both run this at boot, and a
+                                # remove-then-copy interrupted midway left a 0-byte model.bin (re-download forever)
+                                tmp = f"{item}.{os.getpid()}.tmp"
+                                shutil.copyfile(abs_target, tmp)
+                                os.replace(tmp, str(item))
                     except OSError:
                         pass
     except Exception:
@@ -364,7 +367,7 @@ def delete_model(name: str) -> bool:
                 shutil.rmtree(str(model_dir), onerror=_remove_readonly)
                 ok = ok and not model_dir.exists()
         except Exception as e:
-            print(f"[OpenFlow] Failed to delete model {v}: {e}")
+            print(f"[Vaani] Failed to delete model {v}: {e}")
             ok = False
     return ok
 

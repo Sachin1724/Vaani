@@ -1,12 +1,12 @@
-; Inno Setup 6 Script for OpenFlow
-; Produces dist/OpenFlow-Setup.exe
-; Installs per-user to {localappdata}\OpenFlow (no admin UAC elevation required)
+; Inno Setup 6 Script for Vaani
+; Produces dist/Vaani-Setup.exe
+; Installs per-user to {localappdata}\Vaani (no admin UAC elevation required)
 
-#define MyAppName "OpenFlow"
+#define MyAppName "Vaani"
 #define MyAppVersion "1.3.3"
-#define MyAppPublisher "OpenFlow"
-#define MyAppURL "https://sachin1724.github.io/OpenFlow/"
-#define MyAppExeName "OpenFlow.exe"
+#define MyAppPublisher "Vaani"
+#define MyAppURL "https://sachin1724.github.io/Vaani/"
+#define MyAppExeName "Vaani.exe"
 
 [Setup]
 AppId={{D1A3F5B8-7E92-4C61-B9D4-4328E0B5B721}
@@ -15,21 +15,21 @@ AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} v{#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
-AppSupportURL=https://github.com/Sachin1724/OpenFlow/issues
-AppUpdatesURL=https://github.com/Sachin1724/OpenFlow/releases
+AppSupportURL=https://github.com/Sachin1724/Vaani/issues
+AppUpdatesURL=https://github.com/Sachin1724/Vaani/releases
 DefaultDirName={localappdata}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=..\dist
-OutputBaseFilename=OpenFlow-Setup
-SetupIconFile=OpenFlow.ico
+OutputBaseFilename=Vaani-Setup
+SetupIconFile=Vaani.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=commandline
 CloseApplications=force
-CloseApplicationsFilter=*OpenFlow*,*pythonw*
+CloseApplicationsFilter=*Vaani*,*pythonw*
 RestartApplications=no
 DisableDirPage=auto
 DisableProgramGroupPage=auto
@@ -43,7 +43,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "..\dist\OpenFlow\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs restartreplace
+Source: "..\dist\Vaani\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs restartreplace
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
@@ -53,6 +53,9 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDi
 [InstallDelete]
 ; autostart is the app's own setting (Run key); an old Startup shortcut launched it twice at boot
 Type: files; Name: "{userstartup}\{#MyAppName}.lnk"
+; the binary from before the rename to Vaani
+Type: files; Name: "{app}\OpenFlow.exe"
+
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent runasoriginaluser; WorkingDir: "{app}"
@@ -67,8 +70,8 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
 begin
-  // Forcibly terminate any running OpenFlow instances so executables and DLLs are never locked
-  Exec('cmd.exe', '/c taskkill /f /im OpenFlow.exe >nul 2>&1', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Forcibly terminate any running Vaani instances so executables and DLLs are never locked
+  Exec('cmd.exe', '/c taskkill /f /im Vaani.exe /im OpenFlow.exe >nul 2>&1', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(300);
   Result := '';
 end;
@@ -79,7 +82,7 @@ var
 begin
   if CurUninstallStep = usUninstall then
   begin
-    Exec('cmd.exe', '/c taskkill /f /im OpenFlow.exe >nul 2>&1', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('cmd.exe', '/c taskkill /f /im Vaani.exe /im OpenFlow.exe >nul 2>&1', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Sleep(250);
   end;
 end;

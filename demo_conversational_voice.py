@@ -15,9 +15,9 @@ import time
 # Ensure UTF-8 output on Windows PowerShell
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-from openflow.engine.conversational_voice_agent import OdiaConversationalVoiceAgent
-from openflow.engine.semantic_turn_taking import SemanticTurnTaker
-from openflow.engine.conversational_cues import get_cue_manager
+from vaani.engine.conversational_voice_agent import OdiaConversationalVoiceAgent
+from vaani.engine.semantic_turn_taking import SemanticTurnTaker
+from vaani.engine.conversational_cues import get_cue_manager
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
     turn_taker = SemanticTurnTaker()
 
     print("=" * 80)
-    print("🎙️  OPENFLOW MIRA: ODIA HUMAN CONVERSATIONAL VOICE DEMONSTRATION")
+    print("🎙️  VAANI MIRA: ODIA HUMAN CONVERSATIONAL VOICE DEMONSTRATION")
     print("=" * 80)
     print(f"📦 Pre-Cached Conversational Cues: {cue_mgr.list_available_cues()}")
     print("-" * 80)

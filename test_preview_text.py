@@ -1,4 +1,4 @@
-from openflow.engine.preview_text import merge_preview
+from vaani.engine.preview_text import merge_preview
 
 
 def test_sliding_windows_grow_one_line():

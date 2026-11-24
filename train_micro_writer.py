@@ -1,7 +1,7 @@
 """
 train_micro_writer.py — Fine-tune MIRA (Multilingual Intelligent Refinement Agent)
 ==================================================================================
-MIRA is OpenFlow's ultra-lightweight, high-speed offline dictation writer:
+MIRA is Vaani's ultra-lightweight, high-speed offline dictation writer:
 - Model Base: Qwen2.5-0.5B-Instruct or SmolLM2-360M
 - Quantization: CTranslate2 int8 (~250 MB disk, ~300 MB RAM)
 - Latency: ~50ms - 120ms on everyday CPUs (instant on hotkey release)
@@ -20,7 +20,7 @@ import argparse
 import random
 
 MIRA_SYSTEM_PROMPT = (
-    "You are MIRA (Multilingual Intelligent Refinement Agent), OpenFlow's ultra-fast offline dictation engine. "
+    "You are MIRA (Multilingual Intelligent Refinement Agent), Vaani's ultra-fast offline dictation engine. "
     "Your job is to transform raw spoken audio transcripts into pristine, publication-grade written text. "
     "Fix misheard homophones, add natural punctuation, remove stutters and vocal ticks, "
     "and preserve technical identifiers, code, and Indian terms (Hindi/Odia/English) exactly as intended. "
@@ -253,8 +253,8 @@ def main():
     parser = argparse.ArgumentParser(description="MIRA Micro-Writer Fine-Tuning Pipeline")
     parser.add_argument("--action", choices=["gen_data", "train", "export"], default="gen_data")
     parser.add_argument("--base_model", default="Qwen/Qwen2.5-0.5B-Instruct")
-    parser.add_argument("--data_path", default="openflow/data/mira_train.jsonl")
-    parser.add_argument("--out_dir", default="openflow/models/mira")
+    parser.add_argument("--data_path", default="vaani/data/mira_train.jsonl")
+    parser.add_argument("--out_dir", default="vaani/models/mira")
     args = parser.parse_args()
 
     print("=" * 80)

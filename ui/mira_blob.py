@@ -1,5 +1,5 @@
 """
-mira_blob.py — Reactive Living "Blobatar" Indicator for OpenFlow Capsule & Island
+mira_blob.py — Reactive Living "Blobatar" Indicator for Vaani Capsule & Island
 ==================================================================================
 Replaces the mechanical recording dot with an organic, listening Blobatar:
 1. Multi-stop Gaussian diffuse aura ("gaslan") that melts seamlessly into the dark glass capsule

@@ -9,13 +9,13 @@ from PyQt6.QtTest import QTest
 from PyQt6.QtCore import QRect
 
 app = QApplication([])
-import openflow.ui.main_window as mw
+import vaani.ui.main_window as mw
 mw.save_config = lambda *_: None                      # drives real controls: never write the user's config
-from openflow.ui.main_window import MainWindow
-from openflow.ui.island import IslandPill
-from openflow.database import Database
-from openflow.config import load_config
-from openflow.engine.meeting import transcript_text, format_meeting_notes
+from vaani.ui.main_window import MainWindow
+from vaani.ui.island import IslandPill
+from vaani.database import Database
+from vaani.config import load_config
+from vaani.engine.meeting import transcript_text, format_meeting_notes
 
 OUT = os.path.join("docs", "img")
 db = Database(":memory:")
@@ -30,7 +30,7 @@ SAMPLES = [
 now = datetime.datetime.now()
 for i, (app_name, win, text, words, lat) in enumerate(SAMPLES):
     db.add_history_entry(text, text, app_name, win, words / 3.1, words, "smart_clean", "small", "cpu", int(lat * 1000))
-for phrase, rep in (("open flow", "OpenFlow"), ("odia", "Odia"), ("kubernetes", "Kubernetes")):
+for phrase, rep in (("open flow", "Vaani"), ("odia", "Odia"), ("kubernetes", "Kubernetes")):
     db.add_dictionary_entry(phrase, rep)
 lines = [(4, "You", "Thanks everyone for joining, let us start with the release."), (11, "Them", "The installer is ready and the new dashboard is in."),
          (19, "Them", "We decided to ship on Friday."), (27, "Them", "Rahul will follow up with design by tomorrow."),

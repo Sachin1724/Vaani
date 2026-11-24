@@ -1,7 +1,7 @@
-# OpenFlow & MIRA: Continuous Engineering Progress Report
+# Vaani & MIRA: Continuous Engineering Progress Report
 
 > **Document Version**: 2.29.0  
-> **Repository**: [`Sachin1724/OpenFlow`](https://github.com/Sachin1724/OpenFlow)  
+> **Repository**: [`Sachin1724/Vaani`](https://github.com/Sachin1724/Vaani)  
 > **Status**: Active & Maintained Live  
 > **Last Updated**: 2026-11-13T00:00:00+05:30  
 
@@ -9,11 +9,11 @@
 
 ## 1. Executive Summary
 
-This document tracks every user prompt, architectural upgrade, code change, and empirical benchmark for the **OpenFlow** offline voice dictation system and its **MIRA** (*Multilingual Intelligent Refinement Agent*) offline micro-writer.
+This document tracks every user prompt, architectural upgrade, code change, and empirical benchmark for the **Vaani** offline voice dictation system and its **MIRA** (*Multilingual Intelligent Refinement Agent*) offline micro-writer.
 
 ```
                               ┌──────────────────────────────────┐
-                              │     OpenFlow Unified Engine      │
+                              │     Vaani Unified Engine      │
                               └──────────────────────────────────┘
                                                 │
                  ┌──────────────────────────────┴──────────────────────────────┐
@@ -48,7 +48,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
   - Added grammatical protection for standalone nouns (`id`, `ill`, `lets`).
   - Required hesitation commas before self-correction substitution.
   - Set default active model to `small` (244M) on CPU int8.
-- **Git Commit**: [`8d63bdd`](https://github.com/Sachin1724/OpenFlow/commit/8d63bdd)
+- **Git Commit**: [`8d63bdd`](https://github.com/Sachin1724/Vaani/commit/8d63bdd)
 
 ---
 
@@ -68,10 +68,10 @@ This document tracks every user prompt, architectural upgrade, code change, and 
 - **User Request**: `https://youtu.be/s07oNhx0O5o?si=tntYPMmAGL1z8Pv- odai podcst` (Antara Chakraborty EP-185)
 - **Upgrades Implemented**:
   - Downloaded 1-hour Odia audio stream (`odia_podcast.m4a`).
-  - Compared Whisper Small vs OpenFlow Native AI4Bharat `IndicCTC` (`sachinmallick/openflow-odia-asr-int8`).
+  - Compared Whisper Small vs Vaani Native AI4Bharat `IndicCTC` (`sachinmallick/openflow-odia-asr-int8`).
 - **Empirical Results**:
   - **Whisper Small**: 56.96s latency, detected Bengali (`bn`), completely collapsed into Tibetan character loop (`ༀༀༀༀༀ`).
-  - **OpenFlow IndicCTC**: **1.194s latency (25.1x real-time)**, accurately captured guest name **ଅନ୍ତରା** (Antara) and Sambalpuri songs.
+  - **Vaani IndicCTC**: **1.194s latency (25.1x real-time)**, accurately captured guest name **ଅନ୍ତରା** (Antara) and Sambalpuri songs.
   - **IndicTrans2 (`odia-en`)**: Translated Odia to English offline in real-time.
 
 ---
@@ -81,7 +81,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
 - **Architecture Dissected**:
   - Showed that Wispr Flow's accuracy is 90% driven by a two-stage pipeline: **ASR Draft + Fast Contextual LLM Post-Refiner**.
   - Cleaned remaining fallback prompts in [`transcriber.py`](file:///c:/Users/sachi/Music/rea/openflow/engine/transcriber.py) to prevent any residual hallucination.
-- **Git Commit**: [`bf56eab`](https://github.com/Sachin1724/OpenFlow/commit/bf56eab)
+- **Git Commit**: [`bf56eab`](https://github.com/Sachin1724/Vaani/commit/bf56eab)
 
 ---
 
@@ -99,7 +99,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
   - Registered **MIRA** (**M**ultilingual **I**ntelligent **R**efinement **A**gent) across [`local_llm.py`](file:///c:/Users/sachi/Music/rea/openflow/engine/local_llm.py) and [`model_manager.py`](file:///c:/Users/sachi/Music/rea/openflow/engine/model_manager.py).
   - Built [`train_micro_writer.py`](file:///c:/Users/sachi/Music/rea/openflow/train_micro_writer.py) with synthetic dictation training generator.
   - Built [`harvest_podcasts.py`](file:///c:/Users/sachi/Music/rea/openflow/harvest_podcasts.py) for automated audio/subtitle extraction.
-- **Git Commit**: [`7e9e8ac`](https://github.com/Sachin1724/OpenFlow/commit/7e9e8ac)
+- **Git Commit**: [`7e9e8ac`](https://github.com/Sachin1724/Vaani/commit/7e9e8ac)
 
 ---
 
@@ -112,7 +112,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
      - Code-Mixed with English loanwords: **0.935s (26.7x real-time)**
      - Sambalpuri / Western Odia: **0.997s (25.1x real-time)**
      - Rapid dialogue with background music: **0.987s (25.3x real-time)**
-- **Git Commit**: [`15312b2`](https://github.com/Sachin1724/OpenFlow/commit/15312b2)
+- **Git Commit**: [`15312b2`](https://github.com/Sachin1724/Vaani/commit/15312b2)
 
 ---
 
@@ -122,7 +122,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
   1. Extracted and validated the proprietary `OdiaTTS_Data` archive to [`openflow/data/OdiaTTS_Data`](file:///c:/Users/sachi/Music/rea/openflow/data/OdiaTTS_Data):
      - **324 metadata rows** across 19 districts of Odisha.
      - **172 live audio recordings** decoded via high-speed FFmpeg pipe (Opus/WebM inside `.wav`).
-  2. Created [`bench_real_dialects.py`](file:///c:/Users/sachi/Music/rea/openflow/bench_real_dialects.py) to benchmark OpenFlow IndicCTC across all 6 regional dialects.
+  2. Created [`bench_real_dialects.py`](file:///c:/Users/sachi/Music/rea/openflow/bench_real_dialects.py) to benchmark Vaani IndicCTC across all 6 regional dialects.
 - **Empirical Dialect Benchmark Results**:
 
 | Dialect | District | Speaker | Duration | Latency | Speed | Ground Truth | Spoken Utterance | ASR Predicted Output |
@@ -142,7 +142,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
   1. Built [`engine/dialect_detector.py`](file:///c:/Users/sachi/Music/rea/openflow/engine/dialect_detector.py): Real-time classifier operating in **0.025ms** (<1ms) on CPU.
   2. Achieved **100.0% accuracy** across 17 test sentences covering all 6 Odia dialects and 30 districts.
   3. Harvested 566 authentic Odia dialect pairs from `OdiaTTS_Data` and `dialect-engine` and generated `mira_train.jsonl` (2,000 training examples).
-- **Git Commit**: [`c46d75a`](https://github.com/Sachin1724/OpenFlow/commit/c46d75a)
+- **Git Commit**: [`c46d75a`](https://github.com/Sachin1724/Vaani/commit/c46d75a)
 
 ---
 
@@ -152,7 +152,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
   1. Built [`engine/dialect_normalizer.py`](file:///c:/Users/sachi/Music/rea/openflow/engine/dialect_normalizer.py): Ultra-fast deterministic normalizer that maps regional phrases, verbs, and pronouns into Standard written Odia in **0.036ms** with zero RAM overhead.
   2. Integrated into [`main.py`](file:///c:/Users/sachi/Music/rea/openflow/main.py) and [`live_subtitles.py`](file:///c:/Users/sachi/Music/rea/openflow/live_subtitles.py).
   3. Tested complete 4-stage pipeline on authentic audio across 6 districts (**281ms to 449ms total latency**, 10x–18x real-time speed).
-- **Git Commit**: [`35c5f7b`](https://github.com/Sachin1724/OpenFlow/commit/35c5f7b)
+- **Git Commit**: [`35c5f7b`](https://github.com/Sachin1724/Vaani/commit/35c5f7b)
 
 ---
 
@@ -177,7 +177,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
 - **Upgrades Implemented**:
   1. Universal morphological suffix rules (`-ସି`, `-ମୁ`, `-ସନ୍`, `ୁଚି`/`ଉଚି` $\rightarrow$ `ୁଛି`/`ଉଛି`, `ୁଜି`/`ଉଜି` $\rightarrow$ `ୁଛି`/`ଉଛି`, noun article `-ଡା` stripped).
   2. Automatic Odia Danda (`।`) and Question Mark (`?`) restoration in **0.046ms**.
-- **Git Commit**: [`d94eaf8`](https://github.com/Sachin1724/OpenFlow/commit/d94eaf8)
+- **Git Commit**: [`d94eaf8`](https://github.com/Sachin1724/Vaani/commit/d94eaf8)
 
 ---
 
@@ -187,7 +187,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
   1. **Discovered & Harvested Real Odia Podcast**: Downloaded 60 seconds from **Argus Podcast EP-184** (Sangram Sarangi & Ardhendu Maharathy).
   2. **Empirical Conversational Benchmark (3.3x Real-Time Speed)**: IndicCTC + MIRA Normalizer + IndicTrans2 delivered real-time subtitles with 1.52ms normalization latency.
   3. **Executed LoRA Fine-Tuning on RTX 4050**: Trained SmolLM2-135M using PEFT LoRA in 204.6 seconds; loss converged to **0.0772**; exported to 129MB CTranslate2 int8 model (`openflow/models/mira_ct2_int8`).
-- **Git Commit**: [`3e3e82b`](https://github.com/Sachin1724/OpenFlow/commit/3e3e82b)
+- **Git Commit**: [`3e3e82b`](https://github.com/Sachin1724/Vaani/commit/3e3e82b)
 
 ---
 
@@ -197,7 +197,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
   1. OpenAI Whisper fails on Odia (hallucinates Bengali/Tibetan).
   2. Google/Azure are paid, cloud-only ($0.024/min), and fail on regional dialects.
   3. AI4Bharat / IISc are raw academic weights without desktop apps or dialect normalizers.
-  4. OpenFlow + MIRA is the only 100% offline, privacy-first system with 44x real-time Odia ASR and 0.046ms dialect normalization.
+  4. Vaani + MIRA is the only 100% offline, privacy-first system with 44x real-time Odia ASR and 0.046ms dialect normalization.
 
 ---
 
@@ -223,7 +223,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
      - **Anugulia**: *"ତୁଇ ଆସେ ଆମେ ଏକାଢି ଯିବା"* $\rightarrow$ *"ତୁ ଆସ ଆମେ ଏକାଠି ଯିବା ।"* (0.06ms) $\rightarrow$ *"You come, let's go together."*
      - **Baleswari**: *"ବେ ବସ୍ ଷ୍ଟାଣ୍ଡ ଟା ପଟ କି"* $\rightarrow$ *"ବସ୍ ଷ୍ଟାଣ୍ଡ କେଉଁ ଦିଗରେ ।"* (0.06ms) $\rightarrow$ *"In which direction is the bus stand."*
   4. Overall Results: **100% dialect identification accuracy, sub-millisecond normalization (<0.1ms), total turnaround 78ms–250ms with offline English translation**.
-- **Git Commits**: [`c8fcd4c`](https://github.com/Sachin1724/OpenFlow/commit/c8fcd4c), [`ea8c8f2`](https://github.com/Sachin1724/OpenFlow/commit/ea8c8f2)
+- **Git Commits**: [`c8fcd4c`](https://github.com/Sachin1724/Vaani/commit/c8fcd4c), [`ea8c8f2`](https://github.com/Sachin1724/Vaani/commit/ea8c8f2)
 
 ---
 
@@ -253,7 +253,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
      - Built desktop preview runner in [`openflow/preview_mira_blob.py`](file:///c:/Users/sachi/Music/rea/openflow/preview_mira_blob.py).
   4. **Generated High-Definition Visual Snapshot**:
      - Composite sample sheet rendered and saved to [`mira_blobatar_sample.png`](file:///C:/Users/sachi/.gemini/antigravity/brain/0969472c-21dd-457d-9281-a7e0b1c15f1b/mira_blobatar_sample.png) demonstrating the Floating Capsule, Top Dynamic Island, and 96px macro anatomy inspection.
-- **Git Commit**: [`9a549c7`](https://github.com/Sachin1724/OpenFlow/commit/9a549c7)
+- **Git Commit**: [`9a549c7`](https://github.com/Sachin1724/Vaani/commit/9a549c7)
 
 ---
 
@@ -312,7 +312,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
      - Raw Input: `ନମସ୍କାର ମୁଁ ମିୀରା ଆପଣଙ୍କ ଗୋଡ଼ିଆ ଭୟସ ଆସିଷ୍ଟାଣ୍ଟ ତ`
      - MIRA Normalized: `ନମସ୍କାର ମୁଁ ମୀରା ଆପଣଙ୍କ ଓଡ଼ିଆ ଭଏସ ଆସିଷ୍ଟାଣ୍ଟ ତ ।` (⏱️ 0.277ms)
      - English Translation: `"Hello, I am Meera, your Odia voice assistant."` (⏱️ 130.6ms, 100% resolved!).
-- **Git Commit**: [`2678834`](https://github.com/Sachin1724/OpenFlow/commit/2678834)
+- **Git Commit**: [`2678834`](https://github.com/Sachin1724/Vaani/commit/2678834)
 
 ---
 
@@ -348,7 +348,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
      - **Kathbath**: 111+ hours of validated Odia multi-speaker speech.
      - **IndicVoices-R & Vistaar**: Thousands of hours of regional Indian language speech.
      - **Mozilla Common Voice (Odia `or`)**: Community-verified voice clips for fine-tuning.
-  4. **The 4-Pillar Roadmap for OpenFlow**:
+  4. **The 4-Pillar Roadmap for Vaani**:
      - **Pillar 1: Audio Stem Separation**: Clean raw YouTube podcasts with Demucs/UVR-5 to strip background BGM and noise.
      - **Pillar 2: Forced Alignment**: Use WhisperX / CTC-segmentation to auto-slice hours of podcast interviews into 3-10s aligned training pairs.
      - **Pillar 3: Zero-Shot Voice Cloning**: Integrate `ai4bharat/IndicF5` / `dhee-indic-f5` so any Odia podcast voice can speak immediately.
@@ -415,7 +415,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
        - **RL Policy Adaptation**: Base pause tolerance automatically adapted to **565.0ms**; incomplete clause patience increased to **1410.0ms**!
      - **Day 3 Praise Event**: User says *"ହଁ ଠିକ୍ ଅଛି ବହୁତ ବଢ଼ିଆ"*. Reward: $+2.5$! Cumulative Reward: $+1.7$.
      - **Personalized Lexicon Absorbed**: *"ଜିବୁ"* $\rightarrow$ *"ଯିବୁ"*, *"କେନ୍ତା"* $\rightarrow$ *"କିପରି"*.
-     - **Persistence**: Saved 100% offline in `~/.openflow/mira_rl_profile.json`. Restored seamlessly across restarts.
+     - **Persistence**: Saved 100% offline in `~/.vaani/mira_rl_profile.json`. Restored seamlessly across restarts.
 
 
 ---
@@ -481,7 +481,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
        - **Formants ($F_1, F_2, F_3$)**: Acoustic resonance cavities in the pharynx, oral cavity, and nasal tract creating individual timbre.
        - **Spectral Envelope**: Energy distribution across 80-channel Mel filterbanks.
 - **Architectural Implementation**:
-  - Model: `ERes2Net` 3D-Speaker ONNX (`~/.openflow/models/speaker-eres2net.onnx`).
+  - Model: `ERes2Net` 3D-Speaker ONNX (`~/.vaani/models/speaker-eres2net.onnx`).
   - Converts every 3–4 second audio chunk into a 192-dimensional unit vector $\mathbf{e} \in \mathbb{R}^{192}$.
   - Cosine distance metric: $\text{sim}(\mathbf{e}_A, \mathbf{e}_B) = \frac{\mathbf{e}_A \cdot \mathbf{e}_B}{\|\mathbf{e}_A\| \|\mathbf{e}_B\|}$.
   - Agglomerative Hierarchical Clustering automatically groups chunks into **Speaker 1 (Host)** vs **Speaker 2 (Guest)**.
@@ -561,7 +561,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
     4. **Sub-millisecond Lexicon Normalizer**: Corrects colloquial spellings and trims clause boundaries in $<0.05$ms.
     5. **Meta MMS Odia Neural TTS Voice**: Synthesizes 16kHz audio waveform using VITS acoustic synthesis.
     6. **Speaker Playback**: Speaks the generated Odia sentence out loud directly to the user's speakers (Realtek Audio Device 7).
-    7. **On-Device RL Adaptation**: Dynamically updates the user's conversational profile (`~/.openflow/mira_rl_profile.json`).
+    7. **On-Device RL Adaptation**: Dynamically updates the user's conversational profile (`~/.vaani/mira_rl_profile.json`).
 - **One-Click Launchers Created**:
   - [`START_MIRA_LIVE_VOICE.bat`](file:///c:/Users/sachi/Music/rea/START_MIRA_LIVE_VOICE.bat) (Root directory)
   - [`START_MIRA_LIVE_VOICE.bat`](file:///c:/Users/sachi/Music/rea/openflow/START_MIRA_LIVE_VOICE.bat) (`openflow` directory)
@@ -657,7 +657,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
        - **Preloaded Female Voice Profile**: Smita Mohanty's authentic female media voice ([`female_voice_reference.wav`](file:///c:/Users/sachi/Music/rea/openflow/models/female_voice_reference.wav)).
        - **Live Mic Clone Mode**: Users can record 5 seconds of their own voice from the microphone to clone their own speaking style!
        - **External Audio Loader**: Accepts any `.wav` or `.mp3` reference clip from the internet or disk.
-       - **Acoustic Similarity Analysis**: Computes 192-dimensional ERes2Net embeddings (`~/.openflow/models/speaker-eres2net.onnx`).
+       - **Acoustic Similarity Analysis**: Computes 192-dimensional ERes2Net embeddings (`~/.vaani/models/speaker-eres2net.onnx`).
        - **Expressive Phonetic Synthesis**: Translates English loanwords and inserts natural breathing pauses.
   3. **1-Click Launchers Created**:
      - [`LAUNCH_VOICE_STUDIO_CLONER.bat`](file:///c:/Users/sachi/Music/rea/LAUNCH_VOICE_STUDIO_CLONER.bat) (Root directory)
@@ -739,12 +739,12 @@ This document tracks every user prompt, architectural upgrade, code change, and 
 
 ---
 
-### Prompt 39: Comprehensive Reverse Engineering Analysis of `https://sachin1724.github.io/OpenFlow/`
-- **User Request**: `/reverse-engineer-anything https://sachin1724.github.io/OpenFlow/`
+### Prompt 39: Comprehensive Reverse Engineering Analysis of `https://sachin1724.github.io/Vaani/`
+- **User Request**: `/reverse-engineer-anything https://sachin1724.github.io/Vaani/`
 - **Scope & Methodology**:
-  - Full-stack architectural, forensic, and behavioral reverse-engineering of the live deployed web property `https://sachin1724.github.io/OpenFlow/` and its backing build source located at [`openflow/docs/`](file:///c:/Users/sachi/Music/rea/openflow/docs/).
+  - Full-stack architectural, forensic, and behavioral reverse-engineering of the live deployed web property `https://sachin1724.github.io/Vaani/` and its backing build source located at [`openflow/docs/`](file:///c:/Users/sachi/Music/rea/openflow/docs/).
   - Deconstructed static single-page architecture (`index.html` [271 KB], `research.html` [182 KB], `beta.html` [12.7 KB], `changelog.html` [45.1 KB], `llms.txt`, `llms-full.txt`, `sitemap.xml`, `robots.txt`).
-  - Correlated deployed frontend assets against local Windows binary distributions ([`openflow/dist/OpenFlow-Setup.exe`](file:///c:/Users/sachi/Music/rea/openflow/dist/OpenFlow-Setup.exe)), Android packages ([`openflow/android/`](file:///c:/Users/sachi/Music/rea/openflow/android/)), and ML model registries (`openflow-odia-asr-int8`, `SmolLM2-135M`).
+  - Correlated deployed frontend assets against local Windows binary distributions ([`openflow/dist/Vaani-Setup.exe`](file:///c:/Users/sachi/Music/rea/openflow/dist/Vaani-Setup.exe)), Android packages ([`openflow/android/`](file:///c:/Users/sachi/Music/rea/openflow/android/)), and ML model registries (`openflow-odia-asr-int8`, `SmolLM2-135M`).
 - **Core Forensic Findings & Architectural Deconstruction**:
   1. **Zero-Telemetry, Data-Island Architecture**:
      - The landing site and research documentation execute **0 external fetch/XHR calls** and load **zero tracking/telemetry scripts** (no Google Analytics, no Meta Pixel, no Segment).
@@ -767,7 +767,7 @@ This document tracks every user prompt, architectural upgrade, code change, and 
      - Comprehensive `llms.txt` (3.7 KB) and `llms-full.txt` (7.4 KB) tailored for autonomous LLM crawlers (`GPTBot`, `ClaudeBot`, `PerplexityBot`, `Applebot`).
      - Search-engine permissive `robots.txt` and XML sitemap (`sitemap.xml`).
   7. **Binary & Hardware Distribution Correlation**:
-     - Correlated download links with local PyInstaller + Inno Setup build artifacts: [`openflow/dist/OpenFlow-Setup.exe`](file:///c:/Users/sachi/Music/rea/openflow/dist/OpenFlow-Setup.exe) (159 MB) and Kotlin/Jetpack Compose Android app ([`openflow/android/`](file:///c:/Users/sachi/Music/rea/openflow/android/)).
+     - Correlated download links with local PyInstaller + Inno Setup build artifacts: [`openflow/dist/Vaani-Setup.exe`](file:///c:/Users/sachi/Music/rea/openflow/dist/Vaani-Setup.exe) (159 MB) and Kotlin/Jetpack Compose Android app ([`openflow/android/`](file:///c:/Users/sachi/Music/rea/openflow/android/)).
      - Identified version synchronization discrepancies: `llms.txt` referenced older `v1.3.0` while `index.html` references `releases/latest` (v1.3.2) and `changelog.html` documents `1.3.3`.
 
 ---
@@ -963,8 +963,8 @@ ightarrow$ MIRA instantly yields speech floor in <100ms via `semantic_turn_takin
 - **Root Cause of "Sentence per Sentence" Staccato Effect**:
   - In [`openflow/engine/studio_voice.py`](file:///c:/Users/sachi/Music/rea/openflow/engine/studio_voice.py), the previous implementation chopped text at *every comma* (`re.split(r'([।!?,\n]+)', clean_text)`) and inserted blocks of dead digital silence (`np.zeros(int(0.12 * sr))`).
   - This destroyed natural prosodic continuity: the neural model reset its pitch (F0), duration predictor, and vocoder phase on every 2–3 word clause, causing sentences to sound disjointed rather than flowing naturally.
-- **Sufficiency Audit & Industry Benchmark (OpenFlow vs. ElevenLabs)**:
-  1. **Acoustic Quality**: OpenFlow utilizes `indic-tiny-tts-odia` (Matcha Flow-Matching + Vocos Vocoder) trained on native Odia voice artists in the AI4Bharat Rasa acoustic booth. 24,000 Hz studio audio with **12.3% presence energy** (up to 12 kHz) and 100% correct Unicode matra pronunciation. (ElevenLabs struggles with native Odia matras and loanword phonetics).
+- **Sufficiency Audit & Industry Benchmark (Vaani vs. ElevenLabs)**:
+  1. **Acoustic Quality**: Vaani utilizes `indic-tiny-tts-odia` (Matcha Flow-Matching + Vocos Vocoder) trained on native Odia voice artists in the AI4Bharat Rasa acoustic booth. 24,000 Hz studio audio with **12.3% presence energy** (up to 12 kHz) and 100% correct Unicode matra pronunciation. (ElevenLabs struggles with native Odia matras and loanword phonetics).
   2. **Generation Speed / Real-Time Factor (RTF)**:
      - On NVIDIA GeForce RTX 4050 GPU: A full 36-word paragraph (16.6s of audio) generates in **1,102ms** ($\text{RTF} = 0.09$, **11x–18x faster than real time**).
      - TTFB for streaming sentence chunks is **<100ms** (significantly faster than ElevenLabs' 250ms–500ms cloud network round-trip).
@@ -1278,7 +1278,7 @@ ightarrow$ MIRA instantly yields speech floor in <100ms via `semantic_turn_takin
 
 ---
 
-### Prompt 55: OpenFlow Capsule UI — Flat Blobatar Indicator, Live Dialect Badging & Refining State
+### Prompt 55: Vaani Capsule UI — Flat Blobatar Indicator, Live Dialect Badging & Refining State
 
 - **User Prompt**:
   - *"we had developer mira in first for the open flow section where it will smartly correct in realtime... give me preview how it will look like in the open flow bars"*
@@ -1361,3 +1361,59 @@ ightarrow$ MIRA instantly yields speech floor in <100ms via `semantic_turn_takin
   - Voice ordering CRM Phase 2 start: `gateway/order_state_machine.py`, `gateway/live_voice_crm_server.py`, `gateway/entity_clarification.py`, `gateway/demo_advanced_voice_crm.py`, launchers `START_MIRA_LIVE_CRM.bat`, `RUN_ADVANCED_VOICE_CRM_DEMO.bat`.
   - Engine additions: `acoustic_lid_router.py`, `barge_in_session.py`, `blind_source_separation.py`, `emotion_mirror.py`, `podcast_humanizer.py`, `pronunciation_rl.py`, `studio_voice.py`; `api/speech_server.py` and studio template.
   - Known failing test unchanged: `test_dictation_flow.py::test_hold_writes_and_stuck_worker_times_out` (pre-existing).
+
+
+---
+
+### Prompt 57: Capsule Bug Fixes, Rename to Vaani, Live Voice-Order Call (status report, 2026-11-19)
+- **User Requests (in order)**: fix the capsule downloading a model at every boot and the error after turning off one of two monitors; rename the product from "OpenFlow" to something short and unique; make the voice-order CRM take a real order from a live microphone; make Mira's voice natural; learn from a Fish Audio phone-ordering demo; report how much is done.
+- **Measured numbers are marked (measured). Everything else is a description of what changed or a plan, not a verified result.**
+
+#### A. Capsule bugs (fixed in source, installed build not rebuilt)
+| Bug | Cause | Fix | Verified |
+| :--- | :--- | :--- | :--- |
+| Small model downloads on every boot | `sanitize_cache_symlinks` did remove-then-copy; the UI and the engine child both ran it at boot and an interrupted copy left a 0-byte `model.bin`, which looked like "not downloaded" | Copy to a temp file, then `os.replace`; the broken `model.bin` was restored from the intact blob | Parses; the user's cache repaired; not seen across a real reboot |
+| Error after one monitor is turned off | `_check_screen_follow` called `.name()` on a deleted `QScreen` (`crash.log`: "wrapped C/C++ object of type QScreen has been deleted", every 380 ms) | Catch `RuntimeError`, clear the stale screen, move to the live one | Parses; not reproduced with a real monitor |
+
+#### B. Rename OpenFlow -> Vaani
+- **Done**: visible brand text in about 95 files; exe, installer, spec, icon and CI names (`Vaani.exe`, `Vaani-Setup.exe`, `Vaani.spec`); GitHub repo renamed to `Sachin1724/Vaani` and `origin` updated (old URLs redirect); links and Pages URLs updated; npm package `vaani`; Python package imports `openflow.*` -> `vaani.*`; Android package `app.openflow` -> `app.vaani`; folder renamed `rea/openflow` -> `rea/vaani`; installer deletes the old `OpenFlow.exe` and keeps the same AppId.
+- **Not done / left on purpose**: Hugging Face ids (`sachinmallick/openflow-odia-asr-int8`, cannot be renamed from here); the demo API key and model id strings (`openflow-live-key-2026`, `openflow-mira-v2`); `openflow.db` / `openflow.log` file names; old `file:///` links in this report and `docs/plans`.
+- **Not working yet**: the `~/.openflow` -> `~/.vaani` data-folder move has not happened because the old OpenFlow app is still running and locks the folder. Close it, then start the new build once.
+- **Not built**: the installer. `python -m vaani.packaging.make_installer` failed (exit 2): a PyInstaller hook crashed while importing `jsonschema` (access violation, exit code 3221225477). Not investigated further, so there is no `Vaani-Setup.exe` and no release has been published.
+- Tests (measured): 12 passed (`vaani/tests`, run from `rea/`).
+
+#### C. Live voice-order call (Mira): what exists and how well it works
+- **Flow**: ordering -> read-back -> name (+ spelling choice) -> address -> address confirm -> OTP -> placed with a delivery time; edits are accepted at every question; "scratch that" / "never mind" undo the last change; a "one moment" line precedes the placed message.
+- **Live pipeline**: server-side microphone (adaptive noise trigger, mic picker, optional headphone barge-in) -> IndicConformer Odia ASR -> order logic -> studio voice, streamed sentence by sentence with generation ids so stale replies are dropped; model warm-up at start; quick acknowledgement if the reply is slow; dashboard shows stage, name (+ English spelling), kitchen ticket, demo SMS OTP.
+- **Bugs found and fixed along the way**: replies always the generic fallback line (wrong dict key); reset endpoint crashed; cp1252 console crash on Odia/emoji logs; frozen `alert()` on ticket dispatch; digits glued to Odia letters never spoken as numbers; "ଭେଜ୍ ବିରିୟାନୀ ଅଛି" (a question) added an item; "ଦିଟା" not read as 2; "make everything two" added instead of setting; "no, that's fine" gave "didn't understand" plus the full menu; a name said again at the yes/no step looped; hard-coded "ଆଚ୍ଛା" at the start of every reply.
+- **Real-speech test set (measured)**: 20 clips recorded by the user (`tests/fixtures/live`), scored with `tests/fixtures/eval_live_set.py`: **19 of 19** scored clips understood (clip 20 is the overlap clip, not scored). History: 17/19 at first run; one failure was an unrecognised "ଏତିକୁ" spelling (fixed); the other was my own wrong test line ("burger" where the user said "biryani"), not a recognizer error.
+- **Latency (measured on the live mic, a handful of turns)**: caller stopped -> first reply audio queued **781-1,062 ms**. The earlier ~1.5-2.2 s is an estimate from the fixed 1.1 s wait plus recognition and rendering, not a measurement. Target in the plan was under 0.8 s typical: close, not met.
+- **Female voice pace (measured)**: real female podcast speakers 14.0 ch/s median (1,276 clips); the booth voice rendered 10.2. 1.35x matched them but the user found it too fast; set to **1.15x (11.8 ch/s)**, CER 0.95%. Speed slider added (0.8-1.3x). Whether the voice sounds natural is a human judgement and has not been confirmed.
+
+#### D. Tested and rejected (do not repeat without new evidence)
+- **Tiny LLM sentence-correction layer** (Qwen2.5-0.5B-Instruct on the RTX 4050, 12 real phrases): **0/12 correct, 1.1-3.2 s per phrase**, invented menu keys. The rule matcher took about 2 ms on the same phrases.
+- **Recognizer hotword bias** for "burger": no effect from bonus 2 to 20; the audio itself scored far better as "biryani" (NLL 1.5 vs 33.7) - the user had said biryani.
+- **Overlap detection**: the existing detector flagged **all 19 single-speaker clips**; a voice-print-change detector gave 0.01-0.79 for single speakers with the overlap clip inside that range. Neither is wired in; one overlap sample is not enough to build one.
+- **Real human "ହଁ/ଆଚ୍ଛା" clips as acknowledgements**: no clip under 2 s exists in any dataset, so the acknowledgements stay synthesized.
+- **Retraining the voice's rhythm** was not repeated: an earlier attempt measured 6x worse CER.
+
+#### E. Plan status (`docs/plans/2026-11-19-live-call-quality-plan.md`)
+| Phase | Scope | Status |
+| :--- | :--- | :--- |
+| 0 | 20-utterance real test set | **Done** (recorded, scored 19/19) |
+| 1 | Latency: timing log, early end-of-turn, acknowledgement, warm-up | **Built; partly verified** (781-1,062 ms live; early end-of-turn effect not compared before/after) |
+| 4 | Voice naturalness | **Partly done**: speed slider, varied wording; real backchannel clips impossible with current data; naturalness unconfirmed |
+| 5 | Name capture and spelling | **Done** (spelling choice, English-letter spelling on the ticket); only tested on typed text, not live speech |
+| 3 | Language switching (Odia/English/Hindi) | **Not started** - blocked on having no English/Hindi voice |
+| 2 | Overlapping speakers | **Investigated, not shipped** (see D); only a "one person at a time" reply after two misses |
+| - | Fish-Speech Odia test | **Not started** - Odia support unconfirmed, weights probably non-commercial; license to be checked first |
+| - | Telephony (Twilio/Exotel), real SMS OTP, kitchen/ETA integration, persistence | **Not started** (out of scope of the plan) |
+
+- **Rough overall**: of the plan's 5 phases, 2 are done or nearly done (0, 5), 2 are partly done (1, 4), 1 is investigated without a result (2) and 1 is not started (3). The demo works end to end by typed text and, for the 20 recorded sentences, by voice; it is **not** a phone system yet: no telephony, no real SMS, single customer, in-memory order only.
+
+#### F. Known risks and open items
+- Garbled speech can still add an item (clip 20, an overlap, was ordered as 1 Chicken Burger via sound matching); the read-back is the safety net.
+- Names are the weakest part: the recognizer drops final vowels ("ସ୍ମିତା" -> "ସ୍ମିତ").
+- Prices and the 30-minute delivery time are demo values.
+- Nothing from this session is committed: about 160 uncommitted entries in `git status` when last checked (mostly the earlier untracked launchers and the rename).
+- `test_dictation_flow.py::test_hold_writes_and_stuck_worker_times_out` was reported failing before this session (Prompt 55); it was not re-run here.

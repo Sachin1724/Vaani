@@ -57,7 +57,7 @@ class _OpenVINOWhisper:
 
     def __init__(self, model_path: str, device: str = "NPU"):
         import openvino_genai
-        cache = Path.home() / ".openflow" / "cache" / "openvino"  # NPU compiles once; later loads are fast
+        cache = Path.home() / ".vaani" / "cache" / "openvino"  # NPU compiles once; later loads are fast
         cache.mkdir(parents=True, exist_ok=True)
         self._pipe = openvino_genai.WhisperPipeline(model_path, device, CACHE_DIR=str(cache))
 
@@ -65,7 +65,7 @@ class _OpenVINOWhisper:
                    vad_filter=False, **_ignored):
         if vad_filter:  # same Silero VAD faster-whisper uses; without it silence comes out as "you"
             from faster_whisper.vad import get_speech_timestamps, VadOptions
-            spans = get_speech_timestamps(audio, VadOptions(min_silence_duration_ms=300, threshold=0.65))
+            spans = get_speech_timestamps(audio, VadOptions(min_silence_duration_ms=500, threshold=0.45))
             if not spans:
                 return [], SimpleNamespace(language=language or "")
             audio = np.concatenate([audio[c["start"]:c["end"]] for c in spans])
@@ -150,7 +150,7 @@ _HUNG_S = 10.0  # a model call holding the lock this long never comes back (seen
 
 
 def _whisper_args(lang: str) -> dict:
-    """Maps an OpenFlow language setting to faster-whisper language/task arguments."""
+    """Maps an Vaani language setting to faster-whisper language/task arguments."""
     if lang == "translate":  # speak any language, get English text
         return {"language": None, "task": "translate"}
     if lang in ("auto", "") or lang in ODIA_LANGS:  # Odia runs via auto-detect + prompt biasing since Whisper has no 'or' token
@@ -256,9 +256,9 @@ class Transcriber:
             elif hasattr(self.model, "transcribe"):
                 # Pre-warm both Whisper AND Silero VAD together
                 list(self.model.transcribe(silence, language="en", vad_filter=True)[0])
-            print(f"[OpenFlow] Model warm-up complete ({self._current_loaded_name or self.device}) — kernels ready.")
+            print(f"[Vaani] Model warm-up complete ({self._current_loaded_name or self.device}) — kernels ready.")
         except Exception as _e:
-            print(f"[OpenFlow] Warm-up skipped ({_e})")
+            print(f"[Vaani] Warm-up skipped ({_e})")
 
     def _load_model_locked(self):
         self._preview_slow = False  # re-judge preview speed for whatever gets loaded
@@ -278,7 +278,7 @@ class Transcriber:
                 wrong_lang = fallback.endswith(".en") and not target_name.endswith(".en")
                 if (wrong_lang or fallback.replace(".en", "") != target_name.replace(".en", "")) and self.on_status:
                     self.on_status(f"{target_name} not downloaded · using {fallback}. Get it in Model Library")
-                print(f"[OpenFlow] {target_name} not cached; using downloaded {fallback}")
+                print(f"[Vaani] {target_name} not cached; using downloaded {fallback}")
                 self._substitute[target_name] = fallback
                 if fallback == self._current_loaded_name and self.model is not None and self._loaded_device == self.device:
                     return
@@ -291,14 +291,14 @@ class Transcriber:
             try:
                 model_path = model_manager.download(target_name, cb)
             except Exception as dl_err:
-                print(f"[OpenFlow] Download {target_name} failed: {dl_err}")
+                print(f"[Vaani] Download {target_name} failed: {dl_err}")
                 if self.on_status:
                     self.on_status(f"Download failed: {dl_err}")
                 # Fallback to an existing local model so app remains functional
                 for fb in ["base", "base.en", "tiny", "tiny.en", "small"]:
                     fb_p = model_manager.cached_path(fb)
                     if fb_p:
-                        print(f"[OpenFlow] Falling back to existing cached model: {fb}")
+                        print(f"[Vaani] Falling back to existing cached model: {fb}")
                         target_name = fb
                         model_path = fb_p
                         break
@@ -316,7 +316,7 @@ class Transcriber:
                 threading.Thread(target=_fetch_odia_lm, args=(self.model,), daemon=True).start()
             self._current_loaded_name = "odia"
             self._loaded_device = self.device
-            print("[OpenFlow] Odia IndicConformer loaded and ready.")
+            print("[Vaani] Odia IndicConformer loaded and ready.")
             if self.on_status:
                 self.on_status("Model odia ready")
             self._warmup_model()
@@ -325,11 +325,11 @@ class Transcriber:
             return
 
         if target_name.endswith("-ov"):
-            print(f"[OpenFlow] Loading {target_name} on the NPU (first run compiles, can take a minute)...")
+            print(f"[Vaani] Loading {target_name} on the NPU (first run compiles, can take a minute)...")
             try:
                 self.model = _OpenVINOWhisper(model_path, "NPU")
             except Exception as e:
-                print(f"[OpenFlow] NPU load failed ({e}), falling back to CPU int8...")
+                print(f"[Vaani] NPU load failed ({e}), falling back to CPU int8...")
                 if self.on_status:
                     self.on_status("NPU unavailable · using CPU")
                 self.device, self.compute_type = "cpu", "int8"
@@ -338,12 +338,12 @@ class Transcriber:
                 return
             self._current_loaded_name = target_name
             self._loaded_device = model_manager.active_device = "npu"
-            print(f"[OpenFlow] Model {target_name} loaded and ready on the NPU.")
+            print(f"[Vaani] Model {target_name} loaded and ready on the NPU.")
             if self.on_status:
                 self.on_status(f"Model {target_name.removesuffix('-ov')} ready (NPU)")
             return
 
-        print(f"[OpenFlow] Loading WhisperModel({target_name}, device={self.device}, compute_type={self.compute_type})...")
+        print(f"[Vaani] Loading WhisperModel({target_name}, device={self.device}, compute_type={self.compute_type})...")
         try:
             self.model = faster_whisper.WhisperModel(
                 model_path,
@@ -353,19 +353,19 @@ class Transcriber:
             )
             self._current_loaded_name = target_name
             self._loaded_device = model_manager.active_device = self.device
-            print(f"[OpenFlow] Model {target_name} loaded and ready on {self.device}.")
+            print(f"[Vaani] Model {target_name} loaded and ready on {self.device}.")
             if self.on_status:
                 self.on_status(f"Model {target_name} ready ({self.device})")
             self._warmup_model()
         except Exception as e:
-            print(f"[OpenFlow] GPU load failed ({e}), falling back to CPU int8...")
+            print(f"[Vaani] GPU load failed ({e}), falling back to CPU int8...")
             self.device = "cpu"
             self.compute_type = "int8"
             try:
                 self.model = faster_whisper.WhisperModel(model_path, device="cpu", compute_type="int8", cpu_threads=_THREADS)
             except Exception as e2:
                 # Interrupted / corrupt weights: clean up and re-download once
-                print(f"[OpenFlow] CPU load failed ({e2}), repairing {target_name}...")
+                print(f"[Vaani] CPU load failed ({e2}), repairing {target_name}...")
                 if self.on_status:
                     self.on_status(f"Repairing {target_name} model")
                 cb = (lambda pct: self.on_progress(pct, target_name)) if self.on_progress else None
@@ -373,7 +373,7 @@ class Transcriber:
                 self.model = faster_whisper.WhisperModel(model_path, device="cpu", compute_type="int8", cpu_threads=_THREADS)
             self._current_loaded_name = target_name
             self._loaded_device = model_manager.active_device = "cpu"
-            print(f"[OpenFlow] CPU Model {target_name} loaded and ready.")
+            print(f"[Vaani] CPU Model {target_name} loaded and ready.")
             if self.on_status:
                 self.on_status(f"Model {target_name} ready (CPU)")
             self._warmup_model()
@@ -392,7 +392,7 @@ class Transcriber:
                 picks += ["small", "base", "medium", "tiny"]
                 name = next((n for n in picks if model_manager.cached_path(n)), None)
                 if name is None:
-                    print("[OpenFlow] Auto Odia/English: no Whisper model downloaded; English is written from the Odia model")
+                    print("[Vaani] Auto Odia/English: no Whisper model downloaded; English is written from the Odia model")
                     if self.on_status:
                         self.on_status("Auto mode: get a Whisper model in Model Library for English")
                     return
@@ -403,9 +403,9 @@ class Transcriber:
                 except Exception:
                     self._en = faster_whisper.WhisperModel(model_manager.cached_path(name), device="cpu",
                                                            compute_type="int8", cpu_threads=_THREADS)
-                print(f"[OpenFlow] Auto Odia/English: {name} ready for English sentences")
+                print(f"[Vaani] Auto Odia/English: {name} ready for English sentences")
             except Exception as e:
-                print(f"[OpenFlow] Auto Odia/English: English model failed to load ({e})")
+                print(f"[Vaani] Auto Odia/English: English model failed to load ({e})")
             finally:
                 self._en_loading = False
 
@@ -440,7 +440,7 @@ class Transcriber:
         )
         self._current_loaded_name = "parakeet"
         self._loaded_device = self.device  # device doesn't apply; keeps the reload check quiet
-        print("[OpenFlow] Parakeet loaded and ready (CPU).")
+        print("[Vaani] Parakeet loaded and ready (CPU).")
         if self.on_status:
             self.on_status("Model parakeet ready (CPU)")
         self._warmup_model()
@@ -475,7 +475,7 @@ class Transcriber:
     def _abandon_hung_model(self) -> threading.RLock:
         """A model call never returned and still holds the lock (a CUDA encode froze mid-preview).
         Leave that call and its model behind and carry on with a fresh model on the CPU."""
-        print(f"[OpenFlow] {self.device.upper()} model stopped responding; continuing on the CPU")
+        print(f"[Vaani] {self.device.upper()} model stopped responding; continuing on the CPU")
         if self.on_status:
             self.on_status("GPU stopped responding · using CPU")
         if self.device == "cuda":
@@ -540,8 +540,10 @@ class Transcriber:
                     from .odia_mix import to_mixed
                     text = to_mixed(text, getattr(self.model, "lm", None))
                 return _drop_loop(text)
-            # Whisper: the last 3.0 seconds (48,000 samples) instead of 8s keeps decode latency down
-            sample = audio[-16000 * 3:]
+            # Whisper: everything not yet committed (the caller cuts at the last committed phrase), up to 6 s.
+            # Decoding only the last 3 s dropped whatever was said between the committed phrases and that
+            # window, so the live text lost words and jumped. Phrases commit at pauses, so this stays short.
+            sample = audio[-16000 * 6:]
             segments, _ = self.model.transcribe(
                 sample,
                 **_whisper_args(self.language),
@@ -557,7 +559,7 @@ class Transcriber:
             took = time.perf_counter() - start
             if took > _PREVIEW_OFF_S:
                 self._preview_slow = True
-                print(f"[OpenFlow] Live preview took {took * 1000:.0f} ms; turning it off so final text isn't delayed")
+                print(f"[Vaani] Live preview took {took * 1000:.0f} ms; turning it off so final text isn't delayed")
             elif took > _PREVIEW_BUDGET_S:
                 self._preview_resume = time.monotonic() + 3 * took
             lock.release()
@@ -626,7 +628,7 @@ class Transcriber:
                 temperature=0.0,  # avoid expensive multi-temperature fallback loops on low-end CPUs
                 **whisper_args,
                 vad_filter=vad,
-                vad_parameters=dict(min_silence_duration_ms=300, threshold=0.65) if vad else None,
+                vad_parameters=dict(min_silence_duration_ms=500, threshold=0.45) if vad else None,
                 condition_on_previous_text=False,
                 repetition_penalty=1.1,  # discourages the phrase loops Whisper falls into on near-silence
                 without_timestamps=True,  # we only join the text; skipping timestamp tokens is ~5% faster
@@ -660,13 +662,13 @@ class Transcriber:
             except ValueError as ve:
                 if "onnxruntime" not in str(ve).lower() and "vad" not in str(ve).lower():
                     raise
-                print(f"[OpenFlow] VAD filter error ({ve}), retrying without VAD filter...")
+                print(f"[Vaani] VAD filter error ({ve}), retrying without VAD filter...")
                 full_text, info = _run(vad=False)
             except RuntimeError as re_err:
                 if self.device not in ("cuda", "npu"):
                     raise
                 # GPU/NPU went away mid-session (switched off, driver reset): finish this one on the CPU.
-                print(f"[OpenFlow] {self.device.upper()} transcription failed ({re_err}), switching to CPU...")
+                print(f"[Vaani] {self.device.upper()} transcription failed ({re_err}), switching to CPU...")
                 self.device, self.compute_type = "cpu", "int8"
                 self._load_model_locked()
                 full_text, info = _run(vad=True)
@@ -674,7 +676,7 @@ class Transcriber:
             # Whisper hallucinates loops ("1, 2, 3, 4, 1, 2, ...") on short clips, often seeded by the
             # prompt. Nobody says more than ~4 words a second: retry without the prompt, else drop it.
             if _too_many_words(full_text, duration_seconds) or _loop_at(full_text) is not None:
-                print(f"[OpenFlow] Discarding hallucination: {full_text[:60]!r}")
+                print(f"[Vaani] Discarding hallucination: {full_text[:60]!r}")
                 if duration_seconds < 1.0:
                     # On short accidental clicks/presses (<1.0s), re-running Whisper stalls the UI for seconds
                     full_text = ""
@@ -693,7 +695,7 @@ class Transcriber:
             )
             if is_urdu_hallucination and (lang in ("auto", "", "en-in", "en", "hi") or lang in ODIA_LANGS):
                 det = getattr(info, "language", "unknown") if info else "unknown"
-                print(f"[OpenFlow] Detected Urdu/Arabic script or misclassified language ('{det}'). Re-transcribing as Indic speech...")
+                print(f"[Vaani] Detected Urdu/Arabic script or misclassified language ('{det}'). Re-transcribing as Indic speech...")
                 whisper_args = _whisper_args("hi" if lang == "hi" else "en")
                 initial_prompt = (
                     "Indian English, Hinglish, Hindi, and Odia speech in Latin/Roman script or Devanagari. "
@@ -741,9 +743,9 @@ def _fetch_odia_lm(model):
         from .indic_asr import WordLM
         path = hf_hub_download(model_manager._repo("odia"), "or/lm.npz")
         model.lm = WordLM(path)
-        print("[OpenFlow] Odia word LM ready: beam search on")
+        print("[Vaani] Odia word LM ready: beam search on")
     except Exception as e:
-        print(f"[OpenFlow] Odia word LM unavailable ({e}); greedy decoding")
+        print(f"[Vaani] Odia word LM unavailable ({e}); greedy decoding")
 
 
 class StreamingSession:
@@ -789,7 +791,7 @@ class StreamingSession:
                 self._texts.append(text)
             self._done += cut
         except Exception as e:
-            print(f"[OpenFlow] Streaming chunk failed ({e}); the final pass will cover it")
+            print(f"[Vaani] Streaming chunk failed ({e}); the final pass will cover it")
         finally:
             self._busy.release()
 

@@ -31,7 +31,7 @@ from engine.phonetic_translit import prepare_text_for_tts
 
 TTS_MODEL_ID = "facebook/mms-tts-ory"
 DEFAULT_FEMALE_REF = SCRIPT_DIR / "models" / "female_voice_reference.wav"
-EMBEDDING_MODEL = Path.home() / ".openflow" / "models" / "speaker-eres2net.onnx"
+EMBEDDING_MODEL = Path.home() / ".vaani" / "models" / "speaker-eres2net.onnx"
 
 class VoiceStudioCloner:
     def __init__(self):

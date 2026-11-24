@@ -30,16 +30,16 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 # Alias alm module for pickle compatibility
-import openflow.alm as _alm_pkg
-import openflow.alm.model as _alm_model_pkg
+import vaani.alm as _alm_pkg
+import vaani.alm.model as _alm_model_pkg
 sys.modules['alm'] = _alm_pkg
 sys.modules['alm.model'] = _alm_model_pkg
 
-from openflow.engine.indic_asr import IndicCTC
-from openflow.engine.dialect_normalizer import get_dialect_normalizer
-from openflow.engine.phonetic_translit import prepare_text_for_tts
-from openflow.engine.studio_voice import StudioVoiceEngine, get_studio_voice
-from openflow.alm.inference import MiraALMEngine
+from vaani.engine.indic_asr import IndicCTC
+from vaani.engine.dialect_normalizer import get_dialect_normalizer
+from vaani.engine.phonetic_translit import prepare_text_for_tts
+from vaani.engine.studio_voice import StudioVoiceEngine, get_studio_voice
+from vaani.alm.inference import MiraALMEngine
 from huggingface_hub import snapshot_download
 
 

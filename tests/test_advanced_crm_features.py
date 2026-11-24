@@ -11,11 +11,11 @@ Covers:
 
 import pytest
 import numpy as np
-from openflow.engine.blind_source_separation import CocktailPartySeparator
-from openflow.gateway.order_state_machine import OrderStateMachine
-from openflow.gateway.entity_clarification import EntityClarificationLoop
-from openflow.engine.acoustic_lid_router import AcousticLIDRouter
-from openflow.engine.emotion_mirror import AcousticEmotionMirror
+from vaani.engine.blind_source_separation import CocktailPartySeparator
+from vaani.gateway.order_state_machine import OrderStateMachine
+from vaani.gateway.entity_clarification import EntityClarificationLoop
+from vaani.engine.acoustic_lid_router import AcousticLIDRouter
+from vaani.engine.emotion_mirror import AcousticEmotionMirror
 
 
 class TestBlindSourceSeparation:

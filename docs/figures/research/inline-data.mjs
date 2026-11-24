@@ -23,10 +23,10 @@ function problems(ml) {
   // engines really differ: since v1.1.8 "Whisper on Odia" through Transcriber returns the Odia engine's text again.
   if (!existsSync(CLIPS)) {
     const clips = ml.odia_clips ?? [];
-    const empty = clips.filter((c) => !c.engines?.["OpenFlow Odia"]?.trim()).length;
-    const same = clips.filter((c) => c.engines?.["Whisper base"] === c.engines?.["OpenFlow Odia"]).length;
-    if (clips.length < 10 || empty > clips.length * 0.2) bad.push(`odia_clips: ${empty} of ${clips.length} OpenFlow Odia transcripts are empty`);
-    if (same > clips.length * 0.5) bad.push(`odia_clips: Whisper and OpenFlow Odia wrote identical text for ${same} of ${clips.length} clips (run docs/figures/research/odia-clips.py)`);
+    const empty = clips.filter((c) => !c.engines?.["Vaani Odia"]?.trim()).length;
+    const same = clips.filter((c) => c.engines?.["Whisper base"] === c.engines?.["Vaani Odia"]).length;
+    if (clips.length < 10 || empty > clips.length * 0.2) bad.push(`odia_clips: ${empty} of ${clips.length} Vaani Odia transcripts are empty`);
+    if (same > clips.length * 0.5) bad.push(`odia_clips: Whisper and Vaani Odia wrote identical text for ${same} of ${clips.length} clips (run docs/figures/research/odia-clips.py)`);
   }
   const s = ml.silence;
   if (!s || s.recordings < 10 || !s.before || !s.after) bad.push("silence: missing");

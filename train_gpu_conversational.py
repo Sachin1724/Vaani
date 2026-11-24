@@ -22,8 +22,8 @@ from peft import LoraConfig, get_peft_model, TaskType
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
 BASE_MODEL_DIR = r"C:\Users\sachi\.cache\huggingface\hub\models--HuggingFaceTB--SmolLM2-135M-Instruct\snapshots\12fd25f77366fa6b3b4b768ec3050bf629380bac"
-DATA_PATH = "openflow/data/conversational_odia_gpu.jsonl"
-OUTPUT_DIR = "openflow/models/mira_conversational_gpu"
+DATA_PATH = "vaani/data/conversational_odia_gpu.jsonl"
+OUTPUT_DIR = "vaani/models/mira_conversational_gpu"
 
 SYSTEM_PROMPT = "You are MIRA, a natural Odia voice assistant. Respond naturally in authentic colloquial Odia with warm emotions, active listening, and proper discourse markers."
 

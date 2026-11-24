@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Fix the female voice acoustic degradation and fumbles, and build an end-to-end, native Voice Enrollment & Zero-Shot Voice Cloning System under the OpenFlow hood allowing users to enroll their voice, input paragraphs, and tune synthesis parameters (temperature, speed, style guidance) in crisp 24kHz studio quality.
+**Goal:** Fix the female voice acoustic degradation and fumbles, and build an end-to-end, native Voice Enrollment & Zero-Shot Voice Cloning System under the Vaani hood allowing users to enroll their voice, input paragraphs, and tune synthesis parameters (temperature, speed, style guidance) in crisp 24kHz studio quality.
 
 **Architecture:** 
 1. **Acoustic Recovery & Phonetic Alignment:** Eliminate intra-word `<blank>` ballooning by implementing context-aware token duration clamping and restoring clean booth speaker embeddings.
@@ -101,7 +101,7 @@ Run: `python -c "from engine.studio_voice import StudioVoiceEngine; sv = StudioV
    - Trims leading/trailing silence using energy-based VAD.
    - Applies peak normalization to -1.0 dBFS.
 3. `extract_speaker_embedding(wav_24k: np.ndarray) -> np.ndarray`:
-   - Uses `C:\Users\sachi\.openflow\models\speaker-eres2net.onnx` via ONNX Runtime.
+   - Uses `C:\Users\sachi\.vaani\models\speaker-eres2net.onnx` via ONNX Runtime.
    - Generates L2-normalized 192-dimensional speaker identity vector.
 4. `compute_latent_adapter_vector(embedding_192: np.ndarray, gender: str) -> np.ndarray`:
    - Projects 192-dim ERes2Net vector into 64-dim `spk_emb` latent space aligned with MultiCondMatcha.

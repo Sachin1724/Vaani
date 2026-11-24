@@ -1,7 +1,7 @@
 """
-bench_real_dialects.py — Benchmark OpenFlow on Real Odia Dialect Audio Recordings
+bench_real_dialects.py — Benchmark Vaani on Real Odia Dialect Audio Recordings
 =================================================================================
-Tests OpenFlow's IndicCTC model on authentic recordings across 6 Odia dialects:
+Tests Vaani's IndicCTC model on authentic recordings across 6 Odia dialects:
 Standard Odia (Puri/Cuttack), Ganjami, Anugulia, Sambalpuri, Baleswari, Kalahandia.
 """
 
@@ -38,7 +38,7 @@ def load_audio_resampled(file_path):
 
 def main():
     print("=" * 90)
-    print("OPENFLOW REAL ODIA REGIONAL DIALECT AUDIO BENCHMARK (19 DISTRICTS)")
+    print("VAANI REAL ODIA REGIONAL DIALECT AUDIO BENCHMARK (19 DISTRICTS)")
     print("=" * 90)
 
     # Load Odia IndicCTC

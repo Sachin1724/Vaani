@@ -1,4 +1,4 @@
-package app.openflow
+package app.vaani
 
 import android.content.Context
 import android.graphics.Canvas
@@ -12,7 +12,7 @@ import kotlin.math.hypot
 /** Lets a view be dragged around the screen; the service moves the window and remembers where it was left. */
 interface Drag { fun move(v: View, dx: Int, dy: Int); fun end(v: View) }
 
-/** The round button shown beside a focused text field: the OpenFlow mark (an O cut across the middle) on black. */
+/** The round button shown beside a focused text field: the Vaani mark (an O cut across the middle) on black. */
 class BubbleView(context: Context, private val drag: Drag, private val onTap: () -> Unit) : View(context) {
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
     private var downX = 0f; private var downY = 0f; private var lastX = 0f; private var lastY = 0f; private var dragging = false
@@ -20,7 +20,7 @@ class BubbleView(context: Context, private val drag: Drag, private val onTap: ()
     private var pressed = false
 
     init {
-        contentDescription = "Dictate with OpenFlow"
+        contentDescription = "Dictate with Vaani"
         isClickable = true
         isHapticFeedbackEnabled = true
     }

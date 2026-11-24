@@ -6,7 +6,7 @@ sentence as the answer key. 'Words changed' must stay near 0 (MIRA fixes form, n
 English dictation: held-out spoken sentences; the ship-blocker is answering in Odia script, or
 dropping/adding content.
 Odia (--odia): FLEURS Odia clips -> IndicConformer -> raw / refine_odia rules / MIRA.
-Run from the repo's parent:  python -m openflow.bench_mira [N] [model_dir] [--odia]
+Run from the repo's parent:  python -m vaani.bench_mira [N] [model_dir] [--odia]
 """
 import csv
 import io
@@ -16,10 +16,10 @@ import urllib.request
 import sys
 import time
 
-from openflow.bench_odia import fleurs_clips, norm, edits
-from openflow.engine.local_llm import LocalLLM, MIRA_SYSTEM
-from openflow.engine.odia_refine import refine_odia
-from openflow.engine.transcriber import Transcriber
+from vaani.bench_odia import fleurs_clips, norm, edits
+from vaani.engine.local_llm import LocalLLM, MIRA_SYSTEM
+from vaani.engine.odia_refine import refine_odia
+from vaani.engine.transcriber import Transcriber
 
 ODIA = re.compile("[଀-୿]")
 ENGLISH = [

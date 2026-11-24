@@ -1,16 +1,16 @@
-# OpenFlow
+# Vaani
 
 > Free, private, zero-limit local AI voice dictation and meeting intelligence for Windows.
 
-OpenFlow is a high-performance Windows desktop application that enables users to dictate text seamlessly into any application (VS Code, Chrome, Slack, Discord, Microsoft Office, Notion, Terminal) with sub-150ms latency. Unlike cloud-based voice dictation services like Wispr Flow, OpenFlow runs 100% locally on the user's hardware via NVIDIA CUDA float16 kernels with CTranslate2 and faster-whisper, with automatic fallback to DirectML and AVX2 CPU execution. Audio and clipboard data never leave the local machine.
+Vaani is a high-performance Windows desktop application that enables users to dictate text seamlessly into any application (VS Code, Chrome, Slack, Discord, Microsoft Office, Notion, Terminal) with sub-150ms latency. Unlike cloud-based voice dictation services like Wispr Flow, Vaani runs 100% locally on the user's hardware via NVIDIA CUDA float16 kernels with CTranslate2 and faster-whisper, with automatic fallback to DirectML and AVX2 CPU execution. Audio and clipboard data never leave the local machine.
 
 ## Key Facts
 - **Creator**: Sachidananda (GitHub: https://github.com/Sachin1724)
 - **Platform**: Windows 10 & Windows 11 (64-bit)
 - **License**: MIT License (Open Source)
-- **Repository**: https://github.com/Sachin1724/OpenFlow
-- **Download**: https://github.com/Sachin1724/OpenFlow/releases/latest/download/OpenFlow-Setup.exe
-- **Website**: https://sachin1724.github.io/OpenFlow/
+- **Repository**: https://github.com/Sachin1724/Vaani
+- **Download**: https://github.com/Sachin1724/Vaani/releases/latest/download/Vaani-Setup.exe
+- **Website**: https://sachin1724.github.io/Vaani/
 - **Cost**: 100% Free, zero subscriptions, zero usage quotas
 - **Privacy**: 100% Offline, no external network transmission of audio
 
@@ -28,21 +28,21 @@ OpenFlow is a high-performance Windows desktop application that enables users to
 - **Audio Capture**: Windows winmm kernel polling + 16kHz PCM stream capture via sounddevice
 - **Input Injection**: Windows low-level keyboard hooks (WH_KEYBOARD_LL) + Win32 SendInput with clipboard restoration
 - **UI Framework**: PyQt6 with custom vector animations and non-activating window flags
-- **Local Storage**: SQLite database (~/.openflow/openflow.db)
+- **Local Storage**: SQLite database (~/.vaani/openflow.db)
 
 ## Links
-- [Full LLM Knowledge Base](https://sachin1724.github.io/OpenFlow/llms-full.txt)
-- [Official Website](https://sachin1724.github.io/OpenFlow/)
-- [GitHub Repository](https://github.com/Sachin1724/OpenFlow)
-- [Releases & Installer](https://github.com/Sachin1724/OpenFlow/releases)
+- [Full LLM Knowledge Base](https://sachin1724.github.io/Vaani/llms-full.txt)
+- [Official Website](https://sachin1724.github.io/Vaani/)
+- [GitHub Repository](https://github.com/Sachin1724/Vaani)
+- [Releases & Installer](https://github.com/Sachin1724/Vaani/releases)
 
 ## Pages
-- **Windows app** (features, models with measured accuracy and speed, tests): https://sachin1724.github.io/OpenFlow/app.html
-- **Android app** (beta APK, offline Odia, English and Hindi voice typing): https://sachin1724.github.io/OpenFlow/android.html
-- **MIRA model card** (Odia engine specs and FLEURS benchmarks): https://sachin1724.github.io/OpenFlow/mira.html
-- **Research** (every benchmark, method and data): https://sachin1724.github.io/OpenFlow/research.html
+- **Windows app** (features, models with measured accuracy and speed, tests): https://sachin1724.github.io/Vaani/app.html
+- **Android app** (beta APK, offline Odia, English and Hindi voice typing): https://sachin1724.github.io/Vaani/android.html
+- **MIRA model card** (Odia engine specs and FLEURS benchmarks): https://sachin1724.github.io/Vaani/mira.html
+- **Research** (every benchmark, method and data): https://sachin1724.github.io/Vaani/research.html
 
 ## Changelog
-- **Every version in plain words** (what is new, better and fixed in each release, 1.0.0 onward): https://sachin1724.github.io/OpenFlow/changelog.html
-- **Measured accuracy, speed and memory** (Odia, English and Hindi speech recognition on open test sets, with the data): https://sachin1724.github.io/OpenFlow/research.html
-- Release feed: https://github.com/Sachin1724/OpenFlow/releases.atom
+- **Every version in plain words** (what is new, better and fixed in each release, 1.0.0 onward): https://sachin1724.github.io/Vaani/changelog.html
+- **Measured accuracy, speed and memory** (Odia, English and Hindi speech recognition on open test sets, with the data): https://sachin1724.github.io/Vaani/research.html
+- Release feed: https://github.com/Sachin1724/Vaani/releases.atom

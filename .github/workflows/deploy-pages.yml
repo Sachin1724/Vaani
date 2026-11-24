@@ -1,4 +1,4 @@
-name: Deploy OpenFlow Docs to GitHub Pages
+name: Deploy Vaani Docs to GitHub Pages
 
 on:
   push:

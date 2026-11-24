@@ -1,7 +1,7 @@
 """
-updater.py — In-App Auto-Updater for OpenFlow
+updater.py — In-App Auto-Updater for Vaani
 =============================================
-Checks GitHub Releases for new OpenFlow versions, displays download progress
+Checks GitHub Releases for new Vaani versions, displays download progress
 in the HUD pill and main window, and handles smooth installation & restart.
 """
 
@@ -19,7 +19,7 @@ from typing import Optional, Callable
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 
 
-DEFAULT_REPO = "Sachin1724/OpenFlow"
+DEFAULT_REPO = "Sachin1724/Vaani"
 
 
 def parse_version(v_str: str) -> tuple:
@@ -39,7 +39,7 @@ def parse_version(v_str: str) -> tuple:
 
 class AppUpdater(QObject):
     """
-    Background auto-updater that checks GitHub Releases for new OpenFlow builds.
+    Background auto-updater that checks GitHub Releases for new Vaani builds.
     Emits signals for UI progress integration with FloatingPill and MainWindow.
     """
     sig_checking = pyqtSignal()
@@ -69,7 +69,7 @@ class AppUpdater(QObject):
             target=self._check_worker,
             args=(notify_if_current,),
             daemon=True,
-            name="OpenFlow-UpdateChecker"
+            name="Vaani-UpdateChecker"
         )
         thread.start()
 
@@ -78,7 +78,7 @@ class AppUpdater(QObject):
         req = urllib.request.Request(
             api_url,
             headers={
-                "User-Agent": f"OpenFlow-Updater/{self.current_version} (Windows)",
+                "User-Agent": f"Vaani-Updater/{self.current_version} (Windows)",
                 "Accept": "application/vnd.github.v3+json",
             }
         )
@@ -157,19 +157,19 @@ class AppUpdater(QObject):
             target=self._download_worker,
             args=(target_url, target_ver),
             daemon=True,
-            name="OpenFlow-UpdateDownloader"
+            name="Vaani-UpdateDownloader"
         )
         thread.start()
 
     def _download_worker(self, url: str, version: str):
-        dest_path = os.path.join(tempfile.gettempdir(), f"OpenFlow-Setup-v{version}.exe")
-        label = f"OpenFlow v{version}"
+        dest_path = os.path.join(tempfile.gettempdir(), f"Vaani-Setup-v{version}.exe")
+        label = f"Vaani v{version}"
 
         try:
             self.sig_progress.emit(0, label)
             req = urllib.request.Request(
                 url,
-                headers={"User-Agent": f"OpenFlow-Updater/{self.current_version} (Windows)"}
+                headers={"User-Agent": f"Vaani-Updater/{self.current_version} (Windows)"}
             )
 
             with urllib.request.urlopen(req, timeout=30) as resp:
@@ -195,7 +195,7 @@ class AppUpdater(QObject):
             self.sig_ready.emit(dest_path)
 
         except Exception as e:
-            print(f"[OpenFlow Updater] Download error: {e}")
+            print(f"[Vaani Updater] Download error: {e}")
             self.sig_error.emit(f"Download failed: {str(e)[:40]}")
         finally:
             self._is_downloading = False
@@ -212,13 +212,13 @@ class AppUpdater(QObject):
 
         try:
             args = [path]
-            # Ensure Inno Setup automatically closes running instances of OpenFlow
+            # Ensure Inno Setup automatically closes running instances of Vaani
             args.extend(["/CLOSEAPPLICATIONS", "/FORCECLOSEAPPLICATIONS"])
             if silent:
                 # Inno Setup flags for smooth silent update
                 args.extend(["/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART"])
 
-            print(f"[OpenFlow Updater] Launching installer: {' '.join(args)}")
+            print(f"[Vaani Updater] Launching installer: {' '.join(args)}")
             subprocess.Popen(args, close_fds=True, shell=False)
 
             # Exit the running application immediately so executable file lock is released
@@ -226,8 +226,8 @@ class AppUpdater(QObject):
             app = QApplication.instance()
             if app:
                 app.quit()
-            # Force immediate exit so Windows kernel releases the OpenFlow.exe lock
+            # Force immediate exit so Windows kernel releases the Vaani.exe lock
             os._exit(0)
         except Exception as e:
-            print(f"[OpenFlow Updater] Install error: {e}")
+            print(f"[Vaani Updater] Install error: {e}")
             self.sig_error.emit(f"Install error: {str(e)[:40]}")

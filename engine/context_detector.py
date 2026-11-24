@@ -150,7 +150,7 @@ def get_active_app_context() -> AppContext:
 
 # Tech and developer terms
 _BASE_VOCAB = (
-    "OpenFlow", "GitHub", "PyTorch", "CUDA", "API", "SQL", "JSON",
+    "Vaani", "GitHub", "PyTorch", "CUDA", "API", "SQL", "JSON",
     "TypeScript", "JavaScript", "Python", "Rust", "React", "Node.js",
     "VS Code", "git", "npm", "pip", "Docker", "Kubernetes",
 )
@@ -193,10 +193,89 @@ _CATEGORY_VOCAB: dict[str, tuple[str, ...]] = {
 }
 
 
+# ─── Text around the cursor (Windows UI Automation) ──────────────────────────
+_UIA_TEXT_PATTERN = 10014
+_UIA_VALUE_PATTERN = 10002
+_UIA_IS_PASSWORD = 30019
+_UIA_IS_TEXT_EDIT_AVAILABLE = 30149
+_UIA_EDIT_CONTROL = 50004
+_TEXT_UNIT_DOCUMENT = 6
+_BEFORE_CHARS = 200
+
+
+def _read_text_before_cursor(full: bool = False) -> str:
+    """Text before the caret; full=True returns the whole field instead (up to 4000 chars)."""
+    import comtypes
+    import comtypes.client
+    comtypes.CoInitializeEx(comtypes.COINIT_MULTITHREADED)
+    try:
+        comtypes.client.GetModule("UIAutomationCore.dll")
+        from comtypes.gen import UIAutomationClient as uia
+        auto = comtypes.client.CreateObject(uia.CUIAutomation, interface=uia.IUIAutomation)
+        el = auto.GetFocusedElement()
+        if not el or el.GetCurrentPropertyValue(_UIA_IS_PASSWORD):
+            return ""  # never read password fields
+        if el.CurrentControlType != _UIA_EDIT_CONTROL and not el.GetCurrentPropertyValue(_UIA_IS_TEXT_EDIT_AVAILABLE):
+            return ""  # focus is on a page or list, not a text box: its text isn't what the user is writing
+        tp = el.GetCurrentPattern(_UIA_TEXT_PATTERN)
+        if tp:
+            tp = tp.QueryInterface(uia.IUIAutomationTextPattern)
+            sel = tp.GetSelection()
+            doc = tp.DocumentRange
+            if full:
+                return doc.GetText(4000)
+            if sel and sel.Length:
+                before = doc.Clone()
+                # end of 'before' = start of the caret/selection
+                before.MoveEndpointByRange(1, sel.GetElement(0), 0)  # End <- other.Start
+                return before.GetText(-1)[-_BEFORE_CHARS:]
+            return doc.GetText(4000)[-_BEFORE_CHARS:]  # no caret info: assume typing at the end
+        vp = el.GetCurrentPattern(_UIA_VALUE_PATTERN)
+        if vp:
+            value = vp.QueryInterface(uia.IUIAutomationValuePattern).CurrentValue or ""
+            return value[:4000] if full else value[-_BEFORE_CHARS:]
+        return ""
+    finally:
+        comtypes.CoUninitialize()
+
+
+def get_text_before_cursor(timeout_s: float = 0.15, full: bool = False) -> str:
+    """Up to 200 characters before the caret in the focused text box, or "" (password fields,
+    no accessibility support, or the app took longer than timeout_s; some apps hang UIA calls)."""
+    if sys.platform != "win32":
+        return ""
+    import threading
+    out: list[str] = []
+
+    def run():
+        try:
+            out.append(_read_text_before_cursor(full))
+        except Exception:
+            pass
+    t = threading.Thread(target=run, daemon=True, name="openflow-uia-context")
+    t.start()
+    t.join(timeout_s)
+    text = out[0] if out else ""
+    return " ".join(text.split())  # one line: newlines and tabs become spaces
+
+
+def _names_in(text: str) -> list[str]:
+    """Proper nouns and identifiers in nearby text (capitalised mid-sentence, camelCase, has digits):
+    the words Whisper most often misspells."""
+    import re
+    out: list[str] = []
+    for m in re.finditer(r"(?<![.!?]\s)(?<!^)\b([A-Z][a-z]+[A-Z]\w*|[a-z]+[A-Z]\w*|[A-Z][a-zA-Z]{2,}|\w*\d\w*[A-Za-z]\w*)\b", text):
+        w = m.group(1)
+        if w not in out:
+            out.append(w)
+    return out[-5:]
+
+
 def build_initial_prompt(
     context: AppContext | None = None,
     custom_vocab: list[str] | None = None,
     language: str = "en",
+    before_text: str = "",
 ) -> str | None:
     """
     Build the Whisper initial_prompt string from context + user vocab.
@@ -277,6 +356,9 @@ def build_initial_prompt(
         dev_hints = ["API", "JSON", "SQL", "Git", "VS Code"]
         vocab += [v for v in dev_hints if v not in vocab]
 
+    if before_text:
+        vocab += [w for w in _names_in(before_text) if w not in vocab]
+
     # Max 150 characters of vocabulary glossary
     vocab_str = ", ".join(vocab[:15])
     if len(vocab_str) > 150:
@@ -284,5 +366,10 @@ def build_initial_prompt(
 
     if vocab_str:
         parts.append(f"Glossary: {vocab_str}.")
+
+    # Whisper reads its prompt as the words spoken just before this audio, so the text already
+    # in the box goes last: it continues the sentence and keeps names spelled the same way.
+    if before_text:
+        parts.append(before_text[-150:])
 
     return " ".join(parts)

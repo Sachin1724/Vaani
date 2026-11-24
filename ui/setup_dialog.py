@@ -33,7 +33,7 @@ class SetupDialog(QDialog):
     def __init__(self, config: dict):
         super().__init__()
         self.config = config
-        self.setWindowTitle("OpenFlow Setup")
+        self.setWindowTitle("Vaani Setup")
         self.setFixedWidth(440)
         self.setStyleSheet(main_qss() + "QDialog { background: #000000; }")
 
@@ -57,7 +57,7 @@ class SetupDialog(QDialog):
 
         header_text = QVBoxLayout()
         header_text.setSpacing(3)
-        title = QLabel("Welcome to OpenFlow", self)
+        title = QLabel("Welcome to Vaani", self)
         title.setStyleSheet("font-size: 22px; font-weight: 500; color: #ffffff;")
         sub = QLabel("Private, local voice dictation on your device.", self)
         sub.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 13px;")
@@ -102,7 +102,7 @@ class SetupDialog(QDialog):
             self.quality.addItem(label, key)
         lay.addWidget(self.quality)
 
-        self.cb_start = Switch("Start OpenFlow when I sign in")
+        self.cb_start = Switch("Start Vaani when I sign in")
         self.cb_start.setChecked(True)
         lay.addWidget(self.cb_start)
 

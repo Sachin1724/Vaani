@@ -1,4 +1,4 @@
-# OpenFlow engine package
+# Vaani engine package
 from .audio_recorder import AudioRecorder, list_microphones
 from .transcriber import Transcriber
 from .formatter import TextFormatter

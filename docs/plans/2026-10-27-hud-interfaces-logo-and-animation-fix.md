@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Elevate all OpenFlow HUD and dialog interfaces to Apple Human Interface Guidelines and UI/UX Pro Max standards by integrating missing brand marks, eliminating emojis, and adding physics-based spring animations and micro-interactions.
+**Goal:** Elevate all Vaani HUD and dialog interfaces to Apple Human Interface Guidelines and UI/UX Pro Max standards by integrating missing brand marks, eliminating emojis, and adding physics-based spring animations and micro-interactions.
 
 **Architecture:** Implement reusable squircle logo rendering, vector iconography, animated hover/state interpolation, Dynamic Island slide-and-spring popups, and smooth VU level metering across `openflow/ui/floating_pill.py`, `openflow/main.py`, `openflow/ui/setup_dialog.py`, and `openflow/ui/main_window.py`.
 
@@ -14,8 +14,8 @@
 
 | Interface Component | Current State | Defect / Limitation | Apple HIG & UI/UX Pro Max Fix |
 |---|---|---|---|
-| **Capsule HUD Header** (`FloatingPill`) | Plain text `QLabel("OpenFlow")` | Missing logo mark entirely; looks like a generic title | Add a 26x26 anti-aliased squircle brand mark with subtle hairline border; add version pill badge `v1.0` |
-| **System Tray Icon** (`main.py`) | Primitive hand-drawn circle & mic rects | Crude, does not use brand identity; looks placeholder | Render official OpenFlow mark with anti-aliased circular mask and subtle translucent outer ring |
+| **Capsule HUD Header** (`FloatingPill`) | Plain text `QLabel("Vaani")` | Missing logo mark entirely; looks like a generic title | Add a 26x26 anti-aliased squircle brand mark with subtle hairline border; add version pill badge `v1.0` |
+| **System Tray Icon** (`main.py`) | Primitive hand-drawn circle & mic rects | Crude, does not use brand identity; looks placeholder | Render official Vaani mark with anti-aliased circular mask and subtle translucent outer ring |
 | **Application Window Icon** (`main.py`, `MainWindow`) | Default Python/Qt icon | Missing taskbar & Alt-Tab brand identity | Set `app.setWindowIcon(QIcon("assets/logo.jpg"))` and window icon on `MainWindow` |
 | **Pseudo-Capsule Mic Banner** (`MicNotificationPill`) | Raw emojis (`🎙️`, `🔄`, `⚠️`) & static opacity fade | Violates UI/UX Pro Max rule against emojis; lacks spatial physics | Replace emojis with crisp vector glyphs; animate both Y-offset and opacity with `OutBack` spring physics (Dynamic Island style) |
 | **Live Audio Input Meter** (`FloatingPill`) | Immediate `.setValue(int(lvl*100))` | Jarring, stuttering, hard-jumping progress bar | Implement 60 FPS physics-based spring-decay smoothing (fast attack 0.60, smooth decay 0.20) |
@@ -50,7 +50,7 @@ Expected: FAIL with `AttributeError: 'FloatingPill' object has no attribute 'hud
 **Step 3: Implement minimal code**
 In `openflow/ui/floating_pill.py`:
 - Create a helper `get_squircle_pixmap(image_path: str, size: int = 26, radius: float = 6.0) -> QPixmap` that clips an image into an anti-aliased rounded rectangle with a subtle `rgba(255, 255, 255, 0.14)` border.
-- In `_build_hud()`, create `self.hud_logo = QLabel(self)` with the 26x26 squircle logo pixmap and insert it into `header_layout` directly before the "OpenFlow" title.
+- In `_build_hud()`, create `self.hud_logo = QLabel(self)` with the 26x26 squircle logo pixmap and insert it into `header_layout` directly before the "Vaani" title.
 - Add an Apple-style subtle status badge (`v1.0 · Ready`) in the header next to the title.
 
 **Step 4: Run test to verify it passes**
@@ -66,7 +66,7 @@ Expected: PASS
 - Test: `scratch/test_checkout.py`
 
 **Step 1: Write the failing test**
-Add a test in `scratch/test_checkout.py` verifying that `create_tray_icon_pixmap()` uses the official OpenFlow brand asset rather than hand-drawn primitive circles.
+Add a test in `scratch/test_checkout.py` verifying that `create_tray_icon_pixmap()` uses the official Vaani brand asset rather than hand-drawn primitive circles.
 
 ```python
 def test_tray_icon_uses_brand_asset():
@@ -268,8 +268,8 @@ Run: `python scratch/test_checkout.py`
 Expected: FAIL
 
 **Step 3: Implement minimal code**
-- In `openflow/ui/setup_dialog.py`, load `logo.jpg` into a 48x48 squircle and place it in the header layout beside "Welcome to OpenFlow".
-- In `openflow/ui/main_window.py` Model Library tab, add the OpenFlow Neural Engine badge in the top header card.
+- In `openflow/ui/setup_dialog.py`, load `logo.jpg` into a 48x48 squircle and place it in the header layout beside "Welcome to Vaani".
+- In `openflow/ui/main_window.py` Model Library tab, add the Vaani Neural Engine badge in the top header card.
 
 **Step 4: Run test to verify it passes**
 Run: `python scratch/test_checkout.py`
@@ -286,7 +286,7 @@ Expected: PASS
 **Steps:**
 1. Run complete automated checkout suite in `scratch/test_checkout.py`.
 2. Verify all UI components, logos, and animations pass without error.
-3. Re-build the final setup executable (`dist/OpenFlow-Setup.exe`).
+3. Re-build the final setup executable (`dist/Vaani-Setup.exe`).
 4. Validate binary size and execution integrity.
 
 ---

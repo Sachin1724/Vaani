@@ -2,7 +2,7 @@
 
 Streams the first N clips of Google FLEURS Odia (dev split, CC-BY-4.0) without downloading the
 whole 230 MB archive, then runs them through the same Transcriber the app uses.
-Run from the repo's parent:  python -m openflow.bench_odia [N] [whisper_model]
+Run from the repo's parent:  python -m vaani.bench_odia [N] [whisper_model]
 """
 import csv
 import io
@@ -14,8 +14,8 @@ import urllib.request
 
 import soundfile  # bench only; the app never reads files
 
-from openflow.engine import model_manager
-from openflow.engine.transcriber import Transcriber
+from vaani.engine import model_manager
+from vaani.engine.transcriber import Transcriber
 
 BASE = "https://huggingface.co/datasets/google/fleurs/resolve/main/data/or_in/"
 

@@ -6,7 +6,7 @@ Type or pass any custom message in Odia or mixed Odia/English:
 2. Native Female Studio Persona (Trained on AI4Bharat Rasa acoustic booth).
 3. Converts English words (cricket, match, help, online, tea) into Odia phonetics.
 4. Human breathing pauses at punctuation (।, ?, !, ,) with pre-speech inhalation.
-5. Plays out loud through the speakers and saves to 'openflow/data/custom_speech.wav'.
+5. Plays out loud through the speakers and saves to 'vaani/data/custom_speech.wav'.
 """
 
 import os

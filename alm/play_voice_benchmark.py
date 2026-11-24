@@ -15,7 +15,7 @@ from pathlib import Path
 import soundfile as sf
 import numpy as np
 
-BENCHMARK_DIR = Path("openflow/scratch/benchmark_results")
+BENCHMARK_DIR = Path("vaani/scratch/benchmark_results")
 
 VOICES = {
     "0": {
@@ -127,7 +127,7 @@ def main():
         elif choice == "b":
             print("\n>>> Launching full voice benchmark...")
             import subprocess
-            subprocess.run([sys.executable, "openflow/alm/benchmark_voice_engines.py"])
+            subprocess.run([sys.executable, "vaani/alm/benchmark_voice_engines.py"])
         else:
             print("Invalid selection. Please choose an option from the menu.")
 

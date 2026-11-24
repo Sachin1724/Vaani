@@ -1,9 +1,9 @@
-"""Self-check for meeting mode: python test_meeting.py (run from the repo's parent: python -m openflow.test_meeting)."""
+"""Self-check for meeting mode: python test_meeting.py (run from the repo's parent: python -m vaani.test_meeting)."""
 import time
 
 import numpy as np
 
-from openflow.engine import meeting as m
+from vaani.engine import meeting as m
 
 
 def test_app_detection():
@@ -65,12 +65,12 @@ def test_notes_without_llm():
     m._ollama = lambda prompt: None
     notes = m.format_meeting_notes(m.transcript_text([
         (0, "You", "Good morning everyone. Today we are reviewing the Q4 roadmap."),
-        (5, "Person 1", "We decided to launch OpenFlow 1.0 next Tuesday."),
+        (5, "Person 1", "We decided to launch Vaani 1.0 next Tuesday."),
         (9, "Person 2", "Action item: review the PR by tomorrow afternoon."),
     ]), app_name="Google Meet")
     for h in ("## Meeting Summary", "## Key Decisions", "## Action Items", "## Transcript"):
         assert h in notes, h
-    assert "- We decided to launch OpenFlow 1.0" in notes
+    assert "- We decided to launch Vaani 1.0" in notes
     assert "- [ ] Action item: review the PR" in notes
     assert "### Person 1" in notes and "[00:05]" in notes
 
@@ -96,9 +96,33 @@ def test_file_lines_use_file_time():
     class FakeTranscriber:
         def transcribe(self, audio, **kw):
             return ("hello",)
-    m._Speakers.label = lambda self, audio: "Person 1"  # no speaker model download in tests
-    lines = m.MeetingSession(FakeTranscriber(), "or", lambda *a: None, mic=False).transcribe_file(path)
+    real, m._Speakers.label = m._Speakers.label, lambda self, audio: "Person 1"  # no speaker model download in tests
+    try:
+        lines = m.MeetingSession(FakeTranscriber(), "or", lambda *a: None, mic=False).transcribe_file(path)
+    finally:
+        m._Speakers.label = real
     assert [round(t) for t, _, _ in lines] == [3, 8], lines
+
+
+def test_back_to_back_turns_split_by_voice():
+    """Two people with no pause between them arrive as one clip; it must come out as two speakers."""
+    import os
+    import soundfile
+    voices = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "enrolled_speakers")
+    if not m._SPEAKER_MODEL.exists() or not os.path.isdir(voices):
+        print("skip: speaker model or enrolled voices missing")
+        return
+
+    def five_s(name):
+        a, sr = soundfile.read(os.path.join(voices, name), dtype="float32")
+        a = a.mean(axis=1) if a.ndim > 1 else a
+        return np.interp(np.linspace(0, len(a) - 1, len(a) * m.SR // sr), np.arange(len(a)), a)[:5 * m.SR].astype(np.float32)
+
+    s = m._Speakers()
+    parts = s.split(np.concatenate([five_s("sachin_ref.wav"), five_s("elina_samantray_ref.wav")]))
+    assert len(parts) == 2 and abs(parts[1][0] / m.SR - 5) < 1, [(o / m.SR, len(p) / m.SR) for o, p in parts]
+    assert [s.label(p) for _, p in parts] == ["Person 1", "Person 2"]
+    assert len(m._Speakers().split(np.concatenate([five_s("sachin_ref.wav"), five_s("som_ref.wav")]))) == 1  # same voice
 
 
 if __name__ == "__main__":

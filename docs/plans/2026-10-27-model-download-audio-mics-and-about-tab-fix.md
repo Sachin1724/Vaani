@@ -12,7 +12,7 @@
 3. **Mic Hotplug Companion Pill Delegate (`ui/floating_pill.py`, `main.py`)**:
    Implement `FloatingPill.show_mic_event(name, status)` delegating directly to `self.mic_pill.show_event(name, status, self.geometry())` with an active 1.5s hotplug detection poll.
 4. **About & Privacy Policy Dashboard Tab (`ui/main_window.py`)**:
-   Add an **About** tab to the dashboard containing the high-DPI squircle brand emblem, developer bio ("Developed by Sachidananda"), clickable vector-icon buttons for GitHub (`https://github.com/Sachin1724/OpenFlow`), project website (`https://sachin1724.github.io/OpenFlow/`), direct issue reporting email (`mailto:fakesachin.19@gmail.com`), and an ironclad local privacy statement.
+   Add an **About** tab to the dashboard containing the high-DPI squircle brand emblem, developer bio ("Developed by Sachidananda"), clickable vector-icon buttons for GitHub (`https://github.com/Sachin1724/Vaani`), project website (`https://sachin1724.github.io/Vaani/`), direct issue reporting email (`mailto:fakesachin.19@gmail.com`), and an ironclad local privacy statement.
 5. **Capsule Typing Effect & Fast-Exit on Silence (`ui/floating_pill.py`, `main.py`)**:
    Polish `AnimatedText` in the capsule to display live words with an active glowing cursor in expanded listening mode; when speech is empty or under 0.25s, display "No speech detected" for only 800ms and immediately collapse without lingering.
 
@@ -236,14 +236,14 @@ In `openflow/ui/main_window.py`:
 - Add `"About"` tab to `self.tabs`.
 - Implement `_create_about_tab(self) -> QWidget`:
   - **Header Card**:
-    - High-DPI squircle brand emblem (48x48) + "OpenFlow v1.0.0".
+    - High-DPI squircle brand emblem (48x48) + "Vaani v1.0.0".
     - Subtitle: "Private, unlimited voice dictation & speech-to-writing system. 100% on-device AI."
   - **Creator & Open Source Card**:
     - "Developed with ❤️ by **Sachidananda**"
     - Three vector-icon action buttons:
-      1. `GitHub Repository`: Launches `https://github.com/Sachin1724/OpenFlow` via `QDesktopServices.openUrl()`.
-      2. `Official Website`: Launches `https://sachin1724.github.io/OpenFlow/`.
-      3. `Contact Developer / Report Issue`: Launches `mailto:fakesachin.19@gmail.com?subject=OpenFlow%20Inquiry%20%2F%20Issue`.
+      1. `GitHub Repository`: Launches `https://github.com/Sachin1724/Vaani` via `QDesktopServices.openUrl()`.
+      2. `Official Website`: Launches `https://sachin1724.github.io/Vaani/`.
+      3. `Contact Developer / Report Issue`: Launches `mailto:fakesachin.19@gmail.com?subject=Vaani%20Inquiry%20%2F%20Issue`.
   - **Privacy Policy & Local Security Commitment Card**:
     - Zero data transmitted over the internet.
     - Zero telemetry, zero speech logging to external servers.
@@ -318,4 +318,4 @@ git commit -m "fix(ui): polish capsule typing effect and implement fast-exit on 
 **Files:**
 - Run: consolidated test suite
 - Rebuild: `python packaging/make_installer.py --rebuild`
-- Verify: `dist/OpenFlow-Setup.exe`
+- Verify: `dist/Vaani-Setup.exe`

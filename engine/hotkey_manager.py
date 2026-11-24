@@ -86,7 +86,7 @@ class GlobalHotkeyManager:
             self._last_trigger_t = now
             if not self._is_active:
                 self._is_active = True
-                print(f"[OpenFlow Hotkey] Activated '{self.hotkey_str}' (mode={self.mode})")
+                print(f"[Vaani Hotkey] Activated '{self.hotkey_str}' (mode={self.mode})")
                 if self.on_start:
                     threading.Thread(target=self.on_start, daemon=True).start()
 
@@ -94,7 +94,7 @@ class GlobalHotkeyManager:
         with self._lock:
             if self._is_active:
                 self._is_active = False
-                print(f"[OpenFlow Hotkey] Deactivated '{self.hotkey_str}'")
+                print(f"[Vaani Hotkey] Deactivated '{self.hotkey_str}'")
                 if self.on_stop:
                     threading.Thread(target=self.on_stop, daemon=True).start()
 
@@ -106,7 +106,7 @@ class GlobalHotkeyManager:
             self._last_trigger_t = now
             self._is_active = not self._is_active
             active = self._is_active
-        print(f"[OpenFlow Hotkey] Toggled '{self.hotkey_str}': active={active}")
+        print(f"[Vaani Hotkey] Toggled '{self.hotkey_str}': active={active}")
         cb = self.on_start if active else self.on_stop
         if cb:
             threading.Thread(target=cb, daemon=True).start()
@@ -192,7 +192,7 @@ class GlobalHotkeyManager:
     def start(self):
         self._is_running = True
         self._is_active = False
-        print(f"[OpenFlow Hotkey] Manager started for '{self.hotkey_str}' (mode={self.mode})")
+        print(f"[Vaani Hotkey] Manager started for '{self.hotkey_str}' (mode={self.mode})")
 
         # Start pynput hook
         self._current_keys.clear()
@@ -204,7 +204,7 @@ class GlobalHotkeyManager:
             self._listener.daemon = True
             self._listener.start()
         except Exception as e:
-            print(f"[OpenFlow Hotkey] Note: pynput hook unavailable ({e}); using Win32 polling")
+            print(f"[Vaani Hotkey] Note: pynput hook unavailable ({e}); using Win32 polling")
             self._listener = None
 
         # Start Win32 polling loop for modifier hotkeys

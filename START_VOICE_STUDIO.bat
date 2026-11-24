@@ -16,6 +16,6 @@ echo Launching browser to MIRA Studio...
 start http://127.0.0.1:8000/studio
 
 echo Starting local FastAPI backend server...
-python -m uvicorn openflow.api.speech_server:app --host 127.0.0.1 --port 8000 --log-level info
+python -m uvicorn vaani.api.speech_server:app --host 127.0.0.1 --port 8000 --log-level info
 pause
 

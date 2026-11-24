@@ -9,23 +9,23 @@ from PyQt6.QtGui import QPainter, QColor, QPainterPath, QFont, QFontMetrics, QPe
 from PyQt6.QtWidgets import QWidget, QApplication, QMenu
 
 try:
-    from .floating_pill import FloatingPill, FloatingCaptionBubble, ValueRow, WaveformBars, ui_font_family, _force_topmost
+    from .floating_pill import FloatingPill, animations_enabled, FloatingCaptionBubble, ValueRow, WaveformBars, ui_font_family, _force_topmost
     from ..engine import model_manager
     from ..engine.audio_recorder import list_microphones
 except ImportError:
     try:
-        from openflow.ui.floating_pill import FloatingPill, FloatingCaptionBubble, ValueRow, WaveformBars, ui_font_family, _force_topmost
-        from openflow.engine import model_manager
-        from openflow.engine.audio_recorder import list_microphones
+        from vaani.ui.floating_pill import FloatingPill, animations_enabled, FloatingCaptionBubble, ValueRow, WaveformBars, ui_font_family, _force_topmost
+        from vaani.engine import model_manager
+        from vaani.engine.audio_recorder import list_microphones
     except ImportError:
-        from ui.floating_pill import FloatingPill, FloatingCaptionBubble, ValueRow, WaveformBars, ui_font_family, _force_topmost
+        from ui.floating_pill import FloatingPill, animations_enabled, FloatingCaptionBubble, ValueRow, WaveformBars, ui_font_family, _force_topmost
         from engine import model_manager
         from engine.audio_recorder import list_microphones
 try:
     from .blobatar_widget import BlobatarWidget
 except (ImportError, ValueError):
     try:
-        from openflow.ui.blobatar_widget import BlobatarWidget
+        from vaani.ui.blobatar_widget import BlobatarWidget
     except ImportError:
         from ui.blobatar_widget import BlobatarWidget
 
@@ -53,17 +53,6 @@ def _bezier(x1, y1, x2, y2):
 
 EASE_OUT = _bezier(0.23, 1, 0.32, 1)          # things arriving
 EASE_IN_OUT = _bezier(0.77, 0, 0.175, 1)      # things moving on screen (tucking up and back)
-
-
-def animations_enabled():
-    """Windows 'Animation effects' (Settings > Accessibility > Visual effects). Off: the shape snaps, fades stay short."""
-    try:
-        import ctypes
-        on = ctypes.c_int(1)
-        ctypes.windll.user32.SystemParametersInfoW(0x1042, 0, ctypes.byref(on), 0)  # SPI_GETCLIENTAREAANIMATION
-        return bool(on.value)
-    except (AttributeError, OSError):
-        return True
 
 
 class IslandPill(QWidget):
@@ -509,8 +498,8 @@ class IslandPill(QWidget):
     def show_update_available(self, version=""):
         def click():
             self.sig_update_requested.emit()
-            self._push("Downloading update…", "OpenFlow restarts when it finishes", "down", 4000, key="update")
-        self._push(f"OpenFlow {version} is available" if version else "Update available", "Click to download and restart",
+            self._push("Downloading update…", "Vaani restarts when it finishes", "down", 4000, key="update")
+        self._push(f"Vaani {version} is available" if version else "Update available", "Click to download and restart",
                    "down", 8000, click, "update")
 
     def show_download(self, percent, model):
@@ -744,7 +733,7 @@ class IslandPill(QWidget):
             hf = self._font(11, QFont.Weight.DemiBold)
             hf.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.0)
             p.setFont(hf)
-            p.drawText(QRectF(r.left() + 20, r.top() + 10, 200, 26), Qt.AlignmentFlag.AlignVCenter, "OPENFLOW")
+            p.drawText(QRectF(r.left() + 20, r.top() + 10, 200, 26), Qt.AlignmentFlag.AlignVCenter, "VAANI")
             p.setPen(INFO)
             p.setFont(self._font(13))
             p.drawText(QRectF(r.right() - 90, r.top() + 10, 70, 26), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, "Done")
@@ -879,7 +868,7 @@ class CapsuleRouter(QObject):
             self._pill.set_follow_mouse_screen(self._follow)
             self._pill.set_capsule_size(*self._size)
             self._pill.set_capsule_style(style)
-            self._pill.show_message("OpenFlow capsule", duration_ms=1500)
+            self._pill.show_message("Vaani capsule", duration_ms=1500)
         else:
             self._pill.set_capsule_style(style)
 

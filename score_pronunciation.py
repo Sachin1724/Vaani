@@ -185,7 +185,7 @@ def main():
         # voice renders 13.1 ch/s, so pace is one scalar away from the references -- sweep it
         # directly instead of training a duration predictor, which measured 6x worse.
         configs = [("speed=%.2f" % sp, dict(speed=sp)) for sp in
-                   (1.00, 1.05, 1.10, 1.15, 1.20)]
+                   (1.00, 1.15, 1.25, 1.35, 1.45, 1.55)]
     else:
         configs = [("current default", {})]
 

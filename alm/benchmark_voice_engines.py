@@ -22,7 +22,7 @@ import soundfile as sf
 import torch
 
 import chatterbox
-from openflow.engine.phonetic_translit import odia_to_roman
+from vaani.engine.phonetic_translit import odia_to_roman
 
 BENCHMARK_PROMPT = (
     "ନମସ୍କାର ଆଜ୍ଞା ! ରୟାଲ ରେଷ୍ଟୁରାଣ୍ଟକୁ ଆପଣଙ୍କୁ ସ୍ୱାଗତ । "
@@ -30,7 +30,7 @@ BENCHMARK_PROMPT = (
     "ଆମ ପାଖରେ ମଟନ କସା ଏବଂ ଗରମ ନାନ୍ ବହୁତ ବଢ଼ିଆ ହୋଇଛି ।"
 )
 
-OUT_DIR = Path("openflow/scratch/benchmark_results")
+OUT_DIR = Path("vaani/scratch/benchmark_results")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -41,7 +41,7 @@ def benchmark_studio_voice(text: str, voice: str = "female") -> dict:
     print(f">>> Benchmarking {label}...")
     print("=" * 60)
 
-    from openflow.engine.studio_voice import StudioVoiceEngine
+    from vaani.engine.studio_voice import StudioVoiceEngine
 
     engine = StudioVoiceEngine()
     filename = "1_mira_studio_voice.wav" if voice == "female" else "1_mira_studio_voice_kishore.wav"
@@ -83,7 +83,7 @@ def benchmark_chatterbox(text: str) -> dict:
 
     out_wav = OUT_DIR / "3_chatterbox_0.5b.wav"
     try:
-        from openflow.alm.chatterbox_engine import ChatterboxEngine
+        from vaani.alm.chatterbox_engine import ChatterboxEngine
         engine = ChatterboxEngine(device="cuda" if torch.cuda.is_available() else "cpu")
 
         t0 = time.perf_counter()
@@ -125,7 +125,7 @@ def benchmark_chatterbox(text: str) -> dict:
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     print("=" * 70)
-    print("OPENFLOW ODIA VOICE AI ARCHITECTURE BENCHMARK")
+    print("VAANI ODIA VOICE AI ARCHITECTURE BENCHMARK")
     print(f"Prompt: {BENCHMARK_PROMPT}")
     print("=" * 70)
 

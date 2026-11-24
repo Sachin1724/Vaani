@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenFlow Changelog: every version, in plain words</title>
-<meta name="description" content="Every OpenFlow release in plain words: what is new, what is better and what is fixed, from 1.0.0 to the next version. Free, private, offline voice dictation for Windows.">
+<title>Vaani Changelog: every version, in plain words</title>
+<meta name="description" content="Every Vaani release in plain words: what is new, what is better and what is fixed, from 1.0.0 to the next version. Free, private, offline voice dictation for Windows.">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="author" content="Sachidananda">
-<link rel="canonical" href="https://sachin1724.github.io/OpenFlow/changelog.html">
-<link rel="alternate" type="application/atom+xml" title="OpenFlow releases" href="https://github.com/Sachin1724/OpenFlow/releases.atom">
+<link rel="canonical" href="https://sachin1724.github.io/Vaani/changelog.html">
+<link rel="alternate" type="application/atom+xml" title="Vaani releases" href="https://github.com/Sachin1724/Vaani/releases.atom">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://sachin1724.github.io/OpenFlow/changelog.html">
-<meta property="og:title" content="OpenFlow Changelog: every version, in plain words">
-<meta property="og:description" content="What is new, better and fixed in every OpenFlow release, from 1.0.0 to the next version.">
-<meta property="og:image" content="https://sachin1724.github.io/OpenFlow/img/icon.png">
+<meta property="og:url" content="https://sachin1724.github.io/Vaani/changelog.html">
+<meta property="og:title" content="Vaani Changelog: every version, in plain words">
+<meta property="og:description" content="What is new, better and fixed in every Vaani release, from 1.0.0 to the next version.">
+<meta property="og:image" content="https://sachin1724.github.io/Vaani/img/icon.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="OpenFlow Changelog: every version, in plain words">
-<meta name="twitter:description" content="What is new, better and fixed in every OpenFlow release, from 1.0.0 to the next version.">
-<meta name="twitter:image" content="https://sachin1724.github.io/OpenFlow/img/icon.png">
+<meta name="twitter:title" content="Vaani Changelog: every version, in plain words">
+<meta name="twitter:description" content="What is new, better and fixed in every Vaani release, from 1.0.0 to the next version.">
+<meta name="twitter:image" content="https://sachin1724.github.io/Vaani/img/icon.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   "itemListElement": [
-    { "@type": "ListItem", "position": 1, "name": "OpenFlow", "item": "https://sachin1724.github.io/OpenFlow/" },
-    { "@type": "ListItem", "position": 2, "name": "Changelog", "item": "https://sachin1724.github.io/OpenFlow/changelog.html" }
+    { "@type": "ListItem", "position": 1, "name": "Vaani", "item": "https://sachin1724.github.io/Vaani/" },
+    { "@type": "ListItem", "position": 2, "name": "Changelog", "item": "https://sachin1724.github.io/Vaani/changelog.html" }
   ]
 }
 </script>
@@ -160,7 +160,7 @@ ul { list-style: none; padding: 0; }
 .pair figure { margin: 0; }
 .pair .shot { max-width: 100%; }
 
-/* get notified, then get OpenFlow */
+/* get notified, then get Vaani */
 .notify { background: var(--surface-2); padding-block: clamp(72px, 8vw, 140px); }
 .notify .in { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; row-gap: 32px; align-items: end; }
 .notify h2 { grid-column: 1 / 8; font-size: var(--step-head); }
@@ -225,14 +225,14 @@ ul { list-style: none; padding: 0; }
 
 <a class="skip" href="#main">Skip to content</a>
 <nav class="sn" aria-label="Main"><div class="sn-in">
-  <a class="sn-brand" href="index.html"><span class="sn-mark" aria-hidden="true"><i style="--h:40"></i><i style="--h:80"></i><i style="--h:100"></i><i style="--h:60"></i><i style="--h:85"></i></span>OpenFlow</a>
+  <a class="sn-brand" href="index.html"><span class="sn-mark" aria-hidden="true"><i style="--h:40"></i><i style="--h:80"></i><i style="--h:100"></i><i style="--h:60"></i><i style="--h:85"></i></span>Vaani</a>
   <ul>
     <li><a href="app.html">Windows</a></li>
     <li><a href="android.html">Android</a></li>
     <li><a href="research.html">Research</a></li>
     <li><a href="mira.html">MIRA</a></li>
     <li><a href="changelog.html" aria-current="page">Changelog</a></li>
-    <li><a class="sn-cta" href="https://github.com/Sachin1724/OpenFlow/releases/latest/download/OpenFlow-Setup.exe">Download</a></li>
+    <li><a class="sn-cta" href="https://github.com/Sachin1724/Vaani/releases/latest/download/Vaani-Setup.exe">Download</a></li>
   </ul>
 </div></nav>
 
@@ -245,7 +245,8 @@ ul { list-style: none; padding: 0; }
 
 <div class="bar wrap">
   <nav class="jump" aria-label="Versions">
-    <a class="chip next" href="#v1-4-1">1.4.1</a>
+    <a class="chip next" href="#v1-4-2">1.4.2</a>
+    <a class="chip" href="#v1-4-1">1.4.1</a>
     <a class="chip" href="#v1-4-0">1.4.0</a>
     <a class="chip" href="#v1-3-3">1.3.3</a>
     <a class="chip" href="#v0-1-2-android">Android 0.1.2</a>
@@ -275,20 +276,69 @@ ul { list-style: none; padding: 0; }
 
 <main id="main">
 
+<article class="rel" id="v1-4-2" data-v="1.4.2">
+  <div class="in wrap">
+    <div class="ver rv">
+      <h2><span class="sr">Vaani version </span>1.4.2</h2>
+      <div class="meta"><span class="chip next static">22 November 2026</span><span class="chip static">Coming next</span></div>
+      <p style="margin-top: 14px; color: var(--body-soft); font-size: 15px;">In the source code now. The installer is not built yet, so 1.4.1 is still the download.</p>
+    </div>
+    <div class="notes rv" style="--d:1">
+      <section class="group" data-g="new">
+        <h3>New</h3>
+        <ul>
+          <li><strong>OpenFlow is now Vaani.</strong> The app, the installer (<code>Vaani-Setup.exe</code>), the Windows program and the Android package all carry the new name. Installing it over OpenFlow replaces the old program.</li>
+          <li><strong>Hands-free dictation.</strong> Double-tap the hotkey and talk without holding it. Press it once more to write.</li>
+          <li><strong>Snippets.</strong> Say a short phrase such as "my address" and Vaani writes the full text you saved for it. Add one as a dictionary word with the category <code>snippet</code>.</li>
+          <li><strong>Paste the last dictation again</strong> with <code>Alt+Shift+V</code>, or <strong>retry it</strong> from the tray menu. A retry transcribes the same recording again with your current model and language.</li>
+          <li><strong>Instruct mode.</strong> Press <code>Alt+Shift+I</code>, select some text and say what to do with it ("make this shorter", "turn this into a list"). It needs the writing model.</li>
+          <li><strong>Vaani learns from your fixes.</strong> If you correct a word in what Vaani just wrote, that word joins your dictionary, so the next dictation spells it right.</li>
+          <li><strong>A tone for each app.</strong> Set <code>app_tones</code> in the settings file, for example chat for Slack and email for Outlook.</li>
+        </ul>
+      </section>
+      <section class="group" data-g="better">
+        <h3>Better</h3>
+        <ul>
+          <li><strong>Spelling follows what you are writing.</strong> Vaani reads up to 200 characters before the cursor and uses the names and words in them, so a name you already typed comes out the same way. It never reads password fields, and you can turn it off with <code>use_cursor_context</code>.</li>
+          <li><strong>An optional AI correction pass.</strong> With the writing model downloaded, a small language model fixes misheard words and punctuation. If it is slower than 1.2 seconds, or changes more than a quarter of the words, Vaani writes the normal text instead.</li>
+          <li><strong>Microphones that clean their own sound</strong> (Krisp, NVIDIA Broadcast, Voicemeeter, SteelSeries Sonar, VB-Cable and others) are no longer filtered a second time.</li>
+          <li><strong>The capsule fits any size.</strong> When it is made smaller, parts drop out (label, then badge, then waveform bars) instead of squeezing together. The edges are smoother, it slides in and out instead of only fading, and it uses the General Sans font.</li>
+          <li><strong>A slimmer resting bar.</strong> When idle, the capsule shrinks to an empty bar, and the waveform moves more steadily.</li>
+          <li><strong>A warning when the microphone is silent</strong>, 1.5 seconds after you start, instead of after you finish speaking.</li>
+        </ul>
+      </section>
+      <section class="group" data-g="fixed">
+        <h3>Fixed</h3>
+        <ul>
+          <li><strong>Odia + English stopped writing.</strong> In the installed app, "Auto: Odia + English" and "Odia + English words" failed with "No such file or directory" on every sentence, while plain Odia worked. The table that turns Odia spellings of English words back into English was left out of the installer. It is included now.</li>
+          <li><strong>Meeting notes put one person's words under another's name.</strong> When two people spoke back to back with no pause, both turns arrived as one clip and got one name. Vaani now listens for the voice changing inside a clip and splits it there, so each person keeps their own lines.</li>
+          <li><strong>Speaker names drifted during long calls.</strong> Each person's voice print leaned towards whatever they said last, so one unclear sentence could pull later sentences to the wrong name. The voice print is now the average of everything that person said.</li>
+          <li><strong>The last word was cut off</strong> when you let go of the hotkey mid-word. Vaani now keeps listening for 0.3 seconds after you release it.</li>
+          <li><strong>Half a sentence went missing.</strong> If you started speaking loudly and then got quieter, the speaker filter treated your quieter words as background noise and silenced them. It now only runs on recordings of 15 seconds or more. Soft speech is also less likely to be skipped.</li>
+          <li><strong>The live text dropped words and jumped.</strong> Only the last 3 seconds of speech were shown after the finished phrases, so anything in between disappeared. All unfinished speech is shown now.</li>
+          <li><strong>No live text with the capsule settings open.</strong> They now fold away when you start dictating.</li>
+          <li><strong>The icons jumped sideways</strong> between listening, writing and done.</li>
+          <li><strong>Transcript lines out of order.</strong> Your lines and the call's lines could appear in the order they finished, not the order they were spoken. They are sorted by when each one started.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</article>
+
 <article class="rel" id="v1-4-1" data-v="1.4.1">
   <div class="in wrap">
     <div class="ver rv">
-      <h2><span class="sr">OpenFlow version </span>1.4.1</h2>
-      <div class="meta"><span class="chip next static">14 November 2026</span><span class="chip static">Latest</span></div>
+      <h2><span class="sr">Vaani version </span>1.4.1</h2>
+      <div class="meta"><span class="chip static">14 November 2026</span><span class="chip static">Latest release</span></div>
       <div style="margin-top: 14px;">
-        <a class="btn" href="https://github.com/Sachin1724/OpenFlow/releases/download/v1.4.1/OpenFlow-Setup.exe">Download Setup</a>
+        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/v1.4.1/Vaani-Setup.exe">Download Setup</a>
       </div>
     </div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="fixed">
         <h3>Fixed</h3>
         <ul>
-          <li><strong>Startup error after a monitor change.</strong> Unplugging a monitor, or waking a sleeping display, could show "wrapped C/C++ object of type QScreen has been deleted" when OpenFlow started. The capsule and island now forget a screen as soon as it goes away and move to the one you are using.</li>
+          <li><strong>Startup error after a monitor change.</strong> Unplugging a monitor, or waking a sleeping display, could show "wrapped C/C++ object of type QScreen has been deleted" when Vaani started. The capsule and island now forget a screen as soon as it goes away and move to the one you are using.</li>
         </ul>
       </section>
     </div>
@@ -298,10 +348,10 @@ ul { list-style: none; padding: 0; }
 <article class="rel" id="v1-4-0" data-v="1.4.0">
   <div class="in wrap">
     <div class="ver rv">
-      <h2><span class="sr">OpenFlow version </span>1.4.0</h2>
+      <h2><span class="sr">Vaani version </span>1.4.0</h2>
       <div class="meta"><span class="chip static">11 November 2026</span></div>
       <div style="margin-top: 14px;">
-        <a class="btn" href="https://github.com/Sachin1724/OpenFlow/releases/download/v1.4.0/OpenFlow-Setup.exe">Download Setup</a>
+        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/v1.4.0/Vaani-Setup.exe">Download Setup</a>
       </div>
     </div>
     <div class="notes rv" style="--d:1">
@@ -337,10 +387,10 @@ ul { list-style: none; padding: 0; }
 <article class="rel" id="v1-3-3" data-v="1.3.3">
   <div class="in wrap">
     <div class="ver rv">
-      <h2><span class="sr">OpenFlow version </span>1.3.3</h2>
+      <h2><span class="sr">Vaani version </span>1.3.3</h2>
       <div class="meta"><span class="chip static">1 November 2026</span></div>
       <div style="margin-top: 14px;">
-        <a class="btn" href="https://github.com/Sachin1724/OpenFlow/releases/download/v1.3.3/OpenFlow-Setup.exe">Download Setup</a>
+        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/v1.3.3/Vaani-Setup.exe">Download Setup</a>
       </div>
     </div>
     <div class="notes rv" style="--d:1">
@@ -369,14 +419,14 @@ ul { list-style: none; padding: 0; }
     <div class="ver rv">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
         <img src="img/android-icon.png" alt="" width="36" height="36" style="border-radius: 9px; flex-shrink: 0;">
-        <h2><span class="sr">OpenFlow version </span>Android 0.1.2 (Beta)</h2>
+        <h2><span class="sr">Vaani version </span>Android 0.1.2 (Beta)</h2>
       </div>
       <div class="meta">
         <span class="chip next static">31 October 2026</span>
         <span class="chip static">ARM64 APK</span>
       </div>
       <div style="margin-top: 14px;">
-        <a class="btn" href="https://github.com/Sachin1724/OpenFlow/releases/download/android-v0.1.2-beta/OpenFlow-android-beta-0.1.2.apk">Download APK</a>
+        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/android-v0.1.2-beta/OpenFlow-android-beta-0.1.2.apk">Download APK</a>
       </div>
     </div>
     <div class="notes rv" style="--d:1">
@@ -402,14 +452,14 @@ ul { list-style: none; padding: 0; }
 <article class="rel" id="v1-3-2" data-v="1.3.2">
   <div class="in wrap">
     <div class="ver rv">
-      <h2><span class="sr">OpenFlow version </span>1.3.2</h2>
+      <h2><span class="sr">Vaani version </span>1.3.2</h2>
       <div class="meta"><span class="chip next static">31 October 2026</span></div>
     </div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="better">
         <h3>Better</h3>
         <ul>
-          <li><strong>Instant First-Word Start:</strong> Eliminated the 1–3 second warm-up delay on your first spoken word. OpenFlow now pre-warms CTranslate2 and CUDA compute kernels with an immediate background pass right after model load, ensuring instant dictation upon hotkey press.</li>
+          <li><strong>Instant First-Word Start:</strong> Eliminated the 1–3 second warm-up delay on your first spoken word. Vaani now pre-warms CTranslate2 and CUDA compute kernels with an immediate background pass right after model load, ensuring instant dictation upon hotkey press.</li>
         </ul>
       </section>
     </div>
@@ -419,7 +469,7 @@ ul { list-style: none; padding: 0; }
 <article class="rel" id="v1-3-1" data-v="1.3.1">
   <div class="in wrap">
     <div class="ver rv">
-      <h2><span class="sr">OpenFlow version </span>1.3.1</h2>
+      <h2><span class="sr">Vaani version </span>1.3.1</h2>
       <div class="meta"><span class="chip next static">31 October 2026</span></div>
     </div>
     <div class="notes rv" style="--d:1">
@@ -442,7 +492,7 @@ ul { list-style: none; padding: 0; }
 <article class="rel" id="v1-3-0" data-v="1.3.0">
   <div class="in wrap">
     <div class="ver rv">
-      <h2><span class="sr">OpenFlow version </span>1.3.0</h2>
+      <h2><span class="sr">Vaani version </span>1.3.0</h2>
       <div class="meta"><span class="chip next static">31 October 2026</span></div>
     </div>
     <div class="notes rv" style="--d:1">
@@ -499,7 +549,7 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-2-0" data-v="1.2.0">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.2.0</h2><div class="meta"><span class="chip static">30 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.2.0</h2><div class="meta"><span class="chip static">30 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="better">
         <h3>Better</h3>
@@ -520,19 +570,19 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-9" data-v="1.1.9">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.9</h2><div class="meta"><span class="chip static">30 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.9</h2><div class="meta"><span class="chip static">30 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="new">
         <h3>New</h3>
         <ul>
-          <li>Install with npm: <code>npx github:Sachin1724/OpenFlow</code> downloads and runs the latest installer.</li>
+          <li>Install with npm: <code>npx github:Sachin1724/Vaani</code> downloads and runs the latest installer.</li>
         </ul>
       </section>
       <section class="group" data-g="better">
         <h3>Better</h3>
         <ul>
           <li>Automatic mode now picks the Intel NPU on a first run on Core Ultra PCs, instead of staying on the CPU, and logs why when no NPU is visible.</li>
-          <li>A GPU that froze stays off: OpenFlow remembers it and starts on the NPU or CPU next time instead of stalling for 10 seconds again.</li>
+          <li>A GPU that froze stays off: Vaani remembers it and starts on the NPU or CPU next time instead of stalling for 10 seconds again.</li>
         </ul>
       </section>
       <section class="group" data-g="fixed">
@@ -548,7 +598,7 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-8" data-v="1.1.8">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.8</h2><div class="meta"><span class="chip static">29 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.8</h2><div class="meta"><span class="chip static">29 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="better">
         <h3>Better</h3>
@@ -569,7 +619,7 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-7" data-v="1.1.7">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.7</h2><div class="meta"><span class="chip static">29 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.7</h2><div class="meta"><span class="chip static">29 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="new">
         <h3>New</h3>
@@ -588,7 +638,7 @@ ul { list-style: none; padding: 0; }
         <h3>Fixed</h3>
         <ul>
           <li>Dictation pastes again. Ctrl+V sent as one batch was silently dropped on some Windows builds, so the keys are now sent one by one.</li>
-          <li>No more endless spinner. A live preview call on the GPU could freeze and block every dictation after it. OpenFlow now gives up on a stuck call after 10 seconds and finishes on the CPU.</li>
+          <li>No more endless spinner. A live preview call on the GPU could freeze and block every dictation after it. Vaani now gives up on a stuck call after 10 seconds and finishes on the CPU.</li>
         </ul>
       </section>
     </div>
@@ -597,7 +647,7 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-6" data-v="1.1.6">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.6</h2><div class="meta"><span class="chip static">29 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.6</h2><div class="meta"><span class="chip static">29 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="new">
         <h3>New</h3>
@@ -621,20 +671,20 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-5" data-v="1.1.5">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.5</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.5</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="better">
         <h3>Better</h3>
         <ul>
           <li>Dictation on laptops without an NVIDIA GPU is more than 65% faster, using simple greedy decoding and pinning work to physical CPU cores.</li>
-          <li>After a silent background update, OpenFlow relaunches itself and comes straight back online.</li>
+          <li>After a silent background update, Vaani relaunches itself and comes straight back online.</li>
           <li>A more reliable Windows build: every part of the app is bundled into the installer.</li>
         </ul>
       </section>
       <section class="group" data-g="fixed">
         <h3>Fixed</h3>
         <ul>
-          <li>A startup crash that stopped OpenFlow from opening on some PCs. Details are now written to a crash log in your .openflow folder.</li>
+          <li>A startup crash that stopped Vaani from opening on some PCs. Details are now written to a crash log in your .vaani folder.</li>
         </ul>
       </section>
     </div>
@@ -643,13 +693,13 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-4" data-v="1.1.4">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.4</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.4</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="better">
         <h3>Better</h3>
         <ul>
           <li>Lower latency on AMD Ryzen and Intel laptops, more than 65% faster, by decoding greedily on the CPU and using only physical cores.</li>
-          <li>OpenFlow relaunches itself after a silent update finishes.</li>
+          <li>Vaani relaunches itself after a silent update finishes.</li>
         </ul>
       </section>
       <section class="group" data-g="fixed">
@@ -664,7 +714,7 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-3" data-v="1.1.3">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.3</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.3</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="fixed">
         <h3>Fixed</h3>
@@ -678,7 +728,7 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-2" data-v="1.1.2">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.2</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.2</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="fixed">
         <h3>Fixed</h3>
@@ -693,12 +743,12 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-1" data-v="1.1.1">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.1</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.1</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="new">
         <h3>New</h3>
         <ul>
-          <li>Automatic detection of WhatsApp Desktop calls, and of meetings in Chrome, Edge, Brave, Opera, Vivaldi and Firefox, without picking up OpenFlow's own audio.</li>
+          <li>Automatic detection of WhatsApp Desktop calls, and of meetings in Chrome, Edge, Brave, Opera, Vivaldi and Firefox, without picking up Vaani's own audio.</li>
         </ul>
       </section>
       <section class="group" data-g="better">
@@ -719,21 +769,21 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-1-0" data-v="1.1.0">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.1.0</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.1.0</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="new">
         <h3>New</h3>
         <ul>
           <li>Intel NPU acceleration on Windows 11 Copilot+ PCs, under 2 watts, so all-day dictation and meeting transcription cause no fan spin and almost no battery drain. It falls back to NVIDIA CUDA or the CPU automatically.</li>
           <li>A redesigned capsule HUD with grouped cards, fluid iOS-style switches and macOS-style menus with a check mark on the current choice.</li>
-          <li>A silent, capsule-first start. OpenFlow boots straight into the small capsule, and the dashboard opens from the tray or the capsule.</li>
+          <li>A silent, capsule-first start. Vaani boots straight into the small capsule, and the dashboard opens from the tray or the capsule.</li>
           <li>A press-to-record hotkey box in Settings. Global hotkeys pause while you record a new one.</li>
         </ul>
       </section>
       <section class="group" data-g="better">
         <h3>Better</h3>
         <ul>
-          <li>OpenFlow downloads only the model you choose, and a cached variant such as base.en counts as base, so nothing downloads behind your back.</li>
+          <li>Vaani downloads only the model you choose, and a cached variant such as base.en counts as base, so nothing downloads behind your back.</li>
         </ul>
       </section>
     </div>
@@ -746,7 +796,7 @@ ul { list-style: none; padding: 0; }
 
 <article class="rel" id="v1-0-0" data-v="1.0.0">
   <div class="in wrap">
-    <div class="ver rv"><h2><span class="sr">OpenFlow version </span>1.0.0</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
+    <div class="ver rv"><h2><span class="sr">Vaani version </span>1.0.0</h2><div class="meta"><span class="chip static">28 October 2026</span></div></div>
     <div class="notes rv" style="--d:1">
       <section class="group" data-g="new">
         <h3>New</h3>
@@ -776,8 +826,8 @@ ul { list-style: none; padding: 0; }
     <div class="side rv" style="--d:1">
       <p>Every release is published on GitHub. Follow the feed in any reader, or watch the releases page.</p>
       <div class="actions">
-        <a class="btn" href="https://github.com/Sachin1724/OpenFlow/releases.atom">Follow the feed</a>
-        <a class="btn quiet" href="https://github.com/Sachin1724/OpenFlow/releases">All releases on GitHub</a>
+        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases.atom">Follow the feed</a>
+        <a class="btn quiet" href="https://github.com/Sachin1724/Vaani/releases">All releases on GitHub</a>
       </div>
     </div>
   </div>
@@ -785,14 +835,14 @@ ul { list-style: none; padding: 0; }
 
 <section class="get" id="get" aria-labelledby="get-h">
   <div class="in wrap">
-    <h2 id="get-h" class="rv">Get OpenFlow.</h2>
+    <h2 id="get-h" class="rv">Get Vaani.</h2>
     <div class="side rv" style="--d:1">
       <p>Free, offline, no account. Windows 10 and 11.</p>
       <div class="actions">
-        <a class="btn dark" href="https://github.com/Sachin1724/OpenFlow/releases/latest/download/OpenFlow-Setup.exe">Download for Windows</a>
+        <a class="btn dark" href="https://github.com/Sachin1724/Vaani/releases/latest/download/Vaani-Setup.exe">Download for Windows</a>
       </div>
       <div class="npx">
-        <code id="npx">npx github:Sachin1724/OpenFlow</code>
+        <code id="npx">npx github:Sachin1724/Vaani</code>
         <button class="btn" type="button" id="copy">Copy</button>
       </div>
     </div>
@@ -804,11 +854,11 @@ ul { list-style: none; padding: 0; }
     <span class="dev-mark" aria-hidden="true">S</span>
     <div>
       <h2 id="dev-h">Made by Sachidananda</h2>
-      <p>OpenFlow is designed, built and maintained by Sachidananda: free, private dictation for Windows and Android, with Odia written properly. Questions, ideas and bug reports are welcome.</p>
+      <p>Vaani is designed, built and maintained by Sachidananda: free, private dictation for Windows and Android, with Odia written properly. Questions, ideas and bug reports are welcome.</p>
       <ul class="dev-links">
         <li><a href="https://github.com/Sachin1724">GitHub · @Sachin1724</a></li>
-        <li><a href="https://github.com/Sachin1724/OpenFlow/issues">Report an issue</a></li>
-        <li><a href="mailto:fakesachin.19@gmail.com?subject=OpenFlow">Email the developer</a></li>
+        <li><a href="https://github.com/Sachin1724/Vaani/issues">Report an issue</a></li>
+        <li><a href="mailto:fakesachin.19@gmail.com?subject=Vaani">Email the developer</a></li>
       </ul>
     </div>
   </div>
@@ -825,9 +875,9 @@ ul { list-style: none; padding: 0; }
     <a href="research.html">Research</a>
     <a href="mira.html">MIRA</a>
     <a href="changelog.html">Changelog</a>
-    <a href="https://github.com/Sachin1724/OpenFlow">Source</a>
+    <a href="https://github.com/Sachin1724/Vaani">Source</a>
   </div>
-  <p class="small">OpenFlow is free and open source under the MIT license. Made by Sachidananda.</p>
+  <p class="small">Vaani is free and open source under the MIT license. Made by Sachidananda.</p>
 </footer>
 
 <script>

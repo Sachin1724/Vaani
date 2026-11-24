@@ -1,4 +1,4 @@
-package app.openflow
+package app.vaani
 
 import android.content.Context
 import android.graphics.Canvas
@@ -24,7 +24,7 @@ class CapsuleView(context: Context, private val lang: String, private val drag: 
     private val stopRect = RectF()
     private var message: String? = null
 
-    init { contentDescription = "OpenFlow is listening"; isHapticFeedbackEnabled = true }
+    init { contentDescription = "Vaani is listening"; isHapticFeedbackEnabled = true }
 
     fun setLevel(l: Float) { level = l }
     fun setMessage(m: String?) { message = m }

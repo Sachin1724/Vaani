@@ -399,16 +399,19 @@ class T3ForFineTuning(torch.nn.Module):
             training=True,
         )
 
+        # Next-token loss: logits at position t predict token t+1. The old unshifted loss taught
+        # the model to copy its input (loss ~0.05) and never to emit stop_speech -> 40 s of noise.
+        # Targets built here, NOT from the collator labels (those mask the first speech_cond_prompt_len=150
+        # tokens, i.e. the whole utterance for clips under ~6 s).
         IGNORE_ID = -100
         device = out.text_logits.device
-        len_text = text_tokens.size(1)
-        len_speech = speech_tokens.size(1)
-        mask_text = torch.arange(len_text, device=device)[None] >= text_token_lens[:, None]
-        mask_speech = torch.arange(len_speech, device=device)[None] >= speech_token_lens[:, None]
-        masked_text = text_tokens.masked_fill(mask_text, IGNORE_ID)
-        masked_speech = speech_tokens.masked_fill(mask_speech, IGNORE_ID)
-        loss_text = F.cross_entropy(out.text_logits.transpose(1, 2), masked_text, ignore_index=IGNORE_ID)
-        loss_speech = F.cross_entropy(out.speech_logits.transpose(1, 2), masked_speech, ignore_index=IGNORE_ID)
+        def nxt(tok, lens):
+            tgt = tok[:, 1:].clone()
+            tgt[torch.arange(tgt.size(1), device=device)[None] >= (lens[:, None] - 1)] = IGNORE_ID
+            return tgt
+        loss_text = F.cross_entropy(out.text_logits[:, :-1].transpose(1, 2), nxt(text_tokens, text_token_lens), ignore_index=IGNORE_ID)
+        loss_speech = F.cross_entropy(out.speech_logits[:, :-1].transpose(1, 2), nxt(speech_tokens, speech_token_lens), ignore_index=IGNORE_ID)
+        loss_text = 0.1 * loss_text
 
         total_loss = loss_text + loss_speech
 

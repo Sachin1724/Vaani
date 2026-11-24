@@ -1,4 +1,4 @@
-package app.openflow
+package app.vaani
 
 import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
@@ -60,8 +60,8 @@ class FlowService : AccessibilityService() {
         engineLoading = true
         Thread {
             runCatching { SpeechEngine(l, modelDir(l)) }
-                .onSuccess { engine = it; Log.d("OpenFlow", "Loaded engine for $l") }
-                .onFailure { Log.e("OpenFlow", "model load failed for $l", it) }
+                .onSuccess { engine = it; Log.d("Vaani", "Loaded engine for $l") }
+                .onFailure { Log.e("Vaani", "model load failed for $l", it) }
             engineLoading = false
         }.start()
     }
@@ -71,7 +71,7 @@ class FlowService : AccessibilityService() {
     override fun onServiceConnected() {
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {   // developer hook: feed a WAV file to the engine
-            val f = IntentFilter("app.openflow.TEST_WAV")
+            val f = IntentFilter("app.vaani.TEST_WAV")
             if (Build.VERSION.SDK_INT >= 33) registerReceiver(testReceiver, f, Context.RECEIVER_EXPORTED) else registerReceiver(testReceiver, f)
         }
     }
@@ -89,7 +89,7 @@ class FlowService : AccessibilityService() {
                 while (engine == null && engineLoading) Thread.sleep(50)
                 val t0 = System.nanoTime()
                 val text = engine?.transcribe(a).orEmpty()
-                Log.d("OpenFlow", "TEST heard (${(System.nanoTime() - t0) / 1_000_000} ms for ${n / 16000.0} s): $text")
+                Log.d("Vaani", "TEST heard (${(System.nanoTime() - t0) / 1_000_000} ms for ${n / 16000.0} s): $text")
             }.start()
         }
     }
@@ -209,7 +209,7 @@ class FlowService : AccessibilityService() {
                 ui.postDelayed({ stopListening(false) }, 1800); return
             }
             checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ->
-                { c.setMessage("Allow the microphone in OpenFlow"); ui.postDelayed({ stopListening(false) }, 2200); return }
+                { c.setMessage("Allow the microphone in Vaani"); ui.postDelayed({ stopListening(false) }, 2200); return }
         }
         ui.removeCallbacks(unload); loadEngineAsync(lang)
         val r = LevelRecorder { c.setLevel(it) }
@@ -269,7 +269,7 @@ class FlowService : AccessibilityService() {
             val last = if (cur - tailStart >= 1600 && r.peak(tailStart, cur) >= 0.006f) runCatching { engine?.transcribe(r.samples(tailStart, cur)) }.getOrNull().orEmpty() else ""
             val rawFinal = (committed + last).trim()
             val finalText = TextFormatter.format(rawFinal, lang(), isFinal = true)
-            Log.d("OpenFlow", "heard: $finalText")
+            Log.d("Vaani", "heard: $finalText")
             ui.post {
                 if (finalText.isNotEmpty()) {
                     showLive("$finalText ")

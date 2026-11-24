@@ -26,14 +26,14 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 # Alias alm module for pickle compatibility
-import openflow.alm as _alm_pkg
-import openflow.alm.model as _alm_model_pkg
+import vaani.alm as _alm_pkg
+import vaani.alm.model as _alm_model_pkg
 sys.modules['alm'] = _alm_pkg
 sys.modules['alm.model'] = _alm_model_pkg
 
-from openflow.alm.audio_tokenizer import AudioTokenizer
-from openflow.alm.text_tokenizer import MiraTextTokenizer
-from openflow.engine.studio_voice import StudioVoiceEngine, _equal_power_crossfade
+from vaani.alm.audio_tokenizer import AudioTokenizer
+from vaani.alm.text_tokenizer import MiraTextTokenizer
+from vaani.engine.studio_voice import StudioVoiceEngine, _equal_power_crossfade
 
 TOKEN_DIR = SCRIPT_DIR / "tokens"
 
@@ -247,7 +247,7 @@ class MiraALMEngine:
 if __name__ == '__main__':
     engine = MiraALMEngine()
     sample_text = "ଆଚ୍ଛା! <chuckle> ସତ କହିବାକୁ ଗଲେ ଏଇ ଆଇଡିଆ ଟା <pause_short> ବହୁତ ବଢ଼ିଆ ହୋଇଛି <question_rise>?"
-    res = engine.synthesize(sample_text, speaker="smita", output_wav="openflow/scratch/mira_alm_test.wav")
+    res = engine.synthesize(sample_text, speaker="smita", output_wav="vaani/scratch/mira_alm_test.wav")
     print("\n" + "=" * 60)
     print("🎙️ MIRA-ALM CONTINUOUS SPEECH BLENDING:")
     print(f"  Duration:   {res['duration_s']}s (24,000 Hz Broadcast Audio)")

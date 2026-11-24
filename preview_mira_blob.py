@@ -28,7 +28,7 @@ from ui.island import IslandPill
 class MiraBlobShowcase(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("OpenFlow · MIRA Blobatar Desktop Sample")
+        self.setWindowTitle("Vaani · MIRA Blobatar Desktop Sample")
         self.setFixedSize(560, 480)
         self.setStyleSheet("""
             QWidget {

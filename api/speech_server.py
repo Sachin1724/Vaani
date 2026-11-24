@@ -43,7 +43,7 @@ from engine.phonetic_translit import prepare_text_for_tts
 from engine.podcast_humanizer import humanize_to_podcast_style
 
 app = FastAPI(
-    title="OpenFlow & MIRA Speech API",
+    title="Vaani & MIRA Speech API",
     description="ElevenLabs-compatible high-performance Text-to-Speech API for Odia & Regional Indian Languages",
     version="2.26.0"
 )
@@ -456,7 +456,7 @@ def health_check():
     gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "N/A"
     return {
         "status": "healthy",
-        "service": "OpenFlow & MIRA Speech API",
+        "service": "Vaani & MIRA Speech API",
         "version": "2.26.0",
         "device": device,
         "gpu": gpu_name,
@@ -613,7 +613,7 @@ def text_to_speech_stream(
 if __name__ == "__main__":
     import uvicorn
     print("=" * 80)
-    print("🚀 LAUNCHING OPENFLOW & MIRA ELEVENLABS-COMPATIBLE SPEECH API SERVER")
+    print("🚀 LAUNCHING VAANI & MIRA ELEVENLABS-COMPATIBLE SPEECH API SERVER")
     print("=" * 80)
     print("📡 Studio Web App       : http://127.0.0.1:8000/")
     print("📡 Local API Endpoint   : http://127.0.0.1:8000")

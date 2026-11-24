@@ -1,11 +1,11 @@
-# Run from the repo's parent dir: python -m openflow.test_formatter  (or pytest openflow/test_formatter.py)
-from openflow.engine.formatter import TextFormatter
-from openflow.engine import hardware
-from openflow.engine.transcriber import resolve_model_name
+# Run from the repo's parent dir: python -m vaani.test_formatter  (or pytest vaani/test_formatter.py)
+from vaani.engine.formatter import TextFormatter
+from vaani.engine import hardware
+from vaani.engine.transcriber import resolve_model_name
 
 
 def test_formatter():
-    f = TextFormatter([{"phrase_match": "open flow", "replace_with": "OpenFlow"}])
+    f = TextFormatter([{"phrase_match": "open flow", "replace_with": "Vaani"}])
     assert f.format("um so like hello world") == "So hello world."
     assert f.format("is it done question mark") == "Is it done?"
     assert f.format("send it monday scratch that send it friday") == "Send it friday."
@@ -18,7 +18,7 @@ def test_formatter():
 
 
 def test_presets():
-    f = TextFormatter([{"phrase_match": "open flow", "replace_with": "OpenFlow"}])
+    f = TextFormatter([{"phrase_match": "open flow", "replace_with": "Vaani"}])
     assert f.format("camel case user name", "developer") == "userName"
     assert f.format("see you soon", "chat") == "See you soon"
     print("presets OK")

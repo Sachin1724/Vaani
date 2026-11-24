@@ -10,7 +10,7 @@ from Google FLEURS (public). Tools: Android NDK 26.1, whisper.cpp (q5_1 models),
 | Whisper small q5_1, English | 7.9 s | 11.9 s | too slow for dictation |
 | Whisper base q5_1, Hindi | 12.2 s | 10.7 s | fast enough, but 89% word errors on FLEURS Hindi (desktop run) |
 | Whisper small q5_1, Hindi | 12.2 s | 26-32 s | accurate-ish, far too slow |
-| **OpenFlow Odia (IndicConformer int8, ONNX)** | 10 s | **0.7 s** | RTF 0.07, 390 MB RSS, load 1.3 s; CTC beam + word list still to port |
+| **Vaani Odia (IndicConformer int8, ONNX)** | 10 s | **0.7 s** | RTF 0.07, 390 MB RSS, load 1.3 s; CTC beam + word list still to port |
 
 Takeaways
 - Indian languages: use the IndicConformer ONNX family (fast, accurate). Whisper is unusable for Hindi/Odia on this phone.

@@ -11,7 +11,7 @@ Fixes over v1 (train_lora_mira.py):
   - Scope is Latin-script text. Odia script stays with engine/odia_refine.py: SmolLM2's tokenizer spends
     ~17 tokens per Odia word, too slow for dictation.
 Writes models/mira_v2_merged and the app's int8 CTranslate2 build models/mira_v2_ct2_int8.
-Run from the repo's parent:  python -m openflow.train_mira_v2
+Run from the repo's parent:  python -m vaani.train_mira_v2
 """
 import csv
 import io
@@ -28,7 +28,7 @@ import torch
 from peft import LoraConfig, TaskType, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from openflow.engine.local_llm import MIRA_SYSTEM
+from vaani.engine.local_llm import MIRA_SYSTEM
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = r"C:\Users\sachi\.cache\huggingface\hub\models--HuggingFaceTB--SmolLM2-135M-Instruct\snapshots\12fd25f77366fa6b3b4b768ec3050bf629380bac"

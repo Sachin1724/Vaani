@@ -25,8 +25,9 @@ logger = logging.getLogger("precompute_cache")
 
 LOCAL_MODEL_DIR = "./model_odia_init"
 NEW_VOCAB_SIZE = 781
-MANIFEST_PATH = "./data/manifest.json"
-CACHE_PATH = "./data/cache_t3.pt"
+import os
+MANIFEST_PATH = os.environ.get("MANIFEST", "./data/manifest.json")
+CACHE_PATH = os.environ.get("CACHE", "./data/cache_t3.pt")
 
 
 def main():

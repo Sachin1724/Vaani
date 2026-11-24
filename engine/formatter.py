@@ -13,6 +13,46 @@ from .refiner import (
 from .odia_refine import refine_odia
 
 
+def expand_snippets(text: str, snippets: List[Dict[str, Any]]) -> str:
+    """Replace spoken snippet triggers ("my address") with their saved text, longest trigger first.
+    A dictation that is only the trigger (plus punctuation) becomes exactly the snippet."""
+    for s in sorted(snippets, key=lambda e: -len(e.get("phrase_match", ""))):
+        trigger, body = (s.get("phrase_match") or "").strip(), s.get("replace_with") or ""
+        if not trigger:
+            continue
+        if re.fullmatch(r"\W*" + re.escape(trigger) + r"\W*", text, flags=re.I):
+            return body
+        text = re.sub(r"\b" + re.escape(trigger) + r"\b", lambda _m: body, text, flags=re.I)
+    return text
+
+
+def find_corrections(pasted: str, field_text: str) -> List[tuple]:
+    """Single-word fixes the user made to pasted dictation: [(heard, corrected), ...].
+    The pasted words are aligned against the field; only 1:1 swaps that look like spelling fixes
+    (similar letters, not a rewrite) count, and nothing is learned if the text changed a lot."""
+    import difflib
+    words = lambda t: re.findall(r"[\w'+-]+", t)
+    p, f = words(pasted), words(field_text)
+    if len(p) < 3 or not f:
+        return []
+    # the stretch of the field that best matches what was pasted
+    best, best_i = 0.0, 0
+    for i in range(max(1, len(f) - len(p) + 1)):
+        r = difflib.SequenceMatcher(None, [w.lower() for w in p], [w.lower() for w in f[i:i + len(p)]]).ratio()
+        if r > best:
+            best, best_i = r, i
+    if best < 0.6:
+        return []
+    window = f[best_i:best_i + len(p) + 1]
+    out = []
+    for op, a1, a2, b1, b2 in difflib.SequenceMatcher(None, p, window).get_opcodes():
+        if op == "replace" and a2 - a1 == 1 and b2 - b1 == 1:
+            old, new = p[a1], window[b1]
+            if old.lower() != new.lower() and difflib.SequenceMatcher(None, old.lower(), new.lower()).ratio() >= 0.5:
+                out.append((old, new))
+    return out
+
+
 class TextFormatter:
     def __init__(self, dictionary_entries: Optional[List[Dict[str, Any]]] = None):
         self.dictionary = dictionary_entries or []

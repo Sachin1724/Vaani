@@ -27,7 +27,7 @@ Reinforcement Learning Formulation:
 Policy Updates:
 ---------------
 Lightweight Contextual Q-Learning & Multi-Armed Bandit updated on-device in <0.01ms.
-Stored persistently in ~/.openflow/mira_rl_profile.json.
+Stored persistently in ~/.vaani/mira_rl_profile.json.
 """
 
 import os
@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Dict, Any, Tuple, Optional
 
 # Persistent profile path
-_PROFILE_DIR = Path.home() / ".openflow"
+_PROFILE_DIR = Path.home() / ".vaani"
 _PROFILE_PATH = _PROFILE_DIR / "mira_rl_profile.json"
 
 

@@ -1,7 +1,7 @@
 """
 blind_source_separation.py — Multi-Speaker "Cocktail Party" Source Separation
 =============================================================================
-Enables OpenFlow and MIRA CRM to isolate overlapping voices in noisy environments
+Enables Vaani and MIRA CRM to isolate overlapping voices in noisy environments
 (e.g., multiple team members shouting orders simultaneously).
 
 Features:

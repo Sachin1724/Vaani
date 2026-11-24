@@ -7,7 +7,7 @@ with zero Out-of-Vocabulary (OOV) drops and exact prosody boundary preservation.
 
 import unicodedata
 from typing import List, Dict, Optional, Tuple
-from openflow.alm.prosody_tags import SPECIAL_PROSODY_TOKENS, extract_prosody_spans
+from vaani.alm.prosody_tags import SPECIAL_PROSODY_TOKENS, extract_prosody_spans
 
 class MiraTextTokenizer:
     """

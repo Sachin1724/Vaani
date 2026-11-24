@@ -1,6 +1,6 @@
 """Silence and phrase loops must never reach the user as text."""
 import numpy as np
-from openflow.engine.transcriber import _has_speech, _loop_at, _drop_loop
+from vaani.engine.transcriber import _has_speech, _loop_at, _drop_loop
 
 
 def test_silence_and_steady_noise_are_not_speech():

@@ -11,10 +11,10 @@ Integrates:
 
 import time
 from typing import Dict, Any, Optional
-from openflow.engine.conversational_cues import get_cue_manager
-from openflow.engine.semantic_turn_taking import SemanticTurnTaker
-from openflow.engine.dialect_normalizer import get_dialect_normalizer
-from openflow.engine.conversational_rl import get_conversational_rl_agent
+from vaani.engine.conversational_cues import get_cue_manager
+from vaani.engine.semantic_turn_taking import SemanticTurnTaker
+from vaani.engine.dialect_normalizer import get_dialect_normalizer
+from vaani.engine.conversational_rl import get_conversational_rl_agent
 
 
 class OdiaConversationalVoiceAgent:

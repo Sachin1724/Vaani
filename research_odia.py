@@ -5,7 +5,7 @@ On the first N clips of Google FLEURS Odia (dev split, CC-BY-4.0) it measures, p
   writing        share of output letters that are Odia script (U+0B00-0B7F)
   speed          real-time factor (processing time / audio length) on this PC's CPU
   translation    chrF and BLEU of the English output against FLEURS's English sentence
-Writes docs/data/odia-research.json. Run from the repo's parent:  python -m openflow.research_odia [N]
+Writes docs/data/odia-research.json. Run from the repo's parent:  python -m vaani.research_odia [N]
 """
 import csv
 import io
@@ -18,9 +18,9 @@ import urllib.request
 
 import sacrebleu  # research only; the app never imports it
 
-from openflow.bench_odia import BASE, edits, fleurs_clips, norm
-from openflow.engine import model_manager, translator
-from openflow.engine.transcriber import Transcriber
+from vaani.bench_odia import BASE, edits, fleurs_clips, norm
+from vaani.engine import model_manager, translator
+from vaani.engine.transcriber import Transcriber
 
 OUT = os.path.join(os.path.dirname(__file__), "docs", "data", "odia-research.json")
 
@@ -57,7 +57,7 @@ def main():
 
     asr = {"Whisper base": run("Whisper base", "base", "or", clips),
            "Whisper small": run("Whisper small", "small", "or", clips),
-           "OpenFlow Odia": run("OpenFlow Odia", "odia", "or", clips)}
+           "Vaani Odia": run("Vaani Odia", "odia", "or", clips)}
     result = {"clips": len(clips), "audio_seconds": round(sum(len(a) for a, _ in clips) / 16000, 1),
               "cpu": platform.processor(), "asr": {}, "translation": {}}
     for name, rows in asr.items():
@@ -85,7 +85,7 @@ def main():
         score(name, [x["hyp"] for x in run(name, model, "translate", clips)])
     it2 = translator.OdiaToEnglish(os.path.join(model_manager.cached_path("odia-en"), model_manager.TRANSLATOR_DIR),
                                    threads=min(8, os.cpu_count() or 4))
-    score("OpenFlow Odia + IndicTrans2", [it2.translate(x["hyp"]) for x in asr["OpenFlow Odia"]])
+    score("Vaani Odia + IndicTrans2", [it2.translate(x["hyp"]) for x in asr["Vaani Odia"]])
     score("IndicTrans2 on the true transcript", [it2.translate(ref) for _, ref in clips])  # ceiling with perfect ASR
 
     result["example_ref"] = {"odia": clips[0][1], "english": refs_en[0]}

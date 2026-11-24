@@ -2,7 +2,7 @@
 
 Text: AI4Bharat IndicCorpV2 Odia (data/or.txt). Any line sharing a 6-word run with a FLEURS Odia
 dev or test sentence is dropped, so the benchmark sentences never leak into the LM.
-Run from the repo's parent:  python -m openflow.build_odia_lm <or.txt> <fleurs dev.tsv> <fleurs test.tsv> <out.npz>
+Run from the repo's parent:  python -m vaani.build_odia_lm <or.txt> <fleurs dev.tsv> <fleurs test.tsv> <out.npz>
 """
 import csv
 import sys

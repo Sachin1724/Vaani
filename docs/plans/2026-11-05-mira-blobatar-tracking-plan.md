@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Implement a lifelike organic Blobatar indicator for Odia & Sambalpuri dictation in OpenFlow, featuring real-time eye gaze tracking and 3D head tilt following the Windows mouse cursor with Gaussian blend aura ("gaslan").
+**Goal:** Implement a lifelike organic Blobatar indicator for Odia & Sambalpuri dictation in Vaani, featuring real-time eye gaze tracking and 3D head tilt following the Windows mouse cursor with Gaussian blend aura ("gaslan").
 
 **Architecture:** 
 A lightweight vector tracker computes the Euclidean directional vector from the capsule's screen position to the system cursor (`QCursor.pos()`). Spring-damped damping smoothly offsets the pupils and tilts the capsule head towards the cursor at 60 FPS without GPU overhead. When our acoustic and dialect engine detects Odia or Sambalpuri speech, the capsule seamlessly activates the MIRA Blobatar in place of the static recording dot.

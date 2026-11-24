@@ -13,7 +13,7 @@ Features:
    - Maps 512-dim speaker embeddings into 64-dim continuous MultiCondMatcha latent space.
    - Incorporates F0 pitch contour and vocal envelope into baseline booth manifolds.
 5. Persistent Speaker Profile Management:
-   - Stores profiles to openflow/data/enrolled_speakers/<speaker_id>.json.
+   - Stores profiles to vaani/data/enrolled_speakers/<speaker_id>.json.
    - Saves clean 24kHz reference WAVs.
 """
 
@@ -39,7 +39,7 @@ _REPO_ROOT = _MODULE_DIR.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-DEFAULT_SPEAKER_ONNX = Path.home() / ".openflow" / "models" / "speaker-eres2net.onnx"
+DEFAULT_SPEAKER_ONNX = Path.home() / ".vaani" / "models" / "speaker-eres2net.onnx"
 ENROLLED_DIR = _REPO_ROOT / "data" / "enrolled_speakers"
 
 
@@ -64,7 +64,7 @@ class VoiceEnrollmentManager:
         if not self.model_path.exists():
             raise FileNotFoundError(
                 f"Speaker embedding model not found at: {self.model_path}\n"
-                f"Please ensure speaker-eres2net.onnx exists in ~/.openflow/models/"
+                f"Please ensure speaker-eres2net.onnx exists in ~/.vaani/models/"
             )
             
         opts = ort.SessionOptions()

@@ -1,4 +1,4 @@
-package app.openflow
+package app.vaani
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween

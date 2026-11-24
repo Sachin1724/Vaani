@@ -10,8 +10,8 @@ import glob
 import json
 import random
 
-def merge_datasets(harvested_dir="openflow/data/harvested_scripts",
-                   output_file="openflow/data/conversational_odia_gpu.jsonl"):
+def merge_datasets(harvested_dir="vaani/data/harvested_scripts",
+                   output_file="vaani/data/conversational_odia_gpu.jsonl"):
     print("=" * 80)
     print("🔄 AGGREGATING HARVESTED DIALOGUES INTO GPU TRAINING DATASET")
     print("=" * 80)

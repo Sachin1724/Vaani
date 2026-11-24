@@ -1,5 +1,5 @@
-"""Self-check for the settings hotkey recorder: python -m openflow.test_hotkey_recorder (from the repo's parent)."""
-from openflow.ui.main_window import vk_name, combo_from_keys, pretty_hotkey
+"""Self-check for the settings hotkey recorder: python -m vaani.test_hotkey_recorder (from the repo's parent)."""
+from vaani.ui.main_window import vk_name, combo_from_keys, pretty_hotkey
 
 
 def test_combos():

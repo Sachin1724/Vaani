@@ -5,7 +5,7 @@ Everything is measured on this PC's CPU (int8), one model per fresh process so m
   silence           how often an engine invents text from recordings that contain no speech, with and without
                     the silence guard (synthetic non-speech: silence, hiss, hum, clicks)
   odia_clips        what each Odia engine heard, clip by clip, against the true transcript
-Run from the repo's parent:  python -m openflow.research_ml [clips_per_language]
+Run from the repo's parent:  python -m vaani.research_ml [clips_per_language]
 """
 import csv
 import io
@@ -22,7 +22,7 @@ import numpy as np
 import psutil
 import soundfile
 
-from openflow.bench_odia import edits, norm
+from vaani.bench_odia import edits, norm
 
 OUT = os.path.join(os.path.dirname(__file__), "docs", "data", "ml-research.json")
 FLEURS = "https://huggingface.co/datasets/google/fleurs/resolve/main/data/{}/"
@@ -72,7 +72,7 @@ def silence_set():
 
 def guard_on_real_speech():
     """The silence guard must never drop real speech: how many real FLEURS clips it lets through."""
-    from openflow.engine.transcriber import _has_speech
+    from vaani.engine.transcriber import _has_speech
     total = passed = 0
     for lang, n in (("en_us", 30), ("hi_in", 15), ("or_in", 15)):
         cl = clips(lang, n)
@@ -82,7 +82,7 @@ def guard_on_real_speech():
 
 def job(spec):
     """One model in a fresh process: returns its measurements."""
-    from openflow.engine.transcriber import Transcriber
+    from vaani.engine.transcriber import Transcriber
     kind, model, lang = spec["kind"], spec["model"], spec["lang"]
     t = Transcriber(model_size=model, device="cpu", compute_type="int8", language=lang)
     if kind == "silence":
@@ -163,7 +163,7 @@ def main():
     per_clip = [{"ref": ref, "engines": {}, "wer": {}} for _, ref in odia]
     # Only the Odia engine here: since v1.1.8 the app routes every Odia request to it, so a "Whisper" row built
     # through Transcriber would silently be the same engine. Whisper's own Odia output: docs/figures/research/odia-clips.py
-    for label, model in (("OpenFlow Odia", "odia"),):
+    for label, model in (("Vaani Odia", "odia"),):
         out = run({"kind": "asr", "model": model, "lang": "or", "clips": odia})
         for pc, (_, ref), row in zip(per_clip, odia, out["rows"]):
             r, h = norm(ref), norm(row["hyp"])

@@ -1,21 +1,21 @@
 # Plan: NPU Hardware Acceleration & DirectML/OpenVINO Execution
 
-**Goal:** Enable OpenFlow to detect and utilize on-device Neural Processing Units (NPUs) on Windows 11 (Intel AI Boost, AMD Ryzen AI, Qualcomm Snapdragon X Elite Hexagon), achieving sub-2W power efficiency, zero fan noise, and uncompromised dictation latency without competing with foreground CPU/GPU workloads.
+**Goal:** Enable Vaani to detect and utilize on-device Neural Processing Units (NPUs) on Windows 11 (Intel AI Boost, AMD Ryzen AI, Qualcomm Snapdragon X Elite Hexagon), achieving sub-2W power efficiency, zero fan noise, and uncompromised dictation latency without competing with foreground CPU/GPU workloads.
 
 ---
 
 ## Executive Summary & Feasibility
 
 ### Can we implement this?
-**Yes.** OpenFlow can fully support NPU execution. 
+**Yes.** Vaani can fully support NPU execution. 
 
-### Why is this high-impact for OpenFlow?
+### Why is this high-impact for Vaani?
 - **Ultra-Low Power / Battery Saver:** Continuous voice dictation or meeting intelligence on an NVIDIA GPU draws **30W–60W** (spinning up laptop fans and draining battery). Multi-threaded CPU execution draws **15W–35W** and spikes thread queues. An NPU executes INT8/INT4 matrix math at **1.5W–3.5W**, enabling all-day dictation on battery.
 - **Zero Workload Contention:** Because the NPU runs on dedicated silicon (MCDM / Level Zero), it does not compete with GPU shaders or CPU cores during heavy workloads (compiling code in VS Code, gaming, 3D rendering).
 - **Targeting Copilot+ PCs:** Directly supports the modern wave of Windows 11 laptops (Intel Core Ultra, AMD Ryzen AI 300 / Strix Point, Snapdragon X Elite).
 
 ### The Core Architectural Challenge & Solution
-- **The Challenge:** OpenFlow's default transcription backend is `faster-whisper`, powered by `CTranslate2`. **CTranslate2 only compiles for CPU and CUDA.** It has zero native support for DirectML, OpenVINO, QNN, or NPUs. Passing `device="npu"` directly to CTranslate2 will fail.
+- **The Challenge:** Vaani's default transcription backend is `faster-whisper`, powered by `CTranslate2`. **CTranslate2 only compiles for CPU and CUDA.** It has zero native support for DirectML, OpenVINO, QNN, or NPUs. Passing `device="npu"` directly to CTranslate2 will fail.
 - **The Solution:** Implement a dual-engine ASR architecture:
   1. **NVIDIA GPUs & Legacy CPU:** Retain `faster-whisper` (CTranslate2) for float16 CUDA execution and int8 AVX2 CPU execution.
   2. **NPU Engine:** Add an ONNX Runtime / OpenVINO / Sherpa-ONNX execution backend configured for DirectML (`DmlExecutionProvider`), OpenVINO (`OpenVINOExecutionProvider`), or Qualcomm QNN (`QNNExecutionProvider`) with INT8 quantized Whisper/Parakeet models.
@@ -100,14 +100,14 @@
    - NPU accelerators require computational graphs compiled into ONNX format (`.onnx`) or OpenVINO Intermediate Representation (`.xml` / `.bin`).
    - Standardize on:
      - Whisper Base INT8 ONNX (Encoder + Decoder + Tokenizer) ~140 MB.
-     - Parakeet TDT INT8 ONNX (already used by OpenFlow via `sherpa-onnx`) ~670 MB.
+     - Parakeet TDT INT8 ONNX (already used by Vaani via `sherpa-onnx`) ~670 MB.
 2. **Model Download & Storage:**
-   - Dedicated cache directory: `~/.openflow/models/npu/`
+   - Dedicated cache directory: `~/.vaani/models/npu/`
    - Metadata registry: Add entries to `_MODELS` with NPU-compatible URLs (e.g. Hugging Face Optimum / Olive Whisper ONNX).
    - Validation: Strict SHA-256 integrity check and size verification before loading.
 3. **Hardware Compilation Cache:**
    - NPUs compile ONNX graphs into low-level microcode on first run.
-   - Configure model cache paths (`cl_cache` for Intel / QNN context binary cache) in `~/.openflow/cache/` so subsequent app launches load in <300ms.
+   - Configure model cache paths (`cl_cache` for Intel / QNN context binary cache) in `~/.vaani/cache/` so subsequent app launches load in <300ms.
 
 ---
 
@@ -126,10 +126,10 @@
      - For Intel Core Ultra systems: uses `openvino-genai.WhisperPipeline(model_path, device="NPU")`.
      - Extremely clean, native C++ bindings, zero Python overhead.
    - **Path C: Sherpa-ONNX NPU Acceleration:**
-     - OpenFlow already imports `sherpa-onnx`. Sherpa-ONNX supports `provider="openvino"` or `provider="directml"`. We can initialize `sherpa_onnx.OfflineRecognizer` pointing to the DirectML/NPU provider.
+     - Vaani already imports `sherpa-onnx`. Sherpa-ONNX supports `provider="openvino"` or `provider="directml"`. We can initialize `sherpa_onnx.OfflineRecognizer` pointing to the DirectML/NPU provider.
 3. **Fail-Safe Fallback:**
    - If NPU initialization or memory allocation fails at runtime:
-     - Log warning: `[OpenFlow] NPU execution failed, failing over to CPU int8...`
+     - Log warning: `[Vaani] NPU execution failed, failing over to CPU int8...`
      - Automatically switch `self.device = "cpu"` and load standard CTranslate2 CPU model.
      - Notify UI via `self.on_status("NPU unavailable · Falling back to CPU")`.
 
@@ -177,7 +177,7 @@
 
 ---
 
-### Task 6: Packaging, PyInstaller & Binary Distribution (`build_exe.py`, `OpenFlow.spec`)
+### Task 6: Packaging, PyInstaller & Binary Distribution (`build_exe.py`, `Vaani.spec`)
 
 **Objective:** Ensure standalone Windows installer and portable `.exe` bundle required runtimes cleanly without bloated file size or missing DLL errors.
 
@@ -187,7 +187,7 @@
    - Use dynamic imports with graceful degradation:
      - If `onnxruntime-directml` or `openvino` is present in Python environment, enable NPU.
      - If missing, show user-friendly "One-Click Install NPU Driver" button in Settings.
-2. **PyInstaller Spec (`OpenFlow.spec`):**
+2. **PyInstaller Spec (`Vaani.spec`):**
    - Include binaries and providers:
      - `directml.dll`
      - `onnxruntime_providers_shared.dll`, `onnxruntime_providers_dml.dll`

@@ -12,7 +12,7 @@ import json
 import glob
 import re
 
-OUTPUT_FILE = "openflow/data/conversational_odia_gpu.jsonl"
+OUTPUT_FILE = "vaani/data/conversational_odia_gpu.jsonl"
 
 def is_clean_odia(text: str) -> bool:
     """Ensure text is valid, non-trivial Odia with proper ending."""
@@ -98,7 +98,7 @@ def build_corpus():
     print(f"  + Added {len(gold_conversations) * 40} high-priority gold conversational dialogues")
 
     # 2. Extract Valid Question -> Answer Turns from Harvested Transcripts
-    script_files = glob.glob("openflow/data/harvested_scripts/*_full_script.txt")
+    script_files = glob.glob("vaani/data/harvested_scripts/*_full_script.txt")
     harvested_valid = 0
 
     interrogative_words = ["କଣ", "କେମିତି", "କୋଉଠି", "କାହିଁକି", "କେତେ", "କିଏ", "ନା ନାଇଁ", "କି ?"]

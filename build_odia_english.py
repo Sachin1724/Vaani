@@ -4,7 +4,7 @@ Pronunciations: CMUdict (cmudict.dict). Frequencies: Norvig's count_1w.txt (Goog
 Each of the 25k most frequent English words with a pronunciation is spelled in Odia script the ways
 Odia writers do (a schwa may be written or not, "z" as ଜ or ସ, ...); a spelling shared by several
 words goes to the most frequent one.
-Run from the repo's parent:  python -m openflow.build_odia_english <cmudict.dict> <count_1w.txt>
+Run from the repo's parent:  python -m vaani.build_odia_english <cmudict.dict> <count_1w.txt>
 """
 import gzip
 import itertools
@@ -12,7 +12,7 @@ import math
 import re
 import sys
 
-from openflow.engine.odia_mix import TABLE_PATH, key
+from vaani.engine.odia_mix import TABLE_PATH, key
 
 N_WORDS = 25_000
 C = {"B": "ବ", "CH": "ଚ", "D": "ଡ", "DH": "ଦ", "F": "ଫ", "G": "ଗ", "HH": "ହ", "JH": "ଜ", "K": "କ", "L": "ଲ",

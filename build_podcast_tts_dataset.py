@@ -33,7 +33,7 @@ URLS = [
 
 OUT = Path("data/podcasts/user_harvest")
 CLIPS = OUT / "clips"
-SPK_MODEL = Path.home() / ".openflow" / "models" / "speaker-eres2net.onnx"
+SPK_MODEL = Path.home() / ".vaani" / "models" / "speaker-eres2net.onnx"
 CHUNK_S = 5.0          # diarization granularity
 MIN_TURN_S, MAX_TURN_S = 2.0, 15.0
 SAME_SPEAKER_COS = 0.52

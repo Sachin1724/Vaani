@@ -31,7 +31,7 @@ try:
     from .blobatar_widget import BlobatarWidget
 except (ImportError, ValueError):
     try:
-        from openflow.ui.blobatar_widget import BlobatarWidget
+        from vaani.ui.blobatar_widget import BlobatarWidget
     except ImportError:
         from ui.blobatar_widget import BlobatarWidget
 
@@ -55,7 +55,7 @@ try:
     from ..engine.preview_text import merge_preview
 except ImportError:
     try:
-        from openflow.engine.preview_text import merge_preview
+        from vaani.engine.preview_text import merge_preview
     except ImportError:
         from engine.preview_text import merge_preview
 
@@ -103,12 +103,32 @@ def get_squircle_pixmap(image_path: str, size: int = 26, radius: float = 6.0) ->
     return dest
 
 
+def animations_enabled():
+    """Windows 'Animation effects' (Settings > Accessibility > Visual effects). Off: the shape snaps, fades stay short."""
+    try:
+        import ctypes
+        on = ctypes.c_int(1)
+        ctypes.windll.user32.SystemParametersInfoW(0x1042, 0, ctypes.byref(on), 0)  # SPI_GETCLIENTAREAANIMATION
+        return bool(on.value)
+    except (AttributeError, OSError):
+        return True
+
+
+def _bezier(x1, y1, x2, y2) -> QEasingCurve:
+    c = QEasingCurve(QEasingCurve.Type.BezierSpline)
+    c.addCubicBezierSegment(QPointF(x1, y1), QPointF(x2, y2), QPointF(1, 1))
+    return c
+
+
+SNAP_EASE = _bezier(0.05, 0.6, 0.4, 0.95)  # sharp ease-out for size changes: most of the move lands in the first frames
+
+
 @lru_cache(maxsize=1)
 def ui_font_family() -> str:
-    """Bundled Inter, so every PC looks the same. Never calls QFontDatabase.families():
+    """Bundled General Sans (Inter as fallback), so every PC looks the same. Never calls QFontDatabase.families():
     enumerating system fonts takes seconds on machines with many fonts installed."""
     family = ""
-    for f in glob.glob(os.path.join(get_asset_path("fonts"), "*.ttf")):
+    for f in sorted(glob.glob(os.path.join(get_asset_path("fonts"), "*.ttf"))):  # GeneralSans-* sorts before Inter-*
         families = QFontDatabase.applicationFontFamilies(QFontDatabase.addApplicationFont(f))
         family = family or (families[0] if families else "")
     return family or "Segoe UI"
@@ -213,10 +233,14 @@ class WaveformBars(QWidget):
         self.timer.setTimerType(Qt.TimerType.PreciseTimer)
         self.timer.start(16)  # 60 FPS fluid rendering
 
+    LEVEL_SLEW = 3.0  # max level change per second (0..1 scale)
+
     def set_bar_count(self, count: int):
         self.num_bars = count
         if count == 7:
             self.bar_weights = [0.35, 0.65, 0.95, 1.0, 0.95, 0.65, 0.35]
+        elif count == 3:
+            self.bar_weights = [0.7, 1.0, 0.7]
         else:
             self.bar_weights = [0.45, 0.85, 1.0, 0.85, 0.45]
         self.bar_heights = [4.5] * count
@@ -237,11 +261,15 @@ class WaveformBars(QWidget):
         # Advance traveling phase continuously for living wave
         self.phase += 0.16
 
-        # Smooth input loudness level (fast attack, natural decay)
-        if self.target_level > self._current_level:
-            self._current_level += (self.target_level - self._current_level) * 0.50
-        else:
-            self._current_level += (self.target_level - self._current_level) * 0.16
+        # Smooth input loudness the same at any frame rate: move 15% toward the target per 60 Hz frame,
+        # never faster than LEVEL_SLEW per second, so a cough or a dropped buffer can't make the bars jump.
+        now = time.monotonic()
+        dt = min(max(now - getattr(self, "_last_t", now - 1 / 60), 0.001), 0.2)
+        self._last_t = now
+        k = math.pow(0.85, dt * 60.0)
+        step = (self._current_level * k + self.target_level * (1.0 - k)) - self._current_level
+        cap = dt * self.LEVEL_SLEW
+        self._current_level += max(-cap, min(cap, step))
 
         lvl = self._current_level
         max_h = float(self.height() - 2)  # up to 20px
@@ -1253,13 +1281,13 @@ class FloatingPill(QWidget):
 
         if capsule_style == "micro":
             self._cap_w, self._cap_h = 88, 24
-            self._snooze_w, self._snooze_h = 54, 18
+            self._snooze_w, self._snooze_h = 40, 8
         elif capsule_style == "standard":
             self._cap_w, self._cap_h = 360, 44
             self._snooze_w, self._snooze_h = 76, 8
         else: # "compact" / Wispr Flow
             self._cap_w, self._cap_h = 148, 32
-            self._snooze_w, self._snooze_h = 96, 24
+            self._snooze_w, self._snooze_h = 56, 10  # empty resting bar, Wispr-slim
 
         self._hud_w, self._hud_h = 360, 400
         self._line_w, self._line_h = 76, 8
@@ -1304,6 +1332,7 @@ class FloatingPill(QWidget):
         self.fade_anim.setDuration(380)
         self.fade_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
         self.fade_anim.finished.connect(self._on_fade_finished)
+        self.fade_anim.valueChanged.connect(self._on_fade_tick)
 
         # Isolated screen transition animation to prevent cross-talk with state fades
         self.screen_fade_anim = QPropertyAnimation(self, b"windowOpacity")
@@ -1405,6 +1434,10 @@ class FloatingPill(QWidget):
         )
 
         self.visualizer = WaveformBars(self.capsule_widget, num_bars=7)
+        # hidden while writing/pasted, but its slot stays: the spinner and badge don't jump sideways
+        sp = self.visualizer.sizePolicy()
+        sp.setRetainSizeWhenHidden(True)
+        self.visualizer.setSizePolicy(sp)
         self.btn_more = MoreButton(self.capsule_widget)
         self.btn_more.clicked.connect(self.toggle_morph_hud)
 
@@ -1431,13 +1464,23 @@ class FloatingPill(QWidget):
         self.lang_badge.setText(text)
         fm = self.lang_badge.fontMetrics()
         tw = fm.horizontalAdvance(text)
-        bw = max(32, tw + 14)
-        self.lang_badge.setFixedSize(bw, 20)
+        bh = getattr(self, "_badge_h", 20)
+        bw = max(round(bh * 1.6), tw + 14 * bh // 20)
+        self.lang_badge.setFixedSize(bw, bh)
 
     def set_capsule_style(self, style: str):
         if style not in ("standard", "compact", "micro"):
             style = "compact"
         self.capsule_style = style
+        # back to unscaled parts; _fit_capsule rescales them when a size factor is set
+        self._badge_h = 20
+        self.indicator.setFixedSize(20, 20)
+        self.btn_more.setFixedSize(26, 26)
+        self.text_label._font = self._font(10, QFont.Weight.Medium)
+        self.text_label.setMinimumWidth(0)
+        self.lang_badge.setFont(self._font(8, QFont.Weight.DemiBold))
+        self.lang_badge.setStyleSheet(
+            f"QLabel {{ color: {FG_DIM}; background: {FILL}; border-radius: 10px; padding: 0px 5px; }}")
 
         # Clear existing layout items completely so no phantom hidden widgets remain
         while self.capsule_layout.count():
@@ -1467,7 +1510,7 @@ class FloatingPill(QWidget):
             self.capsule_layout.setSpacing(10)
         elif style == "compact":
             self._cap_w, self._cap_h = 148, 32
-            self._snooze_w, self._snooze_h = 96, 24
+            self._snooze_w, self._snooze_h = 56, 10  # empty resting bar, Wispr-slim
             self.capsule_layout.addWidget(self.indicator, 0, Qt.AlignmentFlag.AlignVCenter)
             self.capsule_layout.addWidget(self.blobatar, 0, Qt.AlignmentFlag.AlignVCenter)
             self.capsule_layout.addWidget(self.lang_badge, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -1486,7 +1529,7 @@ class FloatingPill(QWidget):
             self.capsule_layout.setSpacing(8)
         elif style == "micro":
             self._cap_w, self._cap_h = 88, 24
-            self._snooze_w, self._snooze_h = 54, 18
+            self._snooze_w, self._snooze_h = 40, 8
             self.capsule_layout.addWidget(self.indicator, 0, Qt.AlignmentFlag.AlignVCenter)
             self.capsule_layout.addWidget(self.blobatar, 0, Qt.AlignmentFlag.AlignVCenter)
             self.capsule_layout.addWidget(self.visualizer, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -1506,17 +1549,54 @@ class FloatingPill(QWidget):
         k = screen_scale(self.current_screen or self.screen() or QApplication.primaryScreen()) if auto else 1.0
         wf, hf = self._size[0] * k, self._size[1] * k
         if (wf, hf) != (1.0, 1.0):
-            self.visualizer.setFixedSize(round(self.visualizer.width() * min(wf, hf)), round(self.visualizer.height() * min(wf, hf)))
-            need = self.capsule_layout.totalMinimumSize()  # never smaller than what the capsule has to hold
-            self._cap_w, self._cap_h = max(round(self._cap_w * wf), need.width()), max(round(self._cap_h * hf), need.height())
-            self._snooze_w, self._snooze_h = round(self._snooze_w * wf), round(self._snooze_h * hf)
-            self.capsule_widget.setFixedSize(self._cap_w, self._cap_h)
+            self._fit_capsule(wf, hf)
 
         if not self.is_expanded_hud:
             self._snooze_t = 0.0
             self._is_snoozed = False
             self._apply_t(0.0)
             self.position_bottom_center()
+
+    def _fit_capsule(self, wf: float, hf: float):
+        """Scale every part by one factor, then drop parts (label, badge, bars) until the rest fits.
+        Content is never squeezed below its own size: it is removed instead."""
+        s = max(0.6, min(wf, hf, 1.6))
+        w, h = round(self._cap_w * wf), max(18, round(self._cap_h * hf))
+        lay = self.capsule_layout
+        m = lay.contentsMargins()
+        lay.setContentsMargins(round(m.left() * s), 0, round(m.right() * s), 0)
+        lay.setSpacing(max(4, round(lay.spacing() * s)))
+        ind = min(round(20 * s), h - 4)
+        self.indicator.setFixedSize(ind, ind)
+        bh = min(round(20 * s), h - 4)
+        self.lang_badge.setFont(self._font(max(6, round(8 * s)), QFont.Weight.DemiBold))
+        self.lang_badge.setStyleSheet(
+            f"QLabel {{ color: {FG_DIM}; background: {FILL}; border-radius: {bh // 2}px; padding: 0px {max(3, round(5 * s))}px; }}")
+        self._badge_h = bh
+        self._update_badge_text(self.lang_badge.text())
+        self.visualizer.setFixedSize(round(self.visualizer.width() * s), min(round(self.visualizer.height() * s), h - 6))
+        self.text_label._font = self._font(max(7, round(10 * s)), QFont.Weight.Medium)
+        if self.text_label.isVisibleTo(self.capsule_widget):
+            self.text_label.setMinimumWidth(round(64 * s))  # below this a label is noise: drop it
+        self.btn_more.setFixedSize(min(round(26 * s), h - 4), min(round(26 * s), h - 4))
+        # degrade order: label, badge, then fewer bars
+        drops = [lambda: self.text_label.setVisible(False),
+                 lambda: self.lang_badge.setVisible(False),
+                 lambda: self._bars(5),
+                 lambda: self._bars(3)]
+        while lay.totalMinimumSize().width() > w and drops:
+            drops.pop(0)()
+            lay.invalidate()
+        need = lay.totalMinimumSize()
+        self._cap_w, self._cap_h = max(w, need.width()), max(h, need.height())
+        self._snooze_w, self._snooze_h = round(self._snooze_w * wf), round(self._snooze_h * hf)
+        self.capsule_widget.setFixedSize(self._cap_w, self._cap_h)
+
+    def _bars(self, n: int):
+        v = self.visualizer
+        if v.num_bars > n:
+            v.setFixedWidth(round(v.width() * n / v.num_bars))
+            v.set_bar_count(n)
 
     def set_capsule_size(self, wf: float, hf: float, auto: bool):
         """Width and height as fractions of the style's default, plus 'grow with the screen'."""
@@ -1547,11 +1627,7 @@ class FloatingPill(QWidget):
         self.hud_widget.setObjectName("HUD")
         self.hud_widget.setFixedSize(self._hud_w, self._hud_h)
         self.hud_widget.setStyleSheet(f"""
-            QWidget#HUD {{
-                background: rgba(18, 18, 22, 0.98);
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                border-radius: 20px;
-            }}
+            QWidget#HUD {{ background: transparent; border: none; }}
         """)
         lay = QVBoxLayout(self.hud_widget)
         lay.setContentsMargins(16, 20, 16, 16)
@@ -1569,7 +1645,7 @@ class FloatingPill(QWidget):
         self.hud_logo.setPixmap(get_squircle_pixmap(logo_path, size=26, radius=6.5))
         header.addWidget(self.hud_logo, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        title = QLabel("OpenFlow", self)
+        title = QLabel("Vaani", self)
         title.setFont(self._font(12, QFont.Weight.DemiBold))
         header.addWidget(title, 0, Qt.AlignmentFlag.AlignVCenter)
 
@@ -1750,7 +1826,8 @@ class FloatingPill(QWidget):
         return int(self._shape.top()) if self._staged else 0
 
     def _clip_child(self, w: QWidget):
-        """Clip a child to the rounded body so wider content never shows square corners mid-morph."""
+        """Clip a child to the rounded body so wider content never shows square corners mid-morph.
+        The mask is 1-bit, so the body itself is painted (anti-aliased) by paintEvent, never by a masked child."""
         r = self._shape
         rad = min(r.height() / 2.0, 22.0 + 6.0 * self._t)
         path = QPainterPath()
@@ -2149,8 +2226,13 @@ class FloatingPill(QWidget):
         target_screen = QGuiApplication.screenAt(cursor_pos)
         if not target_screen:
             return
-        cur_screen = self.current_screen or self.screen() or QGuiApplication.screenAt(self.geometry().center())
-        if cur_screen and target_screen.name() != cur_screen.name():
+        try:
+            cur_screen = self.current_screen or self.screen() or QGuiApplication.screenAt(self.geometry().center())
+            moved = cur_screen is not None and target_screen.name() != cur_screen.name()
+        except RuntimeError:  # a monitor was switched off and Qt deleted its QScreen: re-home on the live one
+            self.current_screen = None
+            moved = True
+        if moved:
             self._transition_to_screen(target_screen)
 
     def _transition_to_screen(self, target_screen):
@@ -2206,8 +2288,8 @@ class FloatingPill(QWidget):
         self.visualizer.setVisible(False)
         self._bottom_stage(self._cap_w, self._cap_h)
         self.snooze_anim.stop()
-        self.snooze_anim.setDuration(280)
-        self.snooze_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.snooze_anim.setDuration(220)  # resting: unhurried
+        self.snooze_anim.setEasingCurve(SNAP_EASE)
         self.snooze_anim.setStartValue(self._snooze_t)
         self.snooze_anim.setEndValue(1.0)
         self.snooze_anim.start()
@@ -2220,14 +2302,17 @@ class FloatingPill(QWidget):
         self.visualizer.setVisible(True)
         self._bottom_stage(self._cap_w, self._cap_h)
         self.snooze_anim.stop()
-        self.snooze_anim.setDuration(240)
-        self.snooze_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.snooze_anim.setDuration(140)  # waking for dictation: must feel instant
+        self.snooze_anim.setEasingCurve(SNAP_EASE)
         self.snooze_anim.setStartValue(self._snooze_t)
         self.snooze_anim.setEndValue(0.0)
         self.snooze_anim.start()
 
     def _apply_snooze_t(self, val):
         self._snooze_t = float(val)
+        # The resting pill is empty, like Wispr's: the content leaves before the body shrinks around it
+        # and comes back only once there is room, so the blob, badge and bars are never squeezed.
+        self.capsule_widget.setVisible(self._snooze_t < 0.3)
         if self._staged:
             body = self._place_body(self._cap_w - (self._cap_w - self._snooze_w) * self._snooze_t,
                                     self._cap_h - (self._cap_h - self._snooze_h) * self._snooze_t)
@@ -2278,8 +2363,8 @@ class FloatingPill(QWidget):
             self.blobatar.set_level(level)
 
     def show_listening(self, preset_name: str = "Listening"):
-        if self.is_expanded_hud:
-            return
+        if self.is_expanded_hud:  # dictating with the settings sheet open: fold it so the live text shows
+            self.collapse_to_capsule()
         self.hide_timer.stop()
         was_hidden = not self.isVisible() or self.windowOpacity() < 0.1
 
@@ -2311,12 +2396,7 @@ class FloatingPill(QWidget):
         self.show()
         _force_topmost(self)
         if was_hidden:
-            self.setWindowOpacity(0.0)
-            self.fade_anim.setDuration(340)
-            self.fade_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-            self.fade_anim.setStartValue(0.0)
-            self.fade_anim.setEndValue(self.opacity)
-            self.fade_anim.start()
+            self._fade_in()
         else:
             if self.windowOpacity() < self.opacity - 0.01:
                 self.fade_anim.setDuration(240)
@@ -2401,12 +2481,7 @@ class FloatingPill(QWidget):
             self.show()
             _force_topmost(self)
             if was_hidden:
-                self.setWindowOpacity(0.0)
-                self.fade_anim.setDuration(340)
-                self.fade_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-                self.fade_anim.setStartValue(0.0)
-                self.fade_anim.setEndValue(self.opacity)
-                self.fade_anim.start()
+                self._fade_in()
             else:
                 self.setWindowOpacity(self.opacity)
         self.update()
@@ -2432,12 +2507,7 @@ class FloatingPill(QWidget):
             self.show()
             _force_topmost(self)
             if was_hidden:
-                self.setWindowOpacity(0.0)
-                self.fade_anim.setDuration(340)
-                self.fade_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-                self.fade_anim.setStartValue(0.0)
-                self.fade_anim.setEndValue(self.opacity)
-                self.fade_anim.start()
+                self._fade_in()
             else:
                 self.setWindowOpacity(self.opacity)
             self.hide_timer.stop()
@@ -2467,19 +2537,52 @@ class FloatingPill(QWidget):
         if self.is_expanded_hud or self.current_state not in ("idle", "pasted"):
             return
         if self.hide_when_idle:
-            self.fade_anim.stop()
-            self.fade_anim.setDuration(400)
-            self.fade_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-            self.fade_anim.setStartValue(self.windowOpacity())
-            self.fade_anim.setEndValue(0.0)
-            self.fade_anim.start()
+            self._fade_out()
             return
         if self.capsule_style in ("compact", "micro"):
             self.minimize_to_snooze()
         else:
             self.minimize_to_line()
 
+    # ---------- show / hide: fade + a small rise in, a quicker fade + drop out ----------
+
+    RISE_PX = 6
+
+    def _fade_in(self):
+        """Enter: 260 ms, eases out, rising RISE_PX into place. Windows 'Animation effects' off: fade only."""
+        self.fade_anim.stop()
+        on = animations_enabled()
+        self._rise_base = None if (self._staged or not on) else self.pos()
+        self.fade_anim.setDuration(260 if on else 120)
+        self.fade_anim.setEasingCurve(QEasingCurve(QEasingCurve.Type.OutCubic))
+        self.fade_anim.setStartValue(0.0)
+        self.fade_anim.setEndValue(self.opacity)
+        self.setWindowOpacity(0.0)
+        self.fade_anim.start()
+
+    def _fade_out(self):
+        """Exit: faster than the entrance (180 ms, eases in) and drops back the way it came."""
+        self.fade_anim.stop()
+        on = animations_enabled()
+        self._rise_base = None if (self._staged or not on) else self.pos()
+        self.fade_anim.setDuration(180 if on else 120)
+        self.fade_anim.setEasingCurve(QEasingCurve(QEasingCurve.Type.InCubic))
+        self.fade_anim.setStartValue(self.windowOpacity())
+        self.fade_anim.setEndValue(0.0)
+        self.fade_anim.start()
+
+    def _on_fade_tick(self, v):
+        base = getattr(self, "_rise_base", None)
+        if base is None or self.opacity <= 0:
+            return
+        k = 1.0 - float(v) / self.opacity  # 1 = hidden, 0 = shown
+        self.move(base.x(), base.y() + round(self.RISE_PX * k))
+
     def _on_fade_finished(self):
+        base = getattr(self, "_rise_base", None)
+        if base is not None:
+            self.move(base)  # rest exactly where we started, so a hidden window reappears in place
+            self._rise_base = None
         if self.windowOpacity() > 0.01:
             return
         if self.hide_when_idle:

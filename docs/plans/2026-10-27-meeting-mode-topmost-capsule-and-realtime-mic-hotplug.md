@@ -188,7 +188,7 @@ from openflow.engine.meeting_formatter import format_meeting_notes
 def test_meeting_note_formatting():
     raw_transcript = (
         "Good morning everyone. Today we are reviewing the Q4 roadmap. "
-        "First, we decided to launch OpenFlow 1.0 next Tuesday. "
+        "First, we decided to launch Vaani 1.0 next Tuesday. "
         "Sachin will finish the installer and test the meeting mode. "
         "Action item: review the PR by tomorrow afternoon."
     )
@@ -196,7 +196,7 @@ def test_meeting_note_formatting():
     assert "## Meeting Summary" in notes
     assert "## Key Decisions" in notes
     assert "## Action Items" in notes
-    assert "OpenFlow 1.0" in notes
+    assert "Vaani 1.0" in notes
 ```
 
 **Step 2: Run test to verify it fails**

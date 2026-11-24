@@ -19,5 +19,5 @@ sentencepiece>=0.2  # Odia → English: IndicTrans2 tokenizer (model runs on ctr
 # For NVIDIA GPU acceleration (much faster):
 #   pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
 #
-# If llama-cpp-python is NOT installed, OpenFlow still works — the regex
+# If llama-cpp-python is NOT installed, Vaani still works — the regex
 # formatter in engine/formatter.py handles basic cleanup automatically.
