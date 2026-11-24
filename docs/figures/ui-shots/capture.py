@@ -45,7 +45,7 @@ cfg.update(capsule_style="island", capsule_opacity=1.0, capsule_width_pct=100, c
 w = MainWindow(db, cfg)
 w.resize(1180, 760); w.show(); QTest.qWait(500)
 w.refresh_history(); w.refresh_meetings(); w.refresh_stats(); w.refresh_dictionary()
-for name, page in (("history", 0), ("meetings", 1), ("models", 3), ("analytics", 5)):
+for name, page in (("history", 0), ("meetings", 1), ("vocabulary", 2), ("models", 3), ("analytics", 5), ("tools", 7)):
     w.select_page(page); QTest.qWait(350)
     w.grab().save(os.path.join(OUT, f"ui-{name}.png"))
 w.select_page(4); QTest.qWait(300)
@@ -72,4 +72,27 @@ isl._to_idle(); QTest.qWait(600)
 isl.show_mic_event("Realtek Microphone", "connected"); island("mic", 90)
 isl._to_idle(); QTest.qWait(600)
 isl._open_panel(); island("panel", 300)
+
+# meeting bar: the offer, then live captions (transparent PNG, tight to the frame)
+from vaani.ui.floating_pill import MeetingBar
+def tight(widget, name):
+    path = os.path.join(OUT, name)
+    widget.grab().save(path)
+    from PIL import Image
+    im = Image.open(path).convert("RGBA")
+    im.crop(im.getchannel("A").getbbox()).save(path)
+bar = MeetingBar(); bar.show_prompt("Google Meet"); bar.show(); QTest.qWait(400); tight(bar, "meeting-prompt.png")
+bar.show_recording()
+for who, text in (("Person 1", "Good morning. Let's lock the launch date today."), ("You", "The installer is ready. I can ship it on Tuesday."),
+                  ("Person 2", "Great, then I'll send the release notes.")):
+    bar.add_line(who, text)
+QTest.qWait(400); tight(bar, "meeting-captions.png")
+
+# first-run setup window
+import vaani.ui.setup_dialog as setup_mod
+# a public picture shows a sample PC, never the one it was rendered on
+setup_mod.hardware.detect = lambda: {"note": "NVIDIA GPU found, using CUDA.", "cuda_ok": True, "model_size": "small"}
+setup_mod.hardware.npu_name = lambda: None
+sd = setup_mod.SetupDialog(dict(cfg)); sd.show(); QTest.qWait(300); sd.adjustSize(); QTest.qWait(400)
+sd.grab().save(os.path.join(OUT, "setup.png"))
 print("saved to", OUT)

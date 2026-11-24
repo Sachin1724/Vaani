@@ -150,6 +150,14 @@ MODEL_METADATA = [
         "accuracy": "High (Odia)",
         "recommended": False,
     },
+    {
+        "id": "writer",
+        "name": "Writing model (Qwen2.5 1.5B)",
+        "description": "Not a speech model: AI polish, voice edits and meeting notes. Turn on Voice edits to use it (~1.45 GB)",
+        "speed": "~1 s per edit",
+        "accuracy": "Writing",
+        "recommended": False,
+    },
 ]
 
 
@@ -281,17 +289,17 @@ active_device = "cpu"  # set by Transcriber on load; the NPU engine uses its own
 
 def is_ready(name: str) -> bool:
     """Downloaded for the engine that is running now (Model Library and capsule badges)."""
-    if active_device == "npu" and name not in ("parakeet", "odia"):
+    if active_device == "npu" and name not in ("parakeet", "odia", "writer"):
         return cached_path(name.replace(".en", "") + "-ov") is not None
     return is_model_downloaded(name)
 
 
 def list_downloaded_models() -> List[str]:
-    """Returns list of model IDs currently ready in local disk cache."""
+    """Speech model IDs ready in the local disk cache (the transcriber picks fallbacks from these)."""
     downloaded: List[str] = []
     for m in MODEL_METADATA:
         mid = str(m["id"])
-        if is_model_downloaded(mid):
+        if mid != "writer" and is_model_downloaded(mid):
             downloaded.append(mid)
     return downloaded
 

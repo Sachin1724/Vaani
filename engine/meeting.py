@@ -331,6 +331,25 @@ INDIC_MEETING_PROMPT = (
 )
 
 
+class Line(tuple):
+    """(seconds, speaker, text) plus .end, the second the voice stopped; unpacks like a plain 3-tuple."""
+
+    def __new__(cls, start: float, who: str, text: str, end: float):
+        line = super().__new__(cls, (start, who, text))
+        line.end = end
+        return line
+
+
+def _voice_seconds(audio: np.ndarray) -> float:
+    """Length up to the last 20 ms frame with voice in it: an utterance ends with ~0.7 s of the pause
+    that cut it, and a subtitle shouldn't stay up through that."""
+    n = 320
+    rms = np.sqrt((audio[: len(audio) // n * n].reshape(-1, n) ** 2).mean(axis=1))
+    if not len(rms) or rms.max() <= 0:
+        return len(audio) / SR
+    return (int(np.nonzero(rms >= 0.1 * rms.max())[0][-1]) + 1) * n / SR
+
+
 class MeetingSession:
     """Records mic + call audio, transcribes each utterance in the background, reports captions."""
 
@@ -427,7 +446,8 @@ class MeetingSession:
         if not text:
             return
         who = "You" if src == "mic" else speakers.label(audio)
-        self.lines.append((t0 - self.started, who, text))
+        start = t0 - self.started
+        self.lines.append(Line(start, who, text, start + _voice_seconds(audio)))
         try:
             self.on_line(who, text)
         except Exception:
@@ -476,6 +496,51 @@ def group_speaker_turns(lines: List[Tuple[float, str, str]]) -> List[dict]:
                 "texts": [cleaned],
             })
     return turns
+
+
+def _srt_time(t: float) -> str:
+    ms = int(round(max(0.0, t) * 1000))
+    return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
+
+
+def _cue_lines(text: str, width: int = 42) -> str:
+    """One cue's text as at most two lines of ~42 characters (the usual broadcast limit)."""
+    words, rows = text.split(), [""]
+    for w in words:
+        if rows[-1] and len(rows[-1]) + 1 + len(w) > width:
+            rows.append(w)
+        else:
+            rows[-1] = f"{rows[-1]} {w}".strip()
+    return "\n".join(rows)
+
+
+def srt_text(lines: List[Tuple[float, str, str]], max_chars: int = 84) -> str:
+    """SubRip subtitles. A cue runs until the voice stopped (Line.end; plain tuples get an estimate of
+    ~15 characters a second, 1.2-7 s), held at least 1 s so it can be read, never past the next line's
+    start. A long utterance is split into two-line cues with its time shared out by length."""
+    cues = []
+    for i, line in enumerate(lines):
+        start, _who, text = line
+        nxt = lines[i + 1][0] if i + 1 < len(lines) else float("inf")
+        end = getattr(line, "end", None)
+        chunks, cur = [], ""
+        for w in text.split():
+            if cur and len(cur) + 1 + len(w) > max_chars:
+                chunks.append(cur)
+                cur = w
+            else:
+                cur = f"{cur} {w}".strip()
+        if cur:
+            chunks.append(cur)
+        said = end - start if end is not None else sum(min(7.0, max(1.2, len(c) / 15.0)) for c in chunks)
+        span = max(0.1, min(nxt - start, max(1.0, said)))
+        total, t = sum(len(c) for c in chunks) or 1, start
+        for c in chunks:
+            stop = t + span * len(c) / total
+            cues.append((t, stop, c))
+            t = stop
+    return "\n".join(f"{n}\n{_srt_time(a)} --> {_srt_time(b)}\n{_cue_lines(c)}\n"
+                     for n, (a, b, c) in enumerate(cues, 1))
 
 
 def transcript_text(lines: List[Tuple[float, str, str]]) -> str:

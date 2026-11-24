@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QProgressBar
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QFont, QIcon
 
 try:
     from ..config import get_asset_path
@@ -33,9 +33,9 @@ class SetupDialog(QDialog):
     def __init__(self, config: dict):
         super().__init__()
         self.config = config
-        self.setWindowTitle("Vaani Setup")
+        self.setWindowTitle("OpenFlow Vaani Setup")
         self.setFixedWidth(440)
-        self.setStyleSheet(main_qss() + "QDialog { background: #000000; }")
+        self.setStyleSheet(main_qss() + "QDialog { background: #03010A; }")
 
         icon_path = get_asset_path("app_icon_square.png")
         if not os.path.exists(icon_path):
@@ -44,6 +44,7 @@ class SetupDialog(QDialog):
             self.setWindowIcon(QIcon(icon_path))
 
         lay = QVBoxLayout(self)
+        lay.setSizeConstraint(QVBoxLayout.SizeConstraint.SetMinimumSize)  # grow with wrapped text instead of clipping it
         lay.setContentsMargins(28, 28, 28, 24)
         lay.setSpacing(14)
 
@@ -57,8 +58,12 @@ class SetupDialog(QDialog):
 
         header_text = QVBoxLayout()
         header_text.setSpacing(3)
-        title = QLabel("Welcome to Vaani", self)
-        title.setStyleSheet("font-size: 22px; font-weight: 500; color: #ffffff;")
+        title = QLabel("Welcome to OpenFlow Vaani", self)
+        tf = title.font()  # size set on the font, not the style sheet, so the layout measures the real height
+        tf.setPixelSize(21)
+        tf.setWeight(QFont.Weight.DemiBold)
+        title.setFont(tf)
+        title.setStyleSheet("color: #F8FAFC;")
         sub = QLabel("Private, local voice dictation on your device.", self)
         sub.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 13px;")
         header_text.addWidget(title)
@@ -67,7 +72,7 @@ class SetupDialog(QDialog):
         header_row.addStretch()
         lay.addLayout(header_row)
 
-        desc = QLabel("Choose your language. The speech recognition model downloads once, then everything runs 100% offline.")
+        desc = QLabel("Choose your language. The speech model downloads once, then everything runs offline.")
         desc.setWordWrap(True)
         desc.setStyleSheet(f"color: {COLORS['text_secondary']}; line-height: 1.4;")
         lay.addWidget(desc)
@@ -113,7 +118,7 @@ class SetupDialog(QDialog):
         self.bar.setTextVisible(False)
         self.bar.setFixedHeight(4)
         self.bar.setStyleSheet("QProgressBar { background: rgba(255,255,255,0.10); border: none; border-radius: 2px; }"
-                               "QProgressBar::chunk { background: #ffffff; border-radius: 2px; }")
+                               "QProgressBar::chunk { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #5B4CF4, stop:1 #EC4899); border-radius: 2px; }")
         self.bar.hide()
         lay.addWidget(self.bar)
         lay.addWidget(self.status)

@@ -7,21 +7,23 @@ except (ImportError, ValueError):
 _CHECK = get_asset_path("check_white.svg").replace("\\", "/")
 _CHEVRON = get_asset_path("chevron.svg").replace("\\", "/")
 
-# Apple dark system greys: content < sidebar < grouped rows < controls; one accent (systemBlue)
-FONT = "'General Sans', 'Inter', 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', -apple-system, 'Helvetica Neue', sans-serif"
+# Vaani brand (dark gradient styleboard): background < surface 1-3; violet primary, violet->pink brand gradient
+FONT = "'Inter', 'General Sans', 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', -apple-system, 'Helvetica Neue', sans-serif"
+BRAND_GRADIENT = "qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #5B4CF4, stop:1 #EC4899)"
 
 COLORS = {
-    "bg_dark": "#1c1c1e",
-    "bg_sidebar": "#242426",
-    "bg_card": "#2c2c2e",
-    "bg_control": "#3a3a3c",
-    "border_glass": "rgba(255, 255, 255, 0.08)",
-    "accent_primary": "#0a84ff",
-    "danger": "#ff453a",
-    "success": "#30d158",
-    "text_main": "#ffffff",
-    "text_secondary": "rgba(235, 235, 245, 0.60)",
-    "text_muted": "rgba(235, 235, 245, 0.38)",
+    "bg_dark": "#0B0714",
+    "bg_sidebar": "#03010A",
+    "bg_card": "#120B22",
+    "bg_control": "#1A102E",
+    "border_glass": "rgba(168, 85, 247, 0.16)",
+    "accent_primary": "#5B4CF4",
+    "accent_ring": "#A855F7",
+    "danger": "#EF4444",
+    "success": "#22C55E",
+    "text_main": "#F8FAFC",
+    "text_secondary": "rgba(248, 250, 252, 0.60)",
+    "text_muted": "#94A3B8",
 }
 
 MAIN_WINDOW_QSS = f"""
@@ -60,8 +62,8 @@ QLabel#MetricValue {{ font-size: 28px; font-weight: 600; }}
 
 /* Badges */
 QLabel[badge] {{ border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; background: rgba(255,255,255,0.10); color: {COLORS["text_secondary"]}; }}
-QLabel[badge="active"] {{ background: rgba(48,209,88,0.18); color: {COLORS["success"]}; }}
-QLabel[badge="accent"] {{ background: rgba(10,132,255,0.20); color: {COLORS["accent_primary"]}; }}
+QLabel[badge="active"] {{ background: rgba(34, 197, 94,0.18); color: {COLORS["success"]}; }}
+QLabel[badge="accent"] {{ background: rgba(91, 76, 244,0.20); color: {COLORS["accent_primary"]}; }}
 
 /* Buttons: secondary by default, primary = accent fill, danger = tinted red */
 QPushButton {{
@@ -72,19 +74,19 @@ QPushButton:hover {{ background-color: rgba(120,120,128,0.40); }}
 QPushButton:pressed {{ background-color: rgba(120,120,128,0.52); }}
 QPushButton:disabled {{ color: {COLORS["text_muted"]}; background-color: rgba(120,120,128,0.16); }}
 QPushButton[small="true"] {{ height: 28px; padding: 0 10px; font-size: 12.5px; }}
-QPushButton#PrimaryButton {{ background-color: {COLORS["accent_primary"]}; color: #fff; }}
-QPushButton#PrimaryButton:hover {{ background-color: #3395ff; }}
-QPushButton#PrimaryButton:pressed {{ background-color: #0071e3; }}
-QPushButton#PrimaryButton:disabled {{ background-color: rgba(10,132,255,0.35); color: rgba(255,255,255,0.6); }}
-QPushButton#DangerButton {{ background-color: rgba(255,69,58,0.16); color: {COLORS["danger"]}; }}
-QPushButton#DangerButton:hover {{ background-color: rgba(255,69,58,0.28); }}
+QPushButton#PrimaryButton {{ background: {BRAND_GRADIENT}; color: #fff; }}
+QPushButton#PrimaryButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #7D70F7, stop:1 #F062A8); }}
+QPushButton#PrimaryButton:pressed {{ background-color: #4A3BD9; }}
+QPushButton#PrimaryButton:disabled {{ background-color: rgba(91, 76, 244,0.35); color: rgba(255,255,255,0.6); }}
+QPushButton#DangerButton {{ background-color: rgba(239, 68, 68,0.16); color: {COLORS["danger"]}; }}
+QPushButton#DangerButton:hover {{ background-color: rgba(239, 68, 68,0.28); }}
 
 /* Inputs */
 QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox {{
     background-color: {COLORS["bg_control"]}; border: 1px solid transparent; border-radius: 8px;
     padding: 0 10px; height: 30px; selection-background-color: {COLORS["accent_primary"]};
 }}
-QLineEdit:focus, QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus {{ border: 1px solid {COLORS["accent_primary"]}; }}
+QLineEdit:focus, QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus {{ border: 1px solid {COLORS["accent_ring"]}; }}
 QComboBox {{ padding-right: 26px; }}
 QComboBox::drop-down {{ border: none; width: 26px; subcontrol-origin: padding; subcontrol-position: center right; }}
 QComboBox::down-arrow {{ image: url({_CHEVRON}); width: 12px; height: 12px; }}
@@ -94,16 +96,16 @@ QComboBox QAbstractItemView {{
 }}
 QSpinBox::up-button, QSpinBox::down-button, QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{ width: 0; border: none; }}
 QSlider::groove:horizontal {{ height: 4px; border-radius: 2px; background: rgba(120,120,128,0.40); }}
-QSlider::sub-page:horizontal {{ background: {COLORS["accent_primary"]}; border-radius: 2px; }}
+QSlider::sub-page:horizontal {{ background: {BRAND_GRADIENT}; border-radius: 2px; }}
 QSlider::handle:horizontal {{ width: 18px; height: 18px; margin: -7px 0; border-radius: 9px; background: #fff; }}
 QProgressBar {{ background: rgba(255,255,255,0.10); border: none; border-radius: 2px; max-height: 4px; min-height: 4px; }}
-QProgressBar::chunk {{ background: {COLORS["accent_primary"]}; border-radius: 2px; }}
+QProgressBar::chunk {{ background: {BRAND_GRADIENT}; border-radius: 2px; }}
 QCheckBox::indicator {{ width: 18px; height: 18px; border-radius: 9px; border: 1.5px solid rgba(255,255,255,0.35); }}
 QCheckBox::indicator:checked {{ background: {COLORS["accent_primary"]}; border-color: {COLORS["accent_primary"]}; image: url({_CHECK}); }}
 
 /* Tables and lists */
 QTableWidget {{ background: transparent; border: none; gridline-color: transparent; outline: 0;
-    selection-background-color: rgba(10,132,255,0.28); selection-color: #fff; }}
+    selection-background-color: rgba(91, 76, 244,0.28); selection-color: #fff; }}
 QTableWidget::item {{ border-bottom: 1px solid {COLORS["border_glass"]}; padding: 0 8px; }}
 QHeaderView {{ background: transparent; }}
 QHeaderView::section {{ background: transparent; color: {COLORS["text_muted"]}; padding: 10px 11px; border: none;
@@ -111,7 +113,7 @@ QHeaderView::section {{ background: transparent; color: {COLORS["text_muted"]}; 
 QTableCornerButton::section {{ background: transparent; border: none; }}
 QListWidget {{ background: transparent; border: none; outline: 0; padding: 6px; }}
 QListWidget::item {{ padding: 8px 10px; border-radius: 8px; margin-bottom: 2px; }}
-QListWidget::item:selected {{ background: rgba(10,132,255,0.28); color: #fff; }}
+QListWidget::item:selected {{ background: rgba(91, 76, 244,0.28); color: #fff; }}
 QListWidget::item:hover:!selected {{ background: rgba(255,255,255,0.06); }}
 QTextBrowser {{ background: transparent; border: none; }}
 QSplitter::handle {{ background: {COLORS["border_glass"]}; width: 1px; }}

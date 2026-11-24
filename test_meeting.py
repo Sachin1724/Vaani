@@ -139,3 +139,11 @@ def test_transcript_keeps_utterances_as_separate_paragraphs():
     assert "We decided to ship Friday.\n\nRahul follows up.\n\nBudget is approved." in raw  # not one run-on paragraph
     assert raw.count("###") == 3  # You, Them, then Them again once a minute has passed
     assert "\n\nRahul follows up.\n\n" in m.format_meeting_notes(raw, "Meeting")
+
+
+def test_srt_uses_voice_end_and_splits_long_lines():
+    from vaani.engine.meeting import Line, srt_text
+    s = srt_text([Line(0.0, "A", "Hello there.", 2.0), Line(5.0, "A", "word " * 30, 14.0)])
+    assert "00:00:00,000 --> 00:00:02,000\nHello there." in s  # ends when the voice stopped
+    assert s.count("-->") == 3 and "00:00:14,000" in s  # 150 chars -> two cues, last ends at voice end
+    assert all(len(r) <= 42 for r in s.splitlines() if "-->" not in r)
