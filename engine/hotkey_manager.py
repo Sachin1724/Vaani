@@ -52,9 +52,27 @@ class GlobalHotkeyManager:
         self.mode = mode
         self.start()
 
+    @staticmethod
+    def _vks_for_token(token: str):
+        if token == "ctrl":
+            return (VK_CONTROL, VK_LCONTROL, VK_RCONTROL)
+        if token == "shift":
+            return (VK_SHIFT, VK_LSHIFT, VK_RSHIFT)
+        if token == "alt":
+            return (VK_MENU, VK_LMENU, VK_RMENU)
+        if token == "space":
+            return (VK_SPACE,)
+        if token.startswith("f") and token[1:].isdigit():
+            n = int(token[1:])
+            if 1 <= n <= 24:
+                return (0x6F + n,)
+        if len(token) == 1 and ("a" <= token <= "z" or "0" <= token <= "9"):
+            return (ord(token.upper()),)
+        return ()
+
     def _is_modifier_combo(self) -> bool:
-        parts = set(p.strip() for p in self.hotkey_str.split("+"))
-        return parts.issubset({"ctrl", "shift", "alt"})
+        parts = [p.strip() for p in self.hotkey_str.split("+") if p.strip()]
+        return bool(parts) and all(self._vks_for_token(p) for p in parts)
 
     @staticmethod
     def _is_vk_down(*vks: int) -> bool:
@@ -65,16 +83,13 @@ class GlobalHotkeyManager:
         return False
 
     def _check_async_keys(self) -> bool:
-        """Direct Win32 hardware key-state check supporting Left and Right variants."""
-        parts = [p.strip() for p in self.hotkey_str.split("+")]
+        """Direct Win32 hardware key-state check supporting Left/Right modifiers and F/letter/digit keys."""
+        parts = [p.strip() for p in self.hotkey_str.split("+") if p.strip()]
+        if not parts:
+            return False
         for p in parts:
-            if p == "ctrl" and not self._is_vk_down(VK_CONTROL, VK_LCONTROL, VK_RCONTROL):
-                return False
-            elif p == "shift" and not self._is_vk_down(VK_SHIFT, VK_LSHIFT, VK_RSHIFT):
-                return False
-            elif p == "alt" and not self._is_vk_down(VK_MENU, VK_LMENU, VK_RMENU):
-                return False
-            elif p == "space" and not self._is_vk_down(VK_SPACE):
+            vks = self._vks_for_token(p)
+            if not vks or not self._is_vk_down(*vks):
                 return False
         return True
 

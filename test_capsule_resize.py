@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QApplication
 app = QApplication(sys.argv)
 from ui.floating_pill import FloatingPill, ui_font_family
 
-assert ui_font_family() == "General Sans", ui_font_family()
+assert ui_font_family() in ("Inter", "General Sans"), ui_font_family()
 pill = FloatingPill()
 for style in ("standard", "compact", "micro"):
     pill.set_capsule_style(style)

@@ -7,6 +7,8 @@ import sounddevice as sd
 from typing import Callable, Optional, List, Dict
 
 SAMPLE_RATE = 16000
+# Guard PortAudio device enumeration and stream lifecycle against sd._terminate()/_initialize() races
+_pa_lock = threading.RLock()
 
 # Pre-roll: keep this many samples in a ring buffer so the first
 # syllable is never clipped when the user presses Ctrl+Shift.
@@ -145,12 +147,13 @@ class AudioRecorder:
         self._preroll: np.ndarray = np.zeros(PREROLL_SAMPLES, dtype=np.float32)
         self._preroll_lock = threading.Lock()
 
-        # VAD & Auto-write tracking: lowered to 0.008 RMS so normal speech reliably triggers VAD
+        # VAD & Auto-write tracking: sensitive down to 0.0045 RMS so soft/whispered speech still starts live preview
         self._has_spoken = False
         self._last_speech_time = 0.0
         self._last_chunk_emit_time = 0.0
-        self._speech_energy_threshold = 0.008
+        self._speech_energy_threshold = 0.0045
         self._silence_triggered = False
+        self._chunk_emitting = False
 
     @property
     def is_recording(self) -> bool:
@@ -162,6 +165,28 @@ class AudioRecorder:
             chunks = self._audio_chunks[1:]
         return max((float(np.abs(c).max()) for c in chunks if len(c)), default=0.0)
 
+    def _resolve_device(self) -> Optional[int]:
+        """The device to open. A mic the user picked is used as is. "System default" follows Windows, except
+        when Windows' default is a Bluetooth headset (it often becomes default on connect): then the first other
+        live microphone is used, so earbuds stay for listening and dictation keeps full-quality audio."""
+        if self.device_index is not None:
+            return self.device_index
+        try:
+            with _pa_lock:
+                default = sd.query_devices(kind="input")
+            bt = bluetooth_headset_names()
+            if not is_bluetooth_headset(default.get("name", ""), bt):
+                return None
+            for mic in list_microphones():
+                if not is_bluetooth_headset(mic.get("name", ""), bt):
+                    if getattr(self, "_bt_note", None) != mic["name"]:
+                        self._bt_note = mic["name"]
+                        print(f"[Vaani] Windows' default mic is a Bluetooth headset (call quality): using {mic['name']}")
+                    return mic["index"]
+        except Exception as e:
+            print(f"[Vaani] Default mic check skipped ({e})")
+        return None
+
     def set_device(self, device_index: Optional[int]):
         if device_index != self.device_index:
             self.device_index = device_index
@@ -171,65 +196,70 @@ class AudioRecorder:
     def open_stream(self):
         """Keep the mic open between dictations: opening takes ~230 ms, which swallowed the first
         word, and the pre-roll is only real audio while the stream runs."""
-        if self._stream is not None:
-            return
-        with self._preroll_lock:
-            self._preroll = np.zeros(PREROLL_SAMPLES, dtype=np.float32)  # drop audio from a previous session
-        self._stream = sd.InputStream(
-            samplerate=SAMPLE_RATE,
-            channels=1,
-            dtype="float32",
-            device=self.device_index,
-            callback=self._audio_callback,
-            blocksize=1024,
-        )
-        self._stream.start()
+        with _pa_lock:
+            if self._stream is not None:
+                return
+            with self._preroll_lock:
+                self._preroll = np.zeros(PREROLL_SAMPLES, dtype=np.float32)  # drop audio from a previous session
+            self._stream = sd.InputStream(
+                samplerate=SAMPLE_RATE,
+                channels=1,
+                dtype="float32",
+                device=self._resolve_device(),
+                callback=self._audio_callback,
+                blocksize=1024,
+            )
+            self._stream.start()
 
     def close_stream(self):
         """Release the mic (idle, device change); the next dictation reopens it."""
-        if self._stream is not None:
-            try:
-                self._stream.stop()
-                self._stream.close()
-            except Exception:
-                pass
-            self._stream = None
+        with _pa_lock:
+            if self._stream is not None:
+                try:
+                    self._stream.stop()
+                    self._stream.close()
+                except Exception:
+                    pass
+                self._stream = None
 
     def refresh_devices(self) -> Optional[int]:
         """PortAudio lists devices once at startup; restart it so newly plugged mics show up.
         Indexes shift on restart, so the chosen mic is found again by name. Returns its new index."""
-        raw = None
-        if self.device_index is not None:
-            try:
-                raw = sd.query_devices(self.device_index)["name"]
-            except Exception:
-                pass
-        was_open = self._stream is not None
-        self.close_stream()
-        sd._terminate()
-        sd._initialize()
-        self.device_index = None
-        if raw:
-            for i, d in enumerate(sd.query_devices()):
-                if d["name"] == raw and d["max_input_channels"] > 0:
-                    self.device_index = i
-                    break
-        if was_open:
-            self.open_stream()
-        return self.device_index
+        with _pa_lock:
+            raw = None
+            if self.device_index is not None:
+                try:
+                    raw = sd.query_devices(self.device_index)["name"]
+                except Exception:
+                    pass
+            was_open = self._stream is not None
+            self.close_stream()
+            sd._terminate()
+            sd._initialize()
+            self.device_index = None
+            if raw:
+                for i, d in enumerate(sd.query_devices()):
+                    if d["name"] == raw and d["max_input_channels"] > 0:
+                        self.device_index = i
+                        break
+            if was_open:
+                self.open_stream()
+            return self.device_index
 
     def get_current_device_name(self) -> str:
-        if self.device_index is None:
+        with _pa_lock:
+            if self.device_index is None:
+                try:
+                    idx = self._resolve_device()
+                    d = sd.query_devices(kind="input") if idx is None else sd.query_devices(idx)
+                    return clean_device_name(d.get("name", "Default Mic"))
+                except Exception:
+                    return "Default Mic"
             try:
-                d = sd.query_devices(kind="input")
-                return clean_device_name(d.get("name", "Default Mic"))
+                d = sd.query_devices(self.device_index)
+                return clean_device_name(d.get("name", f"Mic {self.device_index}"))
             except Exception:
-                return "Default Mic"
-        try:
-            d = sd.query_devices(self.device_index)
-            return clean_device_name(d.get("name", f"Mic {self.device_index}"))
-        except Exception:
-            return "Microphone"
+                return "Microphone"
 
     def set_auto_silence_duration(self, duration: float):
         self.auto_silence_duration = max(0.6, duration)
@@ -277,14 +307,31 @@ class AudioRecorder:
             self._last_speech_time = now
 
         # Periodic real-time streaming preview (every ~0.55s of speech)
-        if self._has_spoken and self.on_stream_chunk and (now - self._last_chunk_emit_time > 0.55):
+        if (
+            self._has_spoken
+            and self.on_stream_chunk
+            and not self._chunk_emitting
+            and (now - self._last_chunk_emit_time > 0.55)
+        ):
             self._last_chunk_emit_time = now
             with self._lock:
-                accumulated = np.concatenate(self._audio_chunks, axis=0) if self._audio_chunks else None
+                if len(self._audio_chunks) > 1:
+                    accumulated = np.concatenate(self._audio_chunks, axis=0)
+                    self._audio_chunks = [accumulated]  # compact so repeated previews stay O(1) per interval
+                else:
+                    accumulated = self._audio_chunks[0].copy() if self._audio_chunks else None
             if accumulated is not None and len(accumulated) > 6000:
                 # Dispatch in background so PortAudio audio stream callback never blocks
+                self._chunk_emitting = True
                 chunk_cb = self.on_stream_chunk
-                threading.Thread(target=lambda c=accumulated: chunk_cb(c), daemon=True).start()
+
+                def _run_chunk(c=accumulated):
+                    try:
+                        chunk_cb(c)
+                    finally:
+                        self._chunk_emitting = False
+
+                threading.Thread(target=_run_chunk, daemon=True).start()
 
         # Auto-Silence Detection
         if (
@@ -371,6 +418,30 @@ def get_live_hardware_microphones() -> List[str]:
         return []
 
 
+def bluetooth_headset_names() -> set:
+    """Lower-case names of Bluetooth hands-free mics, e.g. {"cmf buds 2 plus"}. These record call-quality
+    audio (8-16 kHz, compressed) and speech recognition makes far more mistakes on them. Windows lists each
+    one through its hands-free driver as "Headset (@System32\\drivers\\bthhfenum.sys,...;(CMF Buds 2 Plus))"."""
+    names = set()
+    try:
+        with _pa_lock:
+            devs = sd.query_devices()
+    except Exception:
+        return names
+    for d in devs:
+        raw = d.get("name", "")
+        if "bthhfenum" in raw.lower():
+            m = re.search(r";\(([^()]+)\)\)?\s*$", raw.replace("\n", " "))
+            if m:
+                names.add(m.group(1).strip().lower())
+    return names
+
+
+def is_bluetooth_headset(name: str, bt_names=None) -> bool:
+    low = name.lower()
+    return any(n in low for n in (bluetooth_headset_names() if bt_names is None else bt_names))
+
+
 def list_microphones() -> List[Dict]:
     devices = []
     live_hw = get_live_hardware_microphones()
@@ -383,7 +454,8 @@ def list_microphones() -> List[Dict]:
         return clean.strip().lower()
 
     try:
-        all_devs = sd.query_devices()
+        with _pa_lock:
+            all_devs = sd.query_devices()
         candidates = []
         for idx, dev in enumerate(all_devs):
             if dev.get("max_input_channels", 0) > 0:
@@ -407,6 +479,7 @@ def list_microphones() -> List[Dict]:
 
                 candidates.append({
                     "index": idx,
+                    "hostapi": dev.get("hostapi", 99),
                     "name": friendly,
                     "base": base,
                     "raw_name": raw_name,
@@ -414,16 +487,18 @@ def list_microphones() -> List[Dict]:
                     "default_samplerate": dev.get("default_samplerate"),
                 })
 
-        # Deduplicate candidates sharing the same base device (e.g. MME vs WASAPI vs DirectSound)
-        # Prefer the entry with the cleaner, more descriptive name
+        # Deduplicate candidates sharing the same base device (e.g. MME vs DirectSound vs WASAPI).
+        # Prefer MME (hostapi=0) so 16 kHz capture shares cleanly, while keeping the longest untruncated display name.
         for c in candidates:
             found = False
             for i, ex in enumerate(devices):
                 b1, b2 = c["base"], ex["base"]
                 if b1 == b2 or b1.startswith(b2) or b2.startswith(b1):
                     found = True
-                    if len(c["name"]) > len(ex["name"]):
+                    best_name = c["name"] if len(c["name"]) > len(ex["name"]) else ex["name"]
+                    if c["hostapi"] < ex["hostapi"] or (c["hostapi"] == ex["hostapi"] and len(c["name"]) > len(ex["name"])):
                         devices[i] = c
+                    devices[i]["name"] = best_name
                     break
             if not found:
                 devices.append(c)

@@ -1,11 +1,18 @@
 """Self-check for the hotkey -> record -> write flow: python -m vaani.test_dictation_flow (from the repo's parent)."""
+import os
 import threading
 import time
 from types import SimpleNamespace
 
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
 import numpy as np
+from PyQt6.QtCore import QObject
+from PyQt6.QtWidgets import QApplication
 
 from vaani.main import OpenFlowApp
+
+_qapp = QApplication.instance() or QApplication([])
 
 
 class _Recorder:
@@ -20,13 +27,16 @@ class _Recorder:
 
 def _app(worker):
     app = OpenFlowApp.__new__(OpenFlowApp)  # skip the Qt/model setup; only the flow logic runs
+    QObject.__init__(app)
     errors = []
     app.config = {"trigger_mode": "push_to_talk", "auto_write_on_silence": False}
     app.audio_recorder = _Recorder()
     app.hotkey_mgr = SimpleNamespace(_is_active=True)
     app.bridge = SimpleNamespace(sig_error=SimpleNamespace(emit=errors.append),
-                                 sig_stop_recording=SimpleNamespace(emit=lambda: None))
+                                 sig_stop_recording=SimpleNamespace(emit=lambda: None),
+                                 sig_status=SimpleNamespace(emit=lambda *a: None))
     app._is_processing, app._job, app._stream_session = False, 0, None
+    app._hands_free, app._swallow_release, app._last_tap = False, False, 0.0
     app._dictation_lock = threading.RLock()
 
     def start():
@@ -41,7 +51,7 @@ def test_tap_is_discarded():
     app, errors = _app(lambda *a: None)
     app._on_hotkey_press()
     app._on_hotkey_release()
-    assert not app.audio_recorder.is_recording and not app._is_processing and errors == ["Hold to speak"]
+    assert not app.audio_recorder.is_recording and not app._is_processing and errors == ["Hold to speak · double-tap for hands-free"]
 
 
 def test_released_while_mic_opened():
@@ -57,11 +67,13 @@ def test_hold_writes_and_stuck_worker_times_out():
     app._on_hotkey_press()
     app._dictate_start_monotonic -= 1  # held for a second
     real_timer = threading.Timer
-    threading.Timer = lambda secs, fn: real_timer(0.05, fn)  # don't wait the real 20 s
+    # shorten the 0.3 s release tail to 20 ms and the watchdog to 120 ms so both stages are deterministic
+    threading.Timer = lambda secs, fn, **kw: real_timer(0.02 if secs < 1 else 0.12, fn)
     try:
         app._on_hotkey_release()
+        time.sleep(0.06)
         assert app._is_processing
-        time.sleep(0.3)
+        time.sleep(0.15)
     finally:
         threading.Timer = real_timer
         hang.set()

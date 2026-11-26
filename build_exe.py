@@ -40,7 +40,8 @@ def build():
         f.write(bat_content)
 
     # 2. Package into portable ZIP
-    zip_name = "Vaani-v1.0-Windows-x64.zip"
+    from vaani import __version__
+    zip_name = f"Vaani-v{__version__}-Windows-x64.zip"
     zip_dest = os.path.join(root, "dist", zip_name)
     print(f"\n[3/3] Creating distribution ZIP: {zip_dest} ...")
 

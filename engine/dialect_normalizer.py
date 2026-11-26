@@ -13,7 +13,13 @@ Capabilities:
 
 import re
 from typing import Dict, Any, Tuple
-from engine.dialect_detector import identify_dialect, tokenize
+try:
+    from .dialect_detector import identify_dialect, tokenize
+except ImportError:
+    try:
+        from vaani.engine.dialect_detector import identify_dialect, tokenize
+    except ImportError:
+        from engine.dialect_detector import identify_dialect, tokenize
 
 # Common Acoustic Co-articulation & Phonetic Self-Repairs
 # (Handles ASR boundary slurring, e.g. "ଆପଣଙ୍କ" + "ଓଡ଼ିଆ" slurred as "ଗୋଡ଼ିଆ" [foot])

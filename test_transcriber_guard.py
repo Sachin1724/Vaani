@@ -37,3 +37,21 @@ def test_hum_and_dead_mic_are_not_speech():
     t = np.arange(16000 * 4) / 16000
     assert not _has_speech((np.sin(2 * np.pi * 50 * t) * 0.02).astype(np.float32))  # steady mains hum
     assert not _has_speech(np.full(16000 * 3, 0.001, np.float32))                  # near-silent dead input
+
+
+def test_quiet_speech_over_usb_floor_is_not_dropped():
+    rng = np.random.default_rng(7)
+    t = np.arange(16000 * 4) / 16000
+    env = np.clip(np.sin(2 * np.pi * 2.0 * t), 0, None) ** 2
+    voice = (np.sin(2 * np.pi * 220 * t) * env * 0.032 + rng.standard_normal(len(t)) * 0.008).astype(np.float32)
+    assert _has_speech(voice)
+    whisper = (np.sin(2 * np.pi * 220 * t) * env * 0.012 + rng.standard_normal(len(t)) * 0.0055).astype(np.float32)
+    assert _has_speech(whisper)
+
+
+def test_caption_hallucinations_are_dropped():
+    """Whisper writes YouTube caption lines on noise (common through Bluetooth headset mics)."""
+    from engine.transcriber import _is_caption_phrase
+    assert _is_caption_phrase("Thanks for watching.") and _is_caption_phrase("Subtitles by the Amara.org community")
+    assert not _is_caption_phrase("Thank you.")  # a real, short dictation
+    assert not _is_caption_phrase("Thanks for watching the demo with me today.")

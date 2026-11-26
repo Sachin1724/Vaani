@@ -11,7 +11,7 @@ def test_formatter():
     assert f.format("send it monday scratch that send it friday") == "Send it friday."
     assert f.format("a comma b") == "A, b."
     assert f.format("first new paragraph second") == "First\n\nSecond."
-    assert f.format("i love open flow") == "I love OpenFlow."
+    assert f.format("i love open flow") == "I love Vaani."
     assert f.format("hola mundo", language="es") == "hola mundo"
     assert f.format("   ") == ""
     print("formatter OK")
@@ -25,14 +25,16 @@ def test_presets():
 
 
 def test_gpu_switch():
-    hardware.detect()
+    hardware.detect.cache_clear()
+    detected = hardware.detect()
     real = hardware._nvidia_smi
-    flipped = {} if hardware.detect()["cuda_ok"] else {"name": "GPU", "vram_gb": 6.0}
+    flipped = {} if detected["gpu_name"] else {"name": "GPU", "vram_gb": 6.0}
     hardware._nvidia_smi = lambda: flipped
     try:
         assert hardware.gpu_changed() and not hardware.gpu_changed()
     finally:
         hardware._nvidia_smi = real
+        hardware.detect.cache_clear()
     assert resolve_model_name("distil-large-v3", "hi") == "medium"
     print("gpu switch OK")
 

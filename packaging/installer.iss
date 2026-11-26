@@ -3,8 +3,8 @@
 ; Installs per-user to {localappdata}\Vaani (no admin UAC elevation required)
 
 #define MyAppName "Vaani"
-#define MyDisplayName "OpenFlow Vaani"  ; shown in the wizard and Apps list; folder and shortcuts keep MyAppName
-#define MyAppVersion "1.5.0"
+#define MyDisplayName "Vaani"  ; shown in the wizard and Apps list; folder and shortcuts keep MyAppName
+#define MyAppVersion "1.6.0"
 #define MyAppPublisher "Vaani"
 #define MyAppURL "https://sachin1724.github.io/Vaani/"
 #define MyAppExeName "Vaani.exe"

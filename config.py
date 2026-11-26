@@ -22,14 +22,17 @@ DEFAULT_CONFIG = {
     "capsule_height_pct": 100,           # 50-200
     "capsule_auto_scale": True,          # grow on screens wider than 1920 px
     "capsule_opacity": 1.0,              # 0.3-1.0, set from Settings
-    "hide_capsule_when_idle": False,     # Hide capsule completely when idle (don't show minimized bar on desktop)
+    "hide_capsule_when_idle": False,
+    "capsule_power_alerts": True,        # capsule alert when the charger is plugged / unplugged, battery low or full
+    "capsule_device_alerts": True,       # capsule alert when headphones, Bluetooth audio or a USB drive connects
+    "capsule_drop_tray": True,           # drop files / images / text on the capsule to hold them in its container     # Hide capsule completely when idle (don't show minimized bar on desktop)
     "follow_mouse_screen": True,         # Automatically follow mouse cursor to active display with smooth ease-in/out
     "input_device_index": None,          # None = system default
     "language": "en",
     "setup_done": False,                 # first-run model download completed
     "autostart": False,                  # launch at Windows sign-in
     "voice_edits": False,                # select text + say "make this formal": local Qwen2.5-1.5B rewrites it
-    "ai_polish": True,                   # LLM correction pass after each dictation (needs the writing model)
+    "ai_polish": False,                  # off by default: don't rewrite Whisper dictations with an LLM
     "ai_polish_budget_ms": 1200,         # slower than this: paste the rule-based text instead
     "use_cursor_context": True,          # read the text before the cursor to guide spelling (never password fields)
     "learn_from_edits": True,            # a word you fix right after pasting joins the dictionary

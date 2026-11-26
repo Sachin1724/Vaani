@@ -146,7 +146,7 @@ _THREADS = min(8, max(2, _physical_cores()))
 # (Whisper small on CPU: ~1.2 s, 25% of the time). Cancel the decode if that shows up in latency.
 _PREVIEW_BUDGET_S = 0.4
 _PREVIEW_OFF_S = 1.5
-_HUNG_S = 10.0  # a model call holding the lock this long never comes back (seen with CUDA)
+_HUNG_S = 5.0  # a model call holding the lock this long never comes back (seen with CUDA)
 
 
 def _whisper_args(lang: str) -> dict:
@@ -164,24 +164,25 @@ def _too_many_words(text: str, seconds: float) -> bool:
 
 def _has_speech(audio: np.ndarray) -> bool:
     """False only for clear non-speech: silence or a dead microphone, and steady low-level noise (hiss, hum).
-    Deliberately conservative: quiet speech must always pass (it has loud and soft moments; steady noise does not),
-    and anything doubtful goes on to the model, whose own voice detector decides."""
+    Deliberately conservative: quiet/whispered speech must pass (modulated rms), while flat noise drops."""
     n = 320  # 20 ms frames
-    if len(audio) < n * 4 or float(np.abs(audio).max()) < 0.003:  # shorter than 80 ms, or nothing above -50 dBFS
+    peak = float(np.abs(audio).max()) if len(audio) else 0.0
+    if len(audio) < n * 4 or peak < 0.002:  # shorter than 80 ms, or dead input (< -54 dBFS)
         return False
     rms = np.sqrt((audio[: len(audio) // n * n].reshape(-1, n) ** 2).mean(axis=1))
     loud, soft = float(np.percentile(rms, 95)), float(np.percentile(rms, 10))
-    return not (loud < 0.02 and loud < 3.0 * soft)  # quiet AND flat: noise, not a voice
+    # Soft/whispered speech over a noisy USB floor still shows clear modulation over the 10th-percentile baseline
+    modulated_over_floor = peak >= 0.008 and loud >= 1.35 * soft and (loud - soft) >= 0.0015
+    return not (loud < 0.02 and loud < 3.0 * soft and not modulated_over_floor)  # quiet AND flat: noise, not a voice
 
 
 def _boost(audio: np.ndarray) -> np.ndarray:
-    """Raise soft speech to a normal level (peak 0.5) before the model hears it. Whisper and its voice
-    detector were trained on normal-volume audio and drop a whisper or a far-away mic as silence.
-    Gain is capped at 20x (+26 dB) so room hiss isn't blown up into words; loud audio is left alone."""
+    """Raise soft speech or whispers to a normal level (peak 0.5) before the model hears it.
+    Gain is capped at 35x (+31 dB) so whispers reach Whisper/VAD cleanly; loud audio is left alone."""
     peak = float(np.abs(audio).max()) if len(audio) else 0.0
     if peak <= 0.0 or peak >= 0.5:
         return audio
-    return (audio * min(20.0, 0.5 / peak)).astype(np.float32)
+    return (audio * min(35.0, 0.5 / peak)).astype(np.float32)
 
 
 def _loop_at(text: str):
@@ -194,6 +195,19 @@ def _loop_at(text: str):
             if all(chunk) and len(chunk) == size and all(w[i + k * size:i + (k + 1) * size] == chunk for k in range(reps)):
                 return i
     return None
+
+
+# Whisper learned these from YouTube subtitles and writes them on silence, breath or line noise (often
+# through Bluetooth headset mics). Dropped only when they are the whole dictation, never inside a sentence.
+_CAPTION_PHRASES = {
+    "thanks for watching", "thank you for watching", "thank you so much for watching", "thanks for watching guys",
+    "please subscribe", "subscribe to my channel", "like and subscribe", "see you in the next video",
+}
+
+
+def _is_caption_phrase(text: str) -> bool:
+    t = " ".join(re.sub(r"[^a-z ]", " ", text.lower()).split())
+    return t in _CAPTION_PHRASES or t.startswith(("subtitles by", "captions by", "transcribed by"))
 
 
 def _drop_loop(text: str) -> str:
@@ -568,8 +582,7 @@ class Transcriber:
         finally:
             took = time.perf_counter() - start
             if took > _PREVIEW_OFF_S:
-                self._preview_slow = True
-                print(f"[Vaani] Live preview took {took * 1000:.0f} ms; turning it off so final text isn't delayed")
+                self._preview_resume = time.monotonic() + 2.0
             elif took > _PREVIEW_BUDGET_S:
                 self._preview_resume = time.monotonic() + 3 * took
             lock.release()
@@ -629,9 +642,8 @@ class Transcriber:
 
         def _run(vad: bool):
             assert self.model is not None
-            # On CPU devices (like AMD Ryzen or Intel Core without NVIDIA GPU), beam_size=1 (greedy)
-            # cuts latency by 65%+ and prevents thermal throttling. On GPU, beam_size=2 provides optimal quality.
-            eff_beam = 1 if self.device == "cpu" else 2
+            # On CPU, beam_size=1 keeps latency low; on GPU (CUDA), beam_size=4 explores more candidates for Indian names/accents.
+            eff_beam = 1 if self.device == "cpu" else 4
             segments, info = self.model.transcribe(
                 audio,
                 beam_size=eff_beam,
@@ -684,6 +696,11 @@ class Transcriber:
                 self._load_model_locked()
                 full_text, info = _run(vad=True)
 
+            # If Silero VAD filtered out quiet/live mic voice even though _has_speech passed,
+            # retry once without VAD so real live speech is never silently dropped.
+            if not full_text.strip() and float(np.abs(audio).max()) >= 0.02:
+                full_text, info = _run(vad=False)
+
             # Whisper hallucinates loops ("1, 2, 3, 4, 1, 2, ...") on short clips, often seeded by the
             # prompt. Nobody says more than ~4 words a second: retry without the prompt, else drop it.
             if _too_many_words(full_text, duration_seconds) or _loop_at(full_text) is not None:
@@ -697,6 +714,9 @@ class Transcriber:
                     if _too_many_words(full_text, duration_seconds):
                         full_text = ""
             full_text = _drop_loop(full_text)
+            if _is_caption_phrase(full_text):
+                print(f"[Vaani] Discarding caption hallucination: {full_text!r}")
+                full_text = ""
 
             # Check if Whisper mistook Hindi / Odia / Indian speech as Urdu, Arabic, Persian, or Pashto,
             # or if any Perso-Arabic unicode characters were produced:
@@ -785,16 +805,18 @@ class StreamingSession:
         if self._closed or not self._busy.acquire(blocking=False):
             return
         try:
-            # Continuous speech can run 30 s without a 0.7 s sentence pause, and then nothing commits
-            # and release decodes it all at once. Past 8 s pending, a 0.3 s breath is a good-enough cut,
-            # judged against this speaker's own level: between-word gaps rarely reach absolute silence
-            # over a room or mic noise floor.
-            cut = None if self._closed else find_pause(audio, self._done)
-            if cut is None and not self._closed and len(audio) - self._done >= 8 * 16000:
-                seg = audio[self._done:]
-                n = len(seg) // 1024
-                level = float(np.median(np.sqrt(np.mean(seg[:n * 1024].reshape(n, 1024) ** 2, axis=1))))
-                cut = find_pause(audio, self._done, min_pending_s=8.0, pause_s=0.3, threshold=max(0.008, 0.3 * level))
+            # On CUDA, keep whole sentences intact instead of cutting mid-breath every 4-8 s;
+            # on CPU, commit chunks at 0.7 s pauses (or 0.3 s past 8 s) to bound release latency.
+            is_cuda = getattr(self._t, "device", "cpu") == "cuda"
+            if is_cuda:
+                cut = None if self._closed else find_pause(audio, self._done, min_pending_s=12.0, pause_s=1.0)
+            else:
+                cut = None if self._closed else find_pause(audio, self._done)
+                if cut is None and not self._closed and len(audio) - self._done >= 8 * 16000:
+                    seg = audio[self._done:]
+                    n = len(seg) // 1024
+                    level = float(np.median(np.sqrt(np.mean(seg[:n * 1024].reshape(n, 1024) ** 2, axis=1))))
+                    cut = find_pause(audio, self._done, min_pending_s=8.0, pause_s=0.3, threshold=max(0.008, 0.3 * level))
             if cut is None:
                 return
             text, *_ = self._t.transcribe(audio[self._done:self._done + cut], self._lang, self._prompt)
@@ -810,7 +832,7 @@ class StreamingSession:
         """Same return shape as Transcriber.transcribe; latency is what the user waits after release."""
         start = time.perf_counter()
         self._closed = True
-        timeout = 0.5 if len(audio) < 16000 else 2.5
+        timeout = 0.5 if len(audio) < 16000 else min(12.0, max(4.0, len(audio) / 16000 * 0.25))
         free = self._busy.acquire(timeout=timeout)  # let an in-flight phrase finish
         try:
             if not free:  # that phrase is stuck: decode the whole recording instead
