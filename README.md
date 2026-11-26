@@ -8,6 +8,8 @@
 
 **Created with precision by Sachidananda**
 
+**Website: [sachin1724.github.io/Vaani](https://sachin1724.github.io/Vaani/)** · [Download for Windows](https://github.com/Sachin1724/Vaani/releases/latest) · [What's new](https://sachin1724.github.io/Vaani/changelog.html)
+
 <br />
 
 [![Release](https://img.shields.io/badge/Release-v1.3.3-000000?style=for-the-badge&logoColor=white)](https://github.com/Sachin1724/Vaani)
