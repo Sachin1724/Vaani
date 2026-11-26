@@ -132,6 +132,7 @@ class IslandPill(QWidget):
 
         QFontMetrics(self._font(11)).horizontalAdvance("EN")  # Qt loads its font database on first use (~2 s): do it now, not mid-animation
         self.wave = WaveformBars(self)
+        self.wave.color = QColor(INK)  # the island stays black: white bars
         self.wave.hide()
         self.blobatar = BlobatarWidget(size=24, parent=self)
         self.blobatar.hide()
@@ -198,8 +199,7 @@ class IslandPill(QWidget):
         r = self.model_row
         r.blockSignals(True)
         r.clear()
-        models = [("base", "Base · Balanced", "141 MB"), ("tiny", "Tiny · Fastest", "75 MB"),
-                  ("small", "Small · Accurate", "464 MB"), ("medium", "Medium · Best", "1.46 GB")]
+        models = model_manager.CAPSULE_SPEECH_MODELS
         active_id = self.current_model.replace(".en", "").lower()
         sel = 0
         for i, (mid, label, size) in enumerate(models):
@@ -495,6 +495,10 @@ class IslandPill(QWidget):
         self._push("Microphone removed" if gone else "Microphone connected", mic_name.removeprefix("● ").strip(),
                    "warn" if gone else "mic", 3200)
 
+    def show_device_event(self, alert):
+        icon = "warn" if alert.get("tone") == "red" else "ok" if alert.get("tone") == "green" else "info"
+        self._push(alert["title"], alert["sub"], icon, 3200)
+
     def show_update_available(self, version=""):
         def click():
             self.sig_update_requested.emit()
@@ -520,6 +524,8 @@ class IslandPill(QWidget):
         self._note = None
 
     def show_listening(self, preset_name="Listening"):
+        if self.tray is not None:
+            self.tray.hide_now()
         if self._state == "listen":
             self._done_timer.stop()  # a size preview may be showing this state: real dictation must not be cut short
             return
@@ -554,6 +560,8 @@ class IslandPill(QWidget):
     def _open_panel(self):
         if self._state == "panel":
             return
+        if self.tray is not None:
+            self.tray.hide_now()
         self._preempt()
         self._panel_idle = 0
         self._go("panel")
@@ -605,6 +613,79 @@ class IslandPill(QWidget):
             self._rest_timer.stop()
             self._set_snooze(0.0)
             self._rest_timer.start(SNOOZE_AFTER_MS)
+        if self.tray is not None:
+            self.tray.hide_timer.stop()
+            if self._held() and self._state == "idle":
+                self._tray_timer.start()
+
+    def leaveEvent(self, a0):
+        if self.tray is not None:
+            self._tray_timer.stop()
+            if self.tray.isVisible():
+                self.tray.hide_timer.start()
+
+    # -- drop container (the same held items as the classic capsule) ------------
+
+    tray = None
+    tray_enabled = True
+
+    def attach_tray(self, store):
+        try:
+            from .drop_tray import TrayPanel
+        except ImportError:
+            from drop_tray import TrayPanel
+        self.tray = TrayPanel(self, store)
+        self._tray_timer = QTimer(self)
+        self._tray_timer.setSingleShot(True)
+        self._tray_timer.setInterval(450)  # hover intent, same as the capsule
+        self._tray_timer.timeout.connect(self._maybe_open_tray)
+        self.setAcceptDrops(True)
+
+    def set_tray_enabled(self, on):
+        self.tray_enabled = bool(on)
+        if not on and self.tray is not None:
+            self.tray.hide_now()
+
+    def _held(self):
+        return len(self.tray.store.items) if self.tray is not None and self.tray_enabled else 0
+
+    @property
+    def tray_below(self):
+        return self.position == "top"
+
+    def tray_anchor(self):
+        r = self._shape_rect()
+        return QRect(self.mapToGlobal(r.topLeft().toPoint()), r.size().toSize())
+
+    def _maybe_open_tray(self):
+        if self.underMouse() and self._state == "idle" and self._held():
+            self.tray.open()
+
+    def dragEnterEvent(self, a0):
+        e = a0
+        m = e.mimeData()
+        if (e.source() is not None or self.tray is None or not self.tray_enabled or self._state in ("listen", "write")
+                or not (m.hasUrls() or m.hasText() or m.hasImage())):
+            e.ignore()
+            return
+        e.acceptProposedAction()
+        self._rest_timer.stop()
+        if self._snooze > 0.05:
+            self._set_snooze(0.0)
+        if self._state == "panel":
+            self._close_panel()
+        self._start_note("Drop to hold", "", "down", 0, None, "drop")
+
+    def dragLeaveEvent(self, a0):
+        if self._note and self._note[5] == "drop":
+            self._finish_note()
+
+    def dropEvent(self, a0):
+        self.tray.store.add_mime(a0.mimeData())
+        a0.acceptProposedAction()
+        n = len(self.tray.store.items)
+        self._start_note(f"Holding {n} item" + ("" if n == 1 else "s"), "", "ok", 1600, None, "drop")
+        self.tray.open()
 
     def mousePressEvent(self, e):
         if e.button() != Qt.MouseButton.LeftButton:
@@ -621,7 +702,11 @@ class IslandPill(QWidget):
             self._note[4]()
         elif self._state == "idle":
             self._set_snooze(0.0)
-            self._open_panel()
+            if self._held():
+                self._tray_timer.stop()
+                self.tray.toggle()
+            else:
+                self._open_panel()
 
     # -- painting -----------------------------------------------------------
 
@@ -661,6 +746,8 @@ class IslandPill(QWidget):
         f = QFont(self.font_family)
         f.setPixelSize(px)
         f.setWeight(weight)
+        f.setHintingPreference(QFont.HintingPreference.PreferNoHinting)  # no jagged stem snapping
+        f.setStyleStrategy(QFont.StyleStrategy.PreferAntialias | QFont.StyleStrategy.NoSubpixelAntialias)
         return f
 
     def _draw_face(self, p, face, r, a, rise=0.0):
@@ -827,6 +914,8 @@ class CapsuleRouter(QObject):
     sig_open_dashboard = pyqtSignal()
     sig_update_requested = pyqtSignal()
     sig_hide_idle_changed = pyqtSignal(bool)
+    sig_paste_last = pyqtSignal()  # classic capsule's bento HUD only
+    sig_retry_last = pyqtSignal()
     _BOTH = ("populate_mics", "populate_models", "update_connected_mic", "update_language", "set_opacity", "set_hide_when_idle")
 
     def __init__(self, pill, island, style="compact", follow=True):
@@ -838,8 +927,11 @@ class CapsuleRouter(QObject):
                     "sig_open_dashboard", "sig_update_requested", "sig_hide_idle_changed"):
             getattr(pill, sig).connect(getattr(self, sig))
             getattr(island, sig).connect(getattr(self, sig))
+        pill.sig_paste_last.connect(self.sig_paste_last)
+        pill.sig_retry_last.connect(self.sig_retry_last)
         for name in self._BOTH:
             setattr(self, name, self._both(name))
+        island.attach_tray(pill.tray.store)  # both styles hold the same items
         if style == "island":
             self.set_capsule_style("island")
 
@@ -876,6 +968,19 @@ class CapsuleRouter(QObject):
         self._follow = follow
         self._island.set_follow_mouse_screen(follow)
         self._pill.set_follow_mouse_screen(follow and not self._on_island)
+
+    def set_tray_enabled(self, on):
+        self._pill.set_tray_enabled(on)
+        self._island.set_tray_enabled(on)
+
+    def set_version_status(self, text):
+        self._pill.set_version_status(text)  # the island's panel has no version line
+
+    def set_theme(self, name):
+        self._pill.set_theme(name)  # the island stays black in both themes
+
+    def set_tone(self, key):
+        self._pill.set_tone(key)  # the island's style row has no external setter
 
     def set_island_position(self, position):
         self._island.set_position(position)

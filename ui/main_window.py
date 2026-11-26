@@ -74,11 +74,14 @@ class _ClearButton(QPushButton):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor(255, 255, 255, 80 if self.isDown() else 56 if self.underMouse() else 34))
+        fill, ink = QColor(COLORS["text_main"]), QColor(COLORS["text_main"])  # follows the theme
+        fill.setAlpha(80 if self.isDown() else 56 if self.underMouse() else 34)
+        ink.setAlpha(220)
+        p.setBrush(fill)
         side = min(self.width(), self.height())  # the global QSS min-height can make the widget taller
         cx, cy, d = self.width() / 2.0, self.height() / 2.0, 3.6
         p.drawEllipse(QPointF(cx, cy), side / 2.0, side / 2.0)
-        p.setPen(QPen(QColor(255, 255, 255, 220), 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        p.setPen(QPen(ink, 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         p.drawLine(QPointF(cx - d, cy - d), QPointF(cx + d, cy + d))
         p.drawLine(QPointF(cx - d, cy + d), QPointF(cx + d, cy - d))
 
@@ -104,6 +107,7 @@ class HotkeyRecorder(QFrame):
         self._caps.setSpacing(4)
         lay.addLayout(self._caps)
         self._hint = QLabel("", self)
+        self._hint.setObjectName("KeyHint")
         lay.addWidget(self._hint)
         lay.addStretch()
         self._btn = _ClearButton(self)
@@ -112,10 +116,6 @@ class HotkeyRecorder(QFrame):
         self._btn.setToolTip("Clear and record a new shortcut")
         self._btn.clicked.connect(self._on_btn)
         lay.addWidget(self._btn, 0, Qt.AlignmentFlag.AlignVCenter)
-        self.setStyleSheet("""
-            QFrame#HotkeyBox { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; }
-            QFrame#HotkeyBox[recording="true"] { border: 2px solid #5B4CF4; background: rgba(91, 76, 244,0.08); }
-        """)
         self._render(pretty_hotkey(hotkey))
 
     def hotkey(self) -> str:
@@ -128,12 +128,12 @@ class HotkeyRecorder(QFrame):
                 w.deleteLater()
         for c in caps:
             cap = QLabel(c, self)
-            cap.setStyleSheet("background: rgba(255,255,255,0.14); color: #ffffff; border-radius: 6px; "
-                              "border-bottom: 2px solid rgba(0,0,0,0.35); padding: 2px 8px; font-size: 12px; font-weight: 600;")
+            cap.setObjectName("KeyCap")
             self._caps.addWidget(cap, 0, Qt.AlignmentFlag.AlignVCenter)
         self._hint.setText(hint)
-        self._hint.setStyleSheet(("color: #EF4444;" if error else "color: rgba(248, 250, 252,0.6);")
-                                 + " font-size: 12px; background: transparent; border: none;")
+        self._hint.setProperty("error", "true" if error else "false")
+        self._hint.style().unpolish(self._hint)
+        self._hint.style().polish(self._hint)
 
     def _set_recording(self, on: bool):
         self._recording = on
@@ -243,10 +243,10 @@ class Group(QFrame):
         row = QWidget(self)
         row.setMinimumHeight(44)
         lay = QHBoxLayout(row)
-        lay.setContentsMargins(16, 8, 16, 8)
+        lay.setContentsMargins(16, 10, 16, 10)
         lay.setSpacing(16)
         text = QVBoxLayout()
-        text.setSpacing(2)
+        text.setSpacing(4)  # title and description must not touch
         if label:
             lbl = QLabel(label, row)
             lbl.setObjectName("RowLabel")
@@ -353,6 +353,7 @@ class MainWindow(QMainWindow):
     sig_hotkey_recording = pyqtSignal(bool)
     sig_capsule_opacity = pyqtSignal(float)  # live while the slider moves
     sig_capsule_size = pyqtSignal()          # width / height / auto-scale changed; read the values from config
+    sig_theme = pyqtSignal(str)              # "light" / "dark": applies at once to the dashboard and the capsule
     sig_transcribe_file = pyqtSignal()       # Tools: same actions as the tray menu
     sig_toggle_live = pyqtSignal()
 
@@ -362,10 +363,10 @@ class MainWindow(QMainWindow):
         self.config = config
         self._model_progress_bars = {}
 
-        self.setWindowTitle("OpenFlow Vaani")
+        self.setWindowTitle("Vaani")
         self.setMinimumSize(760, 560)
         self.resize(1000, 720)
-        self.setStyleSheet(main_qss())
+        self.setStyleSheet(main_qss(self.config.get("theme", "light")))
 
         icon_path = get_asset_path("app_icon_square.png")
         if not os.path.exists(icon_path):
@@ -431,7 +432,7 @@ class MainWindow(QMainWindow):
         logo = _logo_label(18, bar)
         if logo:
             brand.addWidget(logo)
-        brand.addWidget(_label("OpenFlow Vaani", "AppName"))
+        brand.addWidget(_label("Vaani", "AppName"))
         brand.addStretch()
         v.addLayout(brand)
 
@@ -707,37 +708,44 @@ class MainWindow(QMainWindow):
     # -- vocabulary ---------------------------------------------------------
 
     def _create_dictionary_tab(self) -> QWidget:
-        root, body, _ = self._page("Vocabulary", "Add names, acronyms and terms. Vaani corrects them as you speak.", scroll=False)
+        root, body, _ = self._page("Vocabulary & Snippets",
+                                   "Add names, custom terms, and shortcuts like \"my address\" that expand automatically.", scroll=False)
 
         form = Group()
+        self.dict_category = self._combo([
+            ("Word or phrase", "general"),
+            ("Snippet (expands after formatting)", "snippet"),
+        ], "general", width=260)
         self.dict_phrase = QLineEdit(self)
-        self.dict_phrase.setPlaceholderText("e.g. pi torch")
+        self.dict_phrase.setPlaceholderText("e.g. pi torch  or  my address")
         self.dict_replace = QLineEdit(self)
-        self.dict_replace.setPlaceholderText("e.g. PyTorch")
+        self.dict_replace.setPlaceholderText("e.g. PyTorch  or  12 MG Road, Bhubaneswar")
         for e in (self.dict_phrase, self.dict_replace):
             e.setMinimumWidth(240)
         self.dict_case = Switch("", self)
+        form.add("Type", self.dict_category)
         form.add("When I say", self.dict_phrase)
         form.add("Write", self.dict_replace)
         form.add("Match case", self.dict_case)
         body.addWidget(form)
         add_row = QHBoxLayout()
         add_row.addStretch()
-        add_row.addWidget(_btn("Add Word", "primary", slot=self._add_dictionary_word))
+        add_row.addWidget(_btn("Add Entry", "primary", slot=self._add_dictionary_word))
         body.addSpacing(8)
         body.addLayout(add_row)
         body.addSpacing(16)
 
-        self.dict_table = QTableWidget(0, 4, self)
-        self.dict_table.setHorizontalHeaderLabels(["ID", "When I say", "Write", "Match case"])
+        self.dict_table = QTableWidget(0, 5, self)
+        self.dict_table.setHorizontalHeaderLabels(["ID", "Type", "When I say", "Write", "Match case"])
         hh = self.dict_table.horizontalHeader()
         hh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        hh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        hh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         hh.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        hh.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        hh.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        hh.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         _style_table(self.dict_table)
         self.dict_table.hideColumn(0)  # id stays in the table for delete
-        self.dict_empty = _label("No words yet.\nAdd one above and it applies to your next dictation.", "Empty")
+        self.dict_empty = _label("No words or snippets yet.\nAdd one above and it applies to your next dictation.", "Empty")
         self.dict_empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         body.addWidget(_panel(self.dict_table, self.dict_empty), 1)
         body.addSpacing(12)
@@ -752,20 +760,24 @@ class MainWindow(QMainWindow):
         self.dict_table.setRowCount(len(rows))
         self.dict_table.setVisible(bool(rows))
         self.dict_empty.setVisible(not rows)
+        labels = {"snippet": "Snippet", "learned": "Learned"}
         for idx, row in enumerate(rows):
+            cat = labels.get(row.get("category", "general"), "Word")
             self.dict_table.setItem(idx, 0, QTableWidgetItem(str(row["id"])))
-            self.dict_table.setItem(idx, 1, QTableWidgetItem(row["phrase_match"]))
-            self.dict_table.setItem(idx, 2, QTableWidgetItem(row["replace_with"]))
-            self.dict_table.setItem(idx, 3, QTableWidgetItem("Yes" if row["case_sensitive"] else "No"))
+            self.dict_table.setItem(idx, 1, QTableWidgetItem(cat))
+            self.dict_table.setItem(idx, 2, QTableWidgetItem(row["phrase_match"]))
+            self.dict_table.setItem(idx, 3, QTableWidgetItem(row["replace_with"]))
+            self.dict_table.setItem(idx, 4, QTableWidgetItem("Yes" if row["case_sensitive"] else "No"))
 
     def _add_dictionary_word(self):
         phrase = self.dict_phrase.text().strip()
         replace = self.dict_replace.text().strip()
         case_sens = self.dict_case.isChecked()
+        category = self.dict_category.currentData() if hasattr(self, "dict_category") else "general"
         if not phrase or not replace:
             QMessageBox.warning(self, "Missing Fields", "Please enter both spoken phrase and replacement.")
             return
-        self.db.add_dictionary_entry(phrase, replace, case_sens)
+        self.db.add_dictionary_entry(phrase, replace, case_sens, category=category or "general")
         self.dict_phrase.clear()
         self.dict_replace.clear()
         self.refresh_dictionary()
@@ -811,8 +823,7 @@ class MainWindow(QMainWindow):
         g.addLayout(title, 0, 0)
         g.addWidget(_label(m["description"], "RowSub", wrap=True), 1, 0)
         size = m["disk_size_str"] if m["is_downloaded"] else m["expected_size_str"]
-        meta = _label(f"Speed {m['speed']}  ·  Accuracy {m['accuracy']}  ·  {size}", "RowSub")
-        meta.setStyleSheet("color: rgba(248, 250, 252,0.38);")
+        meta = _label(f"Speed {m['speed']}  ·  Accuracy {m['accuracy']}  ·  {size}", "RowMeta")
         g.addWidget(meta, 2, 0)
 
         acts = QHBoxLayout()
@@ -930,9 +941,11 @@ class MainWindow(QMainWindow):
         g, foot = self._section(body, "Speech", hw["note"])
         self.hw_note = foot
         self.model_combo = self._combo([
-            (f"Automatic ({hw['model_size']})", "auto"), ("Tiny · fastest (~39 MB)", "tiny"),
-            ("Base · balanced (~74 MB)", "base"), ("Small · accurate (~244 MB)", "small"),
-            ("Medium · best, wants a GPU (~769 MB)", "medium")], self.config.get("model_size", "auto").replace(".en", ""))
+            (f"Automatic ({hw['model_size']})", "auto"), ("Tiny · fastest (~75 MB)", "tiny"),
+            ("Base · balanced (~141 MB)", "base"), ("Small · accurate (~464 MB)", "small"),
+            ("Medium · best, wants a GPU (~1.46 GB)", "medium"),
+            ("Parakeet V3 · fast CPU (~640 MB)", "parakeet"),
+            ("Odia IndicConformer (~190 MB)", "odia")], self.config.get("model_size", "auto").replace(".en", ""))
         g.add("Speech model", self.model_combo)
         devices = [("Automatic", "auto")]
         if importlib.util.find_spec("openvino_genai"):
@@ -949,6 +962,9 @@ class MainWindow(QMainWindow):
 
         # Capsule
         g, _ = self._section(body, "Capsule")
+        self.theme_combo = self._combo([("Light (website cream)", "light"), ("Dark", "dark")], self.config.get("theme", "light"))
+        self.theme_combo.currentIndexChanged.connect(lambda _: self._on_theme_changed(self.theme_combo.currentData()))
+        g.add("Theme", self.theme_combo)
         self.capsule_style_combo = self._combo([
             ("Compact (148 px)", "compact"), ("Standard (360 px)", "standard"),
             ("Micro (88 px)", "micro"), ("Dynamic Island (top notch)", "island")], self.config.get("capsule_style", "compact"))
@@ -983,6 +999,12 @@ class MainWindow(QMainWindow):
         self.cb_follow_mouse = self._switch(g, "Follow the cursor", "follow_mouse_screen", True, "Moves the capsule to the screen you are working on.")
         self.cb_realtime = self._switch(g, "Live preview", "realtime_preview", True, "Shows words above the capsule while you speak.")
         self.cb_hide_idle = self._switch(g, "Hide when idle", "hide_capsule_when_idle", False, "No resting pill on the desktop.")
+        self.cb_power_alerts = self._switch(g, "Power alerts", "capsule_power_alerts", True,
+                                            "Charger plugged in or out, battery low, fully charged.")
+        self.cb_device_alerts = self._switch(g, "Device alerts", "capsule_device_alerts", True,
+                                             "Headphones, Bluetooth audio and USB drives connecting.")
+        self.cb_drop_tray = self._switch(g, "Drop container", "capsule_drop_tray", True,
+                                         "Drop files, images or text on the capsule to hold them.")
 
         # Audio
         self.mic_combo = NoWheelCombo()
@@ -999,10 +1021,12 @@ class MainWindow(QMainWindow):
         self.silence_spin.setFixedWidth(88)
         self.silence_spin.setAlignment(Qt.AlignmentFlag.AlignRight)
         g.add("Pause before writing", self.silence_spin)
-        self.cb_autowrite = self._switch(g, "Write when I pause", "auto_write_on_silence", True)
+        self.cb_autowrite = self._switch(g, "Write when I pause", "auto_write_on_silence", False)
         self.cb_sound = self._switch(g, "Sound feedback", "sound_feedback", True, "Short tones on start and finish.")
         self.cb_voice_edits = self._switch(g, "Voice edits", "voice_edits", False,
                                            "Select text and say \"make this formal\". Downloads a 1.5 GB writing model once.")
+        self.cb_ai_polish = self._switch(g, "AI auto-correct (beta)", "ai_polish", False,
+                                         "Off by default: keeps Whisper's exact words without an AI rewrite pass.")
 
         # Output
         g, _ = self._section(body, "Output")
@@ -1012,6 +1036,11 @@ class MainWindow(QMainWindow):
         self.hotkey_input.sig_recording.connect(self.sig_hotkey_recording.emit)
         self.hotkey_input.sig_changed.connect(self._on_hotkey_recorded)
         g.add("Hotkey", self.hotkey_input, "Click, then press the shortcut you want.")
+        self.trigger_combo = self._combo([
+            ("Hold hotkey (double-tap = hands-free)", "push_to_talk"),
+            ("Press to start / stop (toggle)", "toggle"),
+        ], self.config.get("trigger_mode", "push_to_talk"))
+        g.add("Activation mode", self.trigger_combo)
         self.inj_combo = self._combo([("Instant paste (clipboard)", "clipboard"), ("Type-in effect (word by word)", "typein"),
                                       ("Direct typing (no clipboard)", "type")], self.config.get("injection_method", "clipboard"))
         g.add("Writing method", self.inj_combo)
@@ -1021,6 +1050,10 @@ class MainWindow(QMainWindow):
             self.config.get("tone_preset", "auto"))
         g.add("Formatting", self.tone_combo)
         self.cb_restore_clip = self._switch(g, "Restore clipboard", "restore_clipboard", True, "Puts your previous clipboard back after pasting.")
+        self.cb_cursor_ctx = self._switch(g, "Read text before cursor", "use_cursor_context", True,
+                                          "Uses up to 200 characters before the caret for name spelling (never password fields).")
+        self.cb_learn_edits = self._switch(g, "Learn from my edits", "learn_from_edits", True,
+                                           "Words you fix right after pasting join your vocabulary automatically.")
 
         # System & updates
         try:
@@ -1047,11 +1080,11 @@ class MainWindow(QMainWindow):
         g = self.stack_group
         g.clear()
         stack = hardware.get_system_stack(self.config)
-        ok, info, off = "#22C55E", "#5B4CF4", "rgba(248, 250, 252,0.38)"
+        ok, info, off = "ok", "info", "off"  # QLabel#RowValue[state=...] in the theme stylesheet
 
-        def value(text, color):
+        def value(text, state):
             lbl = _label(text, "RowValue")
-            lbl.setStyleSheet(f"color: {color};")
+            lbl.setProperty("state", state)
             return lbl
 
         g.add("Active engine", _badge(stack["pipeline"], "active"))
@@ -1088,18 +1121,25 @@ class MainWindow(QMainWindow):
         self.config["input_device_index"] = dev_idx
         self.config["injection_method"] = self.inj_combo.currentData()
         self.config["hotkey"] = hotkey
+        self.config["trigger_mode"] = self.trigger_combo.currentData()
         self.config["tone_preset"] = tone_preset
         self.config["silence_duration"] = float(self.silence_spin.value())
         self.config["auto_write_on_silence"] = self.cb_autowrite.isChecked()
         self.config["realtime_preview"] = self.cb_realtime.isChecked()
         self.config["hide_capsule_when_idle"] = self.cb_hide_idle.isChecked()
+        self.config["capsule_power_alerts"] = self.cb_power_alerts.isChecked()
+        self.config["capsule_device_alerts"] = self.cb_device_alerts.isChecked()
+        self.config["capsule_drop_tray"] = self.cb_drop_tray.isChecked()
         if hasattr(self, "cb_follow_mouse"):
             self.config["follow_mouse_screen"] = self.cb_follow_mouse.isChecked()
         self.config["sound_feedback"] = self.cb_sound.isChecked()
         self.config["voice_edits"] = self.cb_voice_edits.isChecked()
+        self.config["ai_polish"] = self.cb_ai_polish.isChecked()
         if hasattr(self, "cb_keep_warm"):
             self.config["keep_model_in_memory"] = self.cb_keep_warm.isChecked()
         self.config["restore_clipboard"] = self.cb_restore_clip.isChecked()
+        self.config["use_cursor_context"] = self.cb_cursor_ctx.isChecked()
+        self.config["learn_from_edits"] = self.cb_learn_edits.isChecked()
         self.config["autostart"] = self.cb_autostart.isChecked()
 
         save_config(self.config)
@@ -1133,6 +1173,12 @@ class MainWindow(QMainWindow):
         self.sig_capsule_size.emit()
         if not (self.width_slider.isSliderDown() or self.height_slider.isSliderDown()):
             save_config(self.config)
+
+    def _on_theme_changed(self, theme: str):
+        self.config["theme"] = theme
+        save_config(self.config)
+        self.setStyleSheet(main_qss(theme))
+        self.sig_theme.emit(theme)
 
     def _on_opacity_changed(self, value: int):
         """Applies at once, like the hotkey; no Save needed."""
@@ -1280,7 +1326,7 @@ class MainWindow(QMainWindow):
             head.addWidget(logo, 0, Qt.AlignmentFlag.AlignTop)
         col = QVBoxLayout()
         col.setSpacing(2)
-        name = _label(f"OpenFlow Vaani  <span style='font-size:13px; color:rgba(248, 250, 252,0.6); font-weight:400;'>v{__version__}</span>", "PageTitle")
+        name = _label(f"Vaani  <span style='font-size:13px; font-weight:400;'>v{__version__}</span>", "PageTitle")
         name.setStyleSheet("font-size: 20px;")
         col.addWidget(name)
         col.addWidget(_label("Private, unlimited voice dictation and speech-to-writing. 100% on-device AI.", "PageSub", wrap=True))

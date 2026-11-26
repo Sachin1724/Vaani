@@ -255,7 +255,8 @@ def resolve_self_corrections(text: str) -> str:
     # Never match predicate adjectives/adverbs like "I am sorry" or "This is actually good".
     non_correction_leads = {
         "am", "is", "are", "was", "were", "be", "feel", "so", "very", "deeply", "not",
-        "i", "we", "he", "she", "it", "they", "you", "do", "does", "did", "can", "could", "will", "would", "should"
+        "i", "we", "he", "she", "it", "they", "you", "do", "does", "did", "can", "could", "will", "would", "should",
+        "ok", "okay", "well", "yes", "no", "yeah", "nah", "please", "thanks", "thank", "hi", "hello", "hey", "wait", "oh", "hmm",
     }
 
     def _sub_word(m):

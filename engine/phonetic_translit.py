@@ -588,7 +588,13 @@ def prepare_text_for_tts(text: str) -> str:
     
     # 4. Odia Ligatures & Spoken Consonant Cluster Normalization under Reinforcement Learning
     try:
-        from engine.pronunciation_rl import PronunciationRLAgent
+        try:
+            from .pronunciation_rl import PronunciationRLAgent
+        except ImportError:
+            try:
+                from vaani.engine.pronunciation_rl import PronunciationRLAgent
+            except ImportError:
+                from engine.pronunciation_rl import PronunciationRLAgent
         global _rl_pronunciation_agent
         if '_rl_pronunciation_agent' not in globals() or _rl_pronunciation_agent is None:
             _rl_pronunciation_agent = PronunciationRLAgent()

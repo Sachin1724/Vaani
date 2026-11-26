@@ -33,6 +33,7 @@ try:
     from vaani.engine.injector import WindowInjector
     from vaani.engine.hotkey_manager import GlobalHotkeyManager
     from vaani.engine.sound_effects import play_start_sound, play_stop_sound, play_paste_sound
+    from vaani.engine.device_monitor import DeviceMonitor, bluetooth_battery
     from vaani.engine.context_detector import get_active_app_context, build_initial_prompt, get_text_before_cursor, AppContext
     from vaani.engine.updater import AppUpdater
     from vaani.engine.meeting import MeetingSession, active_meeting_app, format_meeting_notes, transcript_text, srt_text, watch_mic
@@ -58,6 +59,7 @@ except Exception:
         from .engine.injector import WindowInjector
         from .engine.hotkey_manager import GlobalHotkeyManager
         from .engine.sound_effects import play_start_sound, play_stop_sound, play_paste_sound
+        from .engine.device_monitor import DeviceMonitor, bluetooth_battery
         from .engine.context_detector import get_active_app_context, build_initial_prompt, get_text_before_cursor, AppContext
         from .engine.updater import AppUpdater
         from .engine.meeting import MeetingSession, active_meeting_app, format_meeting_notes, transcript_text, srt_text, watch_mic
@@ -82,6 +84,7 @@ except Exception:
         from engine.injector import WindowInjector
         from engine.hotkey_manager import GlobalHotkeyManager
         from engine.sound_effects import play_start_sound, play_stop_sound, play_paste_sound
+        from engine.device_monitor import DeviceMonitor, bluetooth_battery
         from engine.context_detector import get_active_app_context, build_initial_prompt, get_text_before_cursor, AppContext
         from engine.updater import AppUpdater
         from engine.meeting import MeetingSession, active_meeting_app, format_meeting_notes, transcript_text, srt_text, watch_mic
@@ -94,7 +97,7 @@ except Exception:
         try:
             from __init__ import __version__
         except Exception:
-            __version__ = "1.5.0"
+            __version__ = "1.6.0"
 
 _BOOT_T0 = time.perf_counter()
 
@@ -161,6 +164,7 @@ class AppBridge(QObject):
     sig_meeting_line = pyqtSignal(str, str)                # (speaker, text) live caption
     sig_meeting_saved = pyqtSignal(str)                    # note title, "" when nothing was said
     sig_mic_changed = pyqtSignal()                         # some app started/stopped using a mic
+    sig_device_alert = pyqtSignal(dict)                    # power / peripheral alert (device_monitor.py)
 
 
 class OpenFlowApp(QObject):
@@ -204,6 +208,7 @@ class OpenFlowApp(QObject):
         self._is_processing = False
         self._job = 0  # bumped per dictation; a worker whose job is stale must not paste
         self._dictation_lock = threading.RLock()
+        self._stream_lock = threading.Lock()
         self._hands_free = False      # double-tapped: recording until the next press
         self._swallow_release = False
         self._last_tap = 0.0
@@ -279,6 +284,8 @@ class OpenFlowApp(QObject):
         island = IslandPill(position=self.config.get("island_position", "top"), **pill_args)
         self.floating_pill = CapsuleRouter(pill, island, style, self.config.get("follow_mouse_screen", True))
         self.floating_pill.set_opacity(float(self.config.get("capsule_opacity", 1.0)))
+        self.floating_pill.set_theme(self.config.get("theme", "light"))
+        self.floating_pill.set_tray_enabled(self.config.get("capsule_drop_tray", True))
         self._apply_capsule_size()
         self.floating_pill.populate_mics(recents)
         self.floating_pill.populate_models(curr_model)
@@ -288,12 +295,16 @@ class OpenFlowApp(QObject):
         self.floating_pill.sig_model_changed.connect(self._on_capsule_model_changed)
         self.floating_pill.sig_hide_idle_changed.connect(self._on_capsule_hide_idle_changed)
         self.floating_pill.sig_open_dashboard.connect(self.show_dashboard)
+        self.floating_pill.sig_paste_last.connect(lambda: threading.Thread(target=self._paste_last, daemon=True).start())
+        self.floating_pill.sig_retry_last.connect(self._retry_last)
+        self.floating_pill.set_tone(self.config.get("tone_preset", "auto"))
 
         _boot("capsule built")
         self.main_window = MainWindow(self.db, self.config)
         self.main_window.refresh_devices(initial_mic)
         self.main_window.config_changed.connect(self._on_config_changed)
         self.main_window.sig_capsule_opacity.connect(self.floating_pill.set_opacity)
+        self.main_window.sig_theme.connect(self.floating_pill.set_theme)
         self.main_window.sig_capsule_size.connect(self._apply_capsule_size)
         self.main_window.sig_transcribe_file.connect(self._transcribe_file)
         self.main_window.sig_toggle_live.connect(self._toggle_playing)
@@ -314,11 +325,17 @@ class OpenFlowApp(QObject):
         self.updater.sig_error.connect(self._on_update_error)
 
         self.floating_pill.sig_update_requested.connect(lambda: self.updater.start_download_async())
-        self.main_window.sig_request_check_update.connect(lambda: self.updater.check_for_updates_async(notify_if_current=True))
+        self._manual_update_check = False
+        self.updater.sig_checking.connect(lambda: self.floating_pill.set_version_status(f"v{__version__} · checking…"))
+        self.main_window.sig_request_check_update.connect(self._check_updates_manually)
+        self.floating_pill.set_version_status(f"v{__version__}")
         self.main_window.sig_request_install_update.connect(lambda: self.updater.start_download_async())
 
         # Check for updates in background 8 seconds after startup
-        QTimer.singleShot(8000, lambda: self.updater.check_for_updates_async(notify_if_current=False))
+        # the result always reaches the dashboard and the HUD; only a manual check pops up a Windows notice
+        QTimer.singleShot(8000, lambda: self.updater.check_for_updates_async(notify_if_current=True))
+        if self.config.get("language") == "or-en":
+            self._preload_translator()
 
         # System Tray
         self._init_tray()
@@ -345,6 +362,15 @@ class OpenFlowApp(QObject):
         self._mic_poll_timer.timeout.connect(self._check_mic_hotplug)
         self._mic_poll_timer.start(1500)
 
+        # Power and peripheral alerts: charger, battery, headphones / Bluetooth audio, USB drives (~2 ms a poll)
+        self._translator_lock = threading.Lock()
+        self.device_monitor = DeviceMonitor()
+        self._pending_alerts = []
+        self.bridge.sig_device_alert.connect(self._show_device_alert)
+        self._device_timer = QTimer(self)
+        self._device_timer.timeout.connect(self._poll_devices)
+        self._device_timer.start(1500)
+
         # Meeting mode: offer to take notes while a call app is using the mic
         self._meeting = None
         self._meeting_app = None
@@ -370,12 +396,12 @@ class OpenFlowApp(QObject):
                                             c.get("capsule_auto_scale", True))
 
     def _active_msg(self) -> str:
-        return f"OpenFlow Vaani · Hold {hotkey_label(self.config)} to Speak"
+        return f"Vaani · Hold {hotkey_label(self.config)} to Speak"
 
     def _init_tray(self):
         self.tray = QSystemTrayIcon(self.app)
         self.tray.setIcon(QIcon(create_tray_icon_pixmap()))
-        self.tray.setToolTip(f"OpenFlow Vaani — Hold {hotkey_label(self.config)} to Speak")
+        self.tray.setToolTip(f"Vaani — Hold {hotkey_label(self.config)} to Speak")
 
         menu = QMenu()
         act_hud = menu.addAction("Show Capsule HUD")
@@ -454,6 +480,7 @@ class OpenFlowApp(QObject):
         self.config["tone_preset"] = preset
         save_config(self.config)
         self.main_window.refresh_stats()
+        self.floating_pill.set_tone(preset)
 
     def _on_capsule_hide_idle_changed(self, hide: bool):
         self.config["hide_capsule_when_idle"] = hide
@@ -497,12 +524,15 @@ class OpenFlowApp(QObject):
         if lang_code == "or-en" and not model_manager.cached_path("odia-en"):
             # picking "Odia → English" is the user asking for the translation model: fetch it once
             threading.Thread(target=self._download_translator, daemon=True).start()
+        elif lang_code == "or-en":
+            self._preload_translator(announce=True)
 
     def _download_translator(self):
         try:
             self.bridge.sig_status.emit("Downloading Odia → English model...")
             model_manager.download("odia-en", on_progress=lambda pct: self.bridge.sig_download.emit(pct, "odia-en"))
             self.bridge.sig_status.emit("Odia → English ready")
+            self._preload_translator()
         except Exception as e:
             print(f"[Vaani] Translation model download failed: {e}")
             self.bridge.sig_error.emit("Translation download failed")
@@ -535,7 +565,7 @@ class OpenFlowApp(QObject):
         context. Bounded: if the model is missing, slow (ai_polish_budget_ms) or rewrites too much, the
         rule-based text is pasted instead, so the LLM can only make a dictation better, never later or worse."""
         n = len(text.split())
-        if (not self.config.get("ai_polish", True) or tone in ("verbatim", "bullets", "email") or "\n" in text
+        if (not self.config.get("ai_polish", False) or tone in ("verbatim", "bullets", "email") or "\n" in text
                 or lang not in ("en", "en-in", "auto") or n < 4 or n > 150):  # layout presets: the LLM flattens lines
             return text
         llm = self._writer()  # None until the writing model is downloaded
@@ -652,15 +682,37 @@ class OpenFlowApp(QObject):
         self.bridge.sig_transcription_complete.emit(edited, len(edited.split()), int((time.perf_counter() - start) * 1000))
         return True
 
+    def _ensure_translator(self):
+        """IndicTrans2 Odia -> English, loaded once (~4 s on CPU; each sentence after that takes ~0.3 s)."""
+        with self._translator_lock:
+            if getattr(self, "_translator", None) is None:
+                path = model_manager.cached_path("odia-en")
+                if path is None:
+                    raise RuntimeError("Odia → English model not downloaded")
+                self._translator = translator.OdiaToEnglish(os.path.join(path, model_manager.TRANSLATOR_DIR),
+                                                            threads=min(8, os.cpu_count() or 4))
+        return self._translator
+
     def _translate_odia(self, text: str) -> str:
-        """Odia text -> English with IndicTrans2; loads the model on first use."""
-        if getattr(self, "_translator", None) is None:
-            path = model_manager.cached_path("odia-en")
-            if path is None:
-                raise RuntimeError("Odia → English model not downloaded")
-            self._translator = translator.OdiaToEnglish(os.path.join(path, model_manager.TRANSLATOR_DIR),
-                                                        threads=min(8, os.cpu_count() or 4))
-        return self._translator.translate(text)
+        return self._ensure_translator().translate(text)
+
+    def _preload_translator(self, announce: bool = False):
+        """Load the translator in the background as soon as Odia → English is chosen, so the first
+        dictation does not wait ~4 s for it (that wait looked like the capsule hanging on "Writing")."""
+        if not model_manager.cached_path("odia-en") or getattr(self, "_translator", None) is not None:
+            return
+
+        def work():
+            t = time.perf_counter()
+            try:
+                self._ensure_translator()
+            except Exception as e:
+                print(f"[Vaani] Odia → English model failed to load ({e})")
+                return
+            print(f"[Vaani] Odia → English model loaded in {time.perf_counter() - t:.1f}s")
+            if announce:
+                self.bridge.sig_status.emit("Odia → English ready")
+        threading.Thread(target=work, daemon=True).start()
 
     def _reload_transcriber_async(self, language=None):
         """Model swap can download hundreds of MB; never block the UI thread."""
@@ -748,7 +800,7 @@ class OpenFlowApp(QObject):
         self.config = new_cfg
         self.hotkey_mgr.update_config(new_cfg.get("hotkey", "ctrl+shift"), new_cfg.get("trigger_mode", "push_to_talk"))
         if hasattr(self, "tray"):
-            self.tray.setToolTip(f"OpenFlow Vaani — Hold {hotkey_label(new_cfg)} to Speak")
+            self.tray.setToolTip(f"Vaani — Hold {hotkey_label(new_cfg)} to Speak")
         self.audio_recorder.set_device(new_cfg.get("input_device_index"))
         set_autostart(new_cfg.get("autostart", False))
         self.audio_recorder.set_auto_silence_duration(float(new_cfg.get("silence_duration", 1.1)))
@@ -759,11 +811,14 @@ class OpenFlowApp(QObject):
             self._engine_key = engine_key
             self._reload_transcriber_async()
         self.formatter.set_dictionary(self.db.get_dictionary())
+        if new_cfg.get("language") == "or-en":
+            self._preload_translator()
         if new_cfg.get("voice_edits") and not model_manager.cached_path("writer"):
             # turning Voice edits on is the user asking for the writing model: fetch it once
             threading.Thread(target=self._download_writer, daemon=True).start()
         if hasattr(self, "floating_pill"):
             self.floating_pill.set_hide_when_idle(new_cfg.get("hide_capsule_when_idle", False))
+            self.floating_pill.set_tray_enabled(new_cfg.get("capsule_drop_tray", True))
             if "capsule_style" in new_cfg:
                 self.floating_pill.set_island_position(new_cfg.get("island_position", "top"))
                 self.floating_pill.set_capsule_style(new_cfg.get("capsule_style", "compact"))
@@ -775,6 +830,31 @@ class OpenFlowApp(QObject):
             self.act_hide_idle.blockSignals(False)
 
     IDLE_UNLOAD_SEC = 600  # unload ends the engine process: all its RAM/VRAM returns; the next press reloads
+
+    def _poll_devices(self):
+        power, devices = self.config.get("capsule_power_alerts", True), self.config.get("capsule_device_alerts", True)
+        if not (power or devices):
+            return
+        for a in self.device_monitor.poll(power=power, devices=devices):
+            if a["kind"] == "buds" and a["sub"] == "Connected":  # battery lookup is ~1 s of PowerShell: off the UI thread
+                def look(a=a):
+                    pct = bluetooth_battery(a["title"])
+                    if pct is not None:
+                        a["sub"], a["level"] = f"Connected · battery {pct}%", pct
+                    self.bridge.sig_device_alert.emit(a)
+                threading.Thread(target=look, daemon=True).start()
+            else:
+                self._show_device_alert(a)
+        if self._pending_alerts and not (self._is_processing or self.audio_recorder.is_recording):
+            alerts, self._pending_alerts = self._pending_alerts, []
+            for a in alerts[-2:]:  # after a long dictation only the latest two still matter
+                self.floating_pill.show_device_event(a)
+
+    def _show_device_alert(self, alert: dict):
+        if self._is_processing or self.audio_recorder.is_recording:  # never cover the live text: show it after
+            self._pending_alerts.append(alert)
+        elif hasattr(self, "floating_pill"):
+            self.floating_pill.show_device_event(alert)
 
     def _housekeep(self):
         now = time.monotonic()
@@ -1108,7 +1188,9 @@ class OpenFlowApp(QObject):
             reader.start()
             reader.join(0.08)
         self._before_text = self._before.get("text", "")
-        self._glossary = [e["replace_with"] for e in dict_entries]  # preferred spellings
+        # Put user-added and learned terms before preloaded defaults so Whisper's Glossary prompt sees custom names first
+        prioritized = sorted(dict_entries, key=lambda e: e.get("category") in ("branding", "tech"))
+        self._glossary = [e["replace_with"] for e in prioritized]  # preferred spellings
         initial_prompt = build_initial_prompt(
             context=self._app_context,
             custom_vocab=self._glossary,
@@ -1135,28 +1217,31 @@ class OpenFlowApp(QObject):
 
     def _on_stream_chunk(self, audio_chunk):
         """Called periodically during speech to provide real-time live preview words."""
-        if not self.audio_recorder.is_recording:
+        if not self.audio_recorder.is_recording or not self._stream_lock.acquire(blocking=False):
             return
-        session = getattr(self, "_stream_session", None)
-        if session is not None:
-            session.feed(audio_chunk)  # commit finished phrases so release only decodes the tail
+        try:
+            session = getattr(self, "_stream_session", None)
+            if session is not None:
+                session.feed(audio_chunk)  # commit finished phrases so release only decodes the tail
 
-        if self.config.get("realtime_preview", True):
-            # Preview only the audio not yet committed: committed phrases are already text, re-decoding
-            # them duplicated words, and shipping the whole recording to the engine process every
-            # 0.55 s grew with every second spoken. 10 s caps the copy if no phrase has committed yet.
-            start = session.pending_from if session else 0
-            partial_text = self.transcriber.transcribe_partial(audio_chunk[max(start, len(audio_chunk) - 16000 * 10):])
-            committed = session.committed_text if session else ""
-            # A slow engine rests its preview between calls; committed phrases still show meanwhile.
-            full_preview = f"{committed} {partial_text}".strip()
-            if full_preview and full_preview != getattr(self, "_last_preview", ""):  # unchanged: no repaint
-                self._last_preview = full_preview
-                self.bridge.sig_realtime_text.emit(full_preview)
+            if self.config.get("realtime_preview", True):
+                # Preview only the audio not yet committed: committed phrases are already text, re-decoding
+                # them duplicated words, and shipping the whole recording to the engine process every
+                # 0.55 s grew with every second spoken. 10 s caps the copy if no phrase has committed yet.
+                start = session.pending_from if session else 0
+                partial_text = self.transcriber.transcribe_partial(audio_chunk[max(start, len(audio_chunk) - 16000 * 10):])
+                committed = session.committed_text if session else ""
+                # Keep only the tail for the live bubble so multi-sentence paragraphs stay lag-free
+                full_preview = f"{committed} {partial_text}".strip()[-220:]
+                if full_preview and full_preview != getattr(self, "_last_preview", ""):  # unchanged: no repaint
+                    self._last_preview = full_preview
+                    self.bridge.sig_realtime_text.emit(full_preview)
+        finally:
+            self._stream_lock.release()
 
     def _on_auto_silence(self):
         """Automatically triggered when user stops speaking for silence_duration."""
-        if self.config.get("auto_write_on_silence", True):
+        if self.config.get("auto_write_on_silence", False):
             with self._dictation_lock:
                 if self.audio_recorder.is_recording:
                     print("[Vaani] Auto-silence detected: automatically writing text!")
@@ -1199,7 +1284,7 @@ class OpenFlowApp(QObject):
             return
 
         peak = float(abs(audio_data).max()) if len(audio_data) > 0 else 0.0
-        if peak < 0.005:  # near-digital silence
+        if peak < 0.002:  # near-digital silence
             print(f"[Vaani] Audio silent (peak {peak:.4f}): discarding")
             self.bridge.sig_error.emit("Microphone silent")
             return
@@ -1225,7 +1310,7 @@ class OpenFlowApp(QObject):
             self._job += 1  # the stuck worker must not paste late into whatever has focus by then
             self._is_processing = False
             self.bridge.sig_error.emit("Took too long · try again")
-        timeout_sec = min(12.0, max(5.0, 3.0 + len(audio_data) / 16000))
+        timeout_sec = min(90.0, max(15.0, 8.0 + (len(audio_data) / 16000) * 1.5))
         threading.Timer(timeout_sec, _watchdog).start()
 
     def _process_worker(self, audio_data, session, job):
@@ -1236,7 +1321,7 @@ class OpenFlowApp(QObject):
 
             peak = float(abs(audio_data).max())
             print(f"[Vaani] Captured {len(audio_data) / 16000:.1f}s of audio, peak level {peak:.3f}")
-            if peak < 0.004:  # near-digital silence: wrong input device or Windows microphone privacy block
+            if peak < 0.002:  # near-digital silence: wrong input device or Windows microphone privacy block
                 print("[Vaani] Microphone is silent. Check Windows Settings > Privacy > Microphone and the input device.")
                 self.bridge.sig_error.emit("Microphone silent")
                 return
@@ -1246,6 +1331,7 @@ class OpenFlowApp(QObject):
             raw_text, duration_sec, latency_ms, detected_lang = session.finish(audio_data)
 
             if not raw_text.strip():
+                print(f"[Vaani] Empty transcription ({duration_sec:.1f}s, {latency_ms} ms)")
                 self.bridge.sig_error.emit("Didn't catch that")
                 return
 
@@ -1257,7 +1343,13 @@ class OpenFlowApp(QObject):
             # By what was heard, not the setting: in Auto an English sentence comes back as "en-in".
             if detected_lang in ("or", "odia", "or-en", "or-mix", "or-auto"):
                 try:
-                    from engine.dialect_normalizer import normalize_dialect
+                    try:
+                        from .engine.dialect_normalizer import normalize_dialect
+                    except ImportError:
+                        try:
+                            from vaani.engine.dialect_normalizer import normalize_dialect
+                        except ImportError:
+                            from engine.dialect_normalizer import normalize_dialect
                     norm_res = normalize_dialect(raw_text, target_style="standard")
                     if norm_res.get("changes_made"):
                         print(f"[Vaani] MIRA normalized {norm_res['dialect']}: {raw_text} -> {norm_res['normalized']}")
@@ -1270,7 +1362,9 @@ class OpenFlowApp(QObject):
                     start = time.perf_counter()
                     print(f"[Vaani] Odia: {raw_text}")
                     raw_text, detected_lang = self._translate_odia(raw_text), "en"
-                    latency_ms += int((time.perf_counter() - start) * 1000)
+                    took = int((time.perf_counter() - start) * 1000)
+                    latency_ms += took
+                    print(f"[Vaani] English ({took} ms): {raw_text}")
                 except Exception as e:  # paste the Odia text rather than lose the dictation
                     print(f"[Vaani] Translation failed ({e}); writing the Odia text")
                     self.bridge.sig_status.emit("Translation unavailable · wrote Odia")
@@ -1361,7 +1455,7 @@ class OpenFlowApp(QObject):
             self.bridge.sig_error.emit("Download failed")
         tray = getattr(self, "tray", None)
         if tray is not None:
-            tray.showMessage("OpenFlow Vaani", message, QSystemTrayIcon.MessageIcon.Information, 3000)
+            tray.showMessage("Vaani", message, QSystemTrayIcon.MessageIcon.Information, 3000)
         print(f"[Vaani] {message}")
 
     @pyqtSlot(int, str)
@@ -1420,7 +1514,13 @@ class OpenFlowApp(QObject):
         self.main_window.refresh_history()
         self.main_window.refresh_stats()
 
+    def _check_updates_manually(self):
+        self._manual_update_check = True
+        self.updater.check_for_updates_async(notify_if_current=True)
+
     def _on_update_available(self, version: str, rel_url: str, dl_url: str, notes: str):
+        self._manual_update_check = False
+        self.floating_pill.set_version_status(f"v{__version__} · v{version} available")
         self.main_window.show_update_available(version, notes)
         self.floating_pill.show_update_available(version)
         self.tray.showMessage(
@@ -1432,8 +1532,12 @@ class OpenFlowApp(QObject):
 
     def _on_no_update(self, version: str):
         self.main_window.show_up_to_date(version)
+        self.floating_pill.set_version_status(f"v{version} · up to date")
+        manual, self._manual_update_check = self._manual_update_check, False
+        if not manual:  # the startup check is quiet: dashboard and HUD only
+            return
         self.tray.showMessage(
-            "OpenFlow Vaani",
+            "Vaani",
             f"Vaani is up to date (v{version}).",
             QSystemTrayIcon.MessageIcon.Information,
             2500
@@ -1442,7 +1546,7 @@ class OpenFlowApp(QObject):
     def _on_update_ready(self, installer_path: str):
         self.floating_pill.show_message("Update ready · Restarting...")
         self.tray.showMessage(
-            "OpenFlow Vaani",
+            "Vaani",
             "Update downloaded. Launching installer and restarting...",
             QSystemTrayIcon.MessageIcon.Information,
             3000
@@ -1451,7 +1555,9 @@ class OpenFlowApp(QObject):
         QTimer.singleShot(1500, lambda: self.updater.install_and_restart(installer_path, silent=False))
 
     def _on_update_error(self, message: str):
+        self._manual_update_check = False
         self.main_window.show_update_error(message)
+        self.floating_pill.set_version_status(f"v{__version__} · update check failed")
 
     def quit_app(self):
         self.hotkey_mgr.stop()
@@ -1460,7 +1566,7 @@ class OpenFlowApp(QObject):
     def run(self):
         print(f"[Vaani] Started! Hold {hotkey_label(self.config)} anywhere to speak — release to paste.")
         # the capsule is the app; the dashboard opens only from the tray or the capsule menu
-        self.floating_pill.show_message(f"OpenFlow Vaani · Hold {hotkey_label(self.config)} to Speak", duration_ms=4500)
+        self.floating_pill.show_message(f"Vaani · Hold {hotkey_label(self.config)} to Speak", duration_ms=4500)
         sys.exit(self.app.exec())
 
 

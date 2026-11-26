@@ -135,6 +135,22 @@ MODEL_METADATA = [
         "recommended": False,
     },
     {
+        "id": "distil-large-v3",
+        "name": "Distil Large v3 (English)",
+        "description": "Near Large-v3 English accuracy at 2x speed for NVIDIA GPUs (~1.51 GB)",
+        "speed": "Fast on GPU",
+        "accuracy": "Very High (English)",
+        "recommended": False,
+    },
+    {
+        "id": "large-v3",
+        "name": "Large v3 (Multilingual)",
+        "description": "Highest accuracy for Indian accents & multilingual speech on GPU (~3.09 GB)",
+        "speed": "GPU Recommended",
+        "accuracy": "Highest",
+        "recommended": False,
+    },
+    {
         "id": "parakeet",
         "name": "Parakeet V3 (CPU)",
         "description": "Fast on computers without a GPU. English + 24 European languages; others use Whisper (~640 MB)",
@@ -158,6 +174,18 @@ MODEL_METADATA = [
         "accuracy": "Writing",
         "recommended": False,
     },
+]
+
+
+CAPSULE_SPEECH_MODELS = [
+    ("base", "Base · Balanced", "141 MB"),
+    ("tiny", "Tiny · Fastest", "75 MB"),
+    ("small", "Small · Accurate", "464 MB"),
+    ("medium", "Medium · Best", "1.46 GB"),
+    ("distil-large-v3", "Distil Large v3 · EN", "1.51 GB"),
+    ("large-v3", "Large v3 · Max", "3.09 GB"),
+    ("parakeet", "Parakeet V3 · CPU", "640 MB"),
+    ("odia", "Odia · IndicConformer", "190 MB"),
 ]
 
 

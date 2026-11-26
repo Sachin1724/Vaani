@@ -33,7 +33,7 @@ class SetupDialog(QDialog):
     def __init__(self, config: dict):
         super().__init__()
         self.config = config
-        self.setWindowTitle("OpenFlow Vaani Setup")
+        self.setWindowTitle("Vaani Setup")
         self.setFixedWidth(440)
         self.setStyleSheet(main_qss() + "QDialog { background: #03010A; }")
 
@@ -58,7 +58,7 @@ class SetupDialog(QDialog):
 
         header_text = QVBoxLayout()
         header_text.setSpacing(3)
-        title = QLabel("Welcome to OpenFlow Vaani", self)
+        title = QLabel("Welcome to Vaani", self)
         tf = title.font()  # size set on the font, not the style sheet, so the layout measures the real height
         tf.setPixelSize(21)
         tf.setWeight(QFont.Weight.DemiBold)

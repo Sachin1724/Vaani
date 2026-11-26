@@ -310,13 +310,14 @@ def build_initial_prompt(
 
     # 1. Instruction prefix based on context and language
     if language == "en-in":
-        parts.append("Indian English dictation with standard punctuation, capitalization, and accurate terminology.")
+        parts.append("Indian English dictation with standard punctuation, capitalization, and accurate names and terminology.")
     elif language == "hinglish":
         parts.append(
             "Hinglish conversation in natural Roman script. "
             "Mix Hindi and English naturally with proper punctuation."
         )
-    elif ctx["category"] == CAT_DEVELOPER:
+
+    if ctx["category"] == CAT_DEVELOPER:
         parts.append(
             "Technical programming dictation with proper punctuation. "
             "Use camelCase, snake_case, and exact symbol names as spoken."
@@ -328,7 +329,7 @@ def build_initial_prompt(
         )
     elif ctx["category"] == CAT_CHAT:
         parts.append("Casual chat message with standard punctuation.")
-    else:
+    elif not parts:
         parts.append("Use standard punctuation, commas, periods, and capitalization.")
 
     # 2. Vocabulary bias - strictly concise (under 15 tokens) so Whisper attention decoder is never distorted
