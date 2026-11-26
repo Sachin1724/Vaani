@@ -554,11 +554,20 @@ class OpenFlowApp(QObject):
     def _writer(self):
         """Qwen2.5-1.5B on ctranslate2 when downloaded, else None; loaded on first use."""
         if getattr(self, "_writer_llm", None) is None:
-            path = model_manager.cached_path("writer")
+            path = model_manager.cached_path("writer") or model_manager.cached_path("mira")
             if path is None:
                 return None
             self._writer_llm = local_llm.LocalLLM(path, threads=min(8, os.cpu_count() or 4))
         return self._writer_llm
+
+    def _mira(self):
+        """Lightweight Indian-adapted MIRA phonetic refiner when present, else writer."""
+        if getattr(self, "_mira_llm", None) is None:
+            path = model_manager.cached_path("mira") or model_manager.cached_path("writer")
+            if path is None:
+                return None
+            self._mira_llm = local_llm.LocalLLM(path, threads=min(8, os.cpu_count() or 4))
+        return self._mira_llm
 
     def _ai_polish(self, text: str, tone: str, lang: str) -> str:
         """LLM correction pass after the rule-based formatter, with the app, nearby text and glossary as
@@ -568,7 +577,7 @@ class OpenFlowApp(QObject):
         if (not self.config.get("ai_polish", False) or tone in ("verbatim", "bullets", "email") or "\n" in text
                 or lang not in ("en", "en-in", "auto") or n < 4 or n > 150):  # layout presets: the LLM flattens lines
             return text
-        llm = self._writer()  # None until the writing model is downloaded
+        llm = self._mira()  # lightweight MIRA-IN if trained locally, else Qwen2.5-1.5B writer
         if llm is None:
             return text
         ctx = self._app_context if isinstance(self._app_context, dict) else {}

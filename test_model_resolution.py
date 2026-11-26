@@ -170,3 +170,15 @@ def test_brand_names_stay_english():
     from vaani.engine.odia_mix import to_mixed
     assert to_mixed("ମୁଁ ୟୁଟ୍ୟୁବ ରେ ଦେଖୁଛି") == "ମୁଁ YouTube ରେ ଦେଖୁଛି"
     assert to_mixed("ହ୍ୱାଟସଆପ ରେ ପଠାଅ") == "WhatsApp ରେ ପଠାଅ"
+
+
+def test_small_in_and_mira_routing():
+    from vaani.engine import transcriber as tr
+    assert tr.resolve_model_name("small-in", "en") == "small-in"
+    assert tr.resolve_model_name("small-in", "en-in") == "small-in"
+    assert tr.engine_model_name("small-in", "en-in", "cuda") == "small-in"
+    assert tr.engine_model_name("small-in", "en-in", "npu") == "small-in"
+    assert "small-in" in mm._MODELS
+    assert mm._weights_file("mira") == "model.bin"
+    assert "Sachin1724/Vaani/releases/download/" in mm._GITHUB_RELEASES["small-in"]
+    assert "Sachin1724/Vaani/releases/download/" in mm._GITHUB_RELEASES["mira"]

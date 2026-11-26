@@ -42,6 +42,8 @@ _MODELS.update({
     "odia": "sachinmallick/openflow-odia-asr-int8",
     # AI4Bharat IndicTrans2 Indic->En distilled 200M, CTranslate2 build (MIT); not a speech model
     "odia-en": "adalat-ai/ct2-rotary-indictrans2-indic-en-dist-200M",
+    # Indian-accent & podcast fine-tuned Whisper-small (local int8 CTranslate2 build in vaani/models/whisper_small_in_ct2)
+    "small-in": "Systran/faster-whisper-small",
     # Qwen2.5-1.5B-Instruct (Apache-2.0), int8 CTranslate2 build: voice edits and meeting notes
     "writer": "jncraton/Qwen2.5-1.5B-Instruct-ct2-int8",
     "mira": "jncraton/Qwen2.5-1.5B-Instruct-ct2-int8",
@@ -88,6 +90,7 @@ _KNOWN_SIZES: Dict[str, int] = {
     "base": 147_882_941,
     "base.en": 147_769_510,
     "small": 486_212_372,
+    "small-in": 256_480_000,
     "small.en": 486_098_798,
     "medium": 1_530_571_735,
     "medium.en": 1_530_457_748,
@@ -116,6 +119,14 @@ MODEL_METADATA = [
         "description": "Ultra-lightweight, minimal memory footprint (~75 MB)",
         "speed": "Ultra-Fast (3.5x)",
         "accuracy": "Good",
+        "recommended": False,
+    },
+    {
+        "id": "small-in",
+        "name": "Small · Indian English (Vaani Trained)",
+        "description": "Fine-tuned on AI4Bharat Svarah (19 states) + Raj Shamani & Indian podcasts (~245 MB)",
+        "speed": "Fast (1.2x)",
+        "accuracy": "Indian Optimized",
         "recommended": False,
     },
     {
@@ -178,6 +189,7 @@ MODEL_METADATA = [
 
 
 CAPSULE_SPEECH_MODELS = [
+    ("small-in", "Small · Indian EN", "245 MB"),
     ("base", "Base · Balanced", "141 MB"),
     ("tiny", "Tiny · Fastest", "75 MB"),
     ("small", "Small · Accurate", "464 MB"),
@@ -251,8 +263,36 @@ def get_model_cache_dir(name: str) -> Path:
     return hub_cache / ("models--" + repo.replace("/", "--"))
 
 
+_LOCAL_MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
+_USER_MODELS_DIR = Path.home() / ".vaani" / "models"
+
+_CUSTOM_MODEL_SUBDIRS: Dict[str, str] = {
+    "small-in": "whisper_small_in_ct2",
+    "mira": "mira_in_ct2_int8",
+    "mira-in": "mira_in_ct2_int8",
+}
+
+_GITHUB_RELEASES: Dict[str, str] = {
+    "small-in": "https://github.com/Sachin1724/Vaani/releases/download/v1.6.0/whisper-small-in-ct2.zip",
+    "mira": "https://github.com/Sachin1724/Vaani/releases/download/v1.6.0/mira-in-ct2-int8.zip",
+    "mira-in": "https://github.com/Sachin1724/Vaani/releases/download/v1.6.0/mira-in-ct2-int8.zip",
+}
+
+
+def _custom_model_dirs(name: str) -> List[Path]:
+    sub = _CUSTOM_MODEL_SUBDIRS.get(name)
+    if not sub:
+        return []
+    return [_LOCAL_MODELS_DIR / sub, _USER_MODELS_DIR / sub]
+
+
 def cached_path(name: str) -> Optional[str]:
     """Local model folder if already completely downloaded, else None."""
+    for candidate in _custom_model_dirs(name):
+        model_bin = candidate / _weights_file(name)
+        if model_bin.is_file() and model_bin.stat().st_size > 5_000_000:
+            return str(candidate)
+
     model_dir = get_model_cache_dir(name)
     sanitize_cache_symlinks(model_dir)
 
@@ -334,7 +374,10 @@ def list_downloaded_models() -> List[str]:
 
 
 def get_model_disk_size(name: str) -> int:
-    """Calculate total bytes occupied on disk by this model (both variants)."""
+    """Calculate total bytes occupied on disk by this model (custom local dirs or HF cache)."""
+    for candidate in _custom_model_dirs(name):
+        if candidate.is_dir():
+            return _dir_size(candidate)
     return sum(_dir_size(get_model_cache_dir(v)) for v in variants(name))
 
 
@@ -393,8 +436,16 @@ def _remove_readonly(func, path, excinfo):
 
 
 def delete_model(name: str) -> bool:
-    """Safely delete model cache (both variants) from disk. Returns True if deleted or did not exist."""
+    """Safely delete model cache (custom local dirs + HF variants) from disk."""
     ok = True
+    for candidate in _custom_model_dirs(name):
+        try:
+            if candidate.exists():
+                shutil.rmtree(str(candidate), onerror=_remove_readonly)
+                ok = ok and not candidate.exists()
+        except Exception as e:
+            print(f"[Vaani] Failed to delete local model {candidate}: {e}")
+            ok = False
     ov = f"{name.replace('.en', '')}-ov"
     for v in variants(name) + ([ov] if ov in _MODELS else []):  # the NPU build goes with it
         try:
@@ -462,11 +513,74 @@ def _blob_bytes(repo: str) -> int:
         return 0
 
 
+def _download_github_zip(name: str, url: str, on_progress: Optional[Callable[[int], None]] = None, force: bool = False) -> str:
+    """Download and extract a custom fine-tuned model archive from GitHub Releases into ~/.vaani/models/."""
+    import urllib.request
+    import zipfile
+
+    if force:
+        delete_model(name)
+
+    sub = _CUSTOM_MODEL_SUBDIRS[name]
+    dest = _USER_MODELS_DIR / sub
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp_zip = dest.parent / f"{sub}.zip.part"
+
+    if on_progress:
+        try:
+            on_progress(0)
+        except Exception:
+            pass
+
+    req = urllib.request.Request(url, headers={"User-Agent": "Vaani-ModelManager/1.6"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        total = int(resp.headers.get("Content-Length") or _KNOWN_SIZES.get(name, 0))
+        got = 0
+        last = 0
+        with open(tmp_zip, "wb") as out:
+            while True:
+                chunk = resp.read(256 * 1024)
+                if not chunk:
+                    break
+                out.write(chunk)
+                got += len(chunk)
+                if total > 0 and on_progress:
+                    pct = min(95, int(got * 95 / total))
+                    if pct != last:
+                        last = pct
+                        try:
+                            on_progress(pct)
+                        except Exception:
+                            pass
+
+    dest.mkdir(parents=True, exist_ok=True)
+    dest_resolved = dest.resolve()
+    with zipfile.ZipFile(tmp_zip, "r") as zf:
+        for member in zf.infolist():
+            target = (dest_resolved / member.filename).resolve()
+            if not str(target).startswith(str(dest_resolved)):
+                raise RuntimeError(f"Unsafe path in release archive: {member.filename}")
+        zf.extractall(dest_resolved)
+    tmp_zip.unlink(missing_ok=True)
+
+    verified_path = cached_path(name)
+    if not verified_path:
+        raise RuntimeError(f"GitHub model download for {name} finished but weights were not verified.")
+    if on_progress:
+        try:
+            on_progress(100)
+        except Exception:
+            pass
+    return verified_path
+
+
 def download(name: str, on_progress: Optional[Callable[[int], None]] = None, force: bool = False) -> str:
     """
     Downloads a model, reporting overall percent (0-100).
-    Automatically cleans corrupted partial files if forced or interrupted.
+    Supports fine-tuned GitHub Release models (small-in, mira) and HuggingFace Hub models.
     """
+    if name in _GITHUB_RELEASES:
+        return _download_github_zip(name, _GITHUB_RELEASES[name], on_progress=on_progress, force=force)
     repo = _repo(name)
     total = _total_bytes(repo, model_name=name)
 

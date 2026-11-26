@@ -941,7 +941,9 @@ class MainWindow(QMainWindow):
         g, foot = self._section(body, "Speech", hw["note"])
         self.hw_note = foot
         self.model_combo = self._combo([
-            (f"Automatic ({hw['model_size']})", "auto"), ("Tiny · fastest (~75 MB)", "tiny"),
+            (f"Automatic ({hw['model_size']})", "auto"),
+            ("Small · Indian English (~245 MB)", "small-in"),
+            ("Tiny · fastest (~75 MB)", "tiny"),
             ("Base · balanced (~141 MB)", "base"), ("Small · accurate (~464 MB)", "small"),
             ("Medium · best, wants a GPU (~1.46 GB)", "medium"),
             ("Parakeet V3 · fast CPU (~640 MB)", "parakeet"),
