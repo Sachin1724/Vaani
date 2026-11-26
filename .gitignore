@@ -24,6 +24,7 @@ android/.kotlin/
 *.mp3
 models/
 data/podcasts/
+data/indian_asr/
 data/OdiaTTS_Data/
 data/*.jsonl
 data/gdrive_odia/

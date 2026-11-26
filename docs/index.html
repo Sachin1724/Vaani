@@ -1004,6 +1004,217 @@ section[id] { scroll-margin-top: 24px; }
   </div>
 </section>
 
+<section class="odia pad" id="indian-english" aria-labelledby="in-h">
+<style>
+  .infg-wrap { grid-column: 1 / -1; display: grid; gap: 22px; }
+  .infg-head { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 24px; align-items: end; }
+  .infg-head p { color: var(--soft); font-size: 17px; max-width: 54ch; }
+  .infg-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .infg-kpi { background: var(--surface); border: 1px solid rgba(255,255,255,.08); border-radius: 20px; padding: 18px 20px; display: grid; gap: 6px; }
+  .infg-kpi b { font-size: clamp(1.75rem, 1.3rem + 1.4vw, 2.6rem); font-weight: 600; letter-spacing: -0.04em; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .infg-kpi.accent { background: var(--accent); color: var(--ink); }
+  .infg-kpi.accent b, .infg-kpi.accent span { color: var(--ink); }
+  .infg-kpi span { font-size: 13px; color: var(--soft); }
+  .infg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .infg-card { background: var(--surface); border: 1px solid rgba(255,255,255,.08); border-radius: 24px; padding: 24px; display: grid; gap: 16px; align-content: start; }
+  .infg-card h3 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.02em; }
+  .infg-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .infg-pill { border: 1px solid rgba(255,255,255,.14); background: var(--surface-2); color: var(--ink); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background .25s, transform .2s; }
+  .infg-pill:hover { transform: translateY(-1px); background: #2f3b49; }
+  .infg-pill[aria-pressed="true"] { background: var(--accent); color: #1E2A36; border-color: transparent; font-weight: 600; }
+  .infg-gauge-row { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 18px; align-items: center; }
+  .infg-ring { position: relative; width: 124px; height: 124px; display: grid; place-items: center; }
+  .infg-ring svg { transform: rotate(-90deg); width: 124px; height: 124px; }
+  .infg-ring .ring-val { position: absolute; text-align: center; }
+  .infg-ring .ring-val strong { display: block; font-size: 22px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .infg-ring .ring-val small { font-size: 11px; color: var(--soft); }
+  .infg-bars { display: grid; gap: 10px; }
+  .infg-bar { display: grid; gap: 5px; }
+  .infg-bar-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--soft); }
+  .infg-bar-top b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .infg-track { height: 11px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
+  .infg-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7895B2, #4ade80); transition: width .45s var(--ease); }
+  .infg-fill.old { background: rgba(255,255,255,.28); }
+  .infg-flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .infg-node { background: var(--surface-2); border-radius: 14px; padding: 12px; display: grid; gap: 4px; position: relative; }
+  .infg-node small { font-size: 11px; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; }
+  .infg-node strong { font-size: 14px; font-weight: 600; }
+  .infg-node span { font-size: 12px; color: var(--soft); }
+  .infg-diff { display: grid; gap: 10px; background: var(--surface-2); border-radius: 16px; padding: 16px; }
+  .infg-diff-row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 14px; }
+  .infg-tag { display: inline-block; text-align: center; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .infg-tag.bad { background: rgba(229, 72, 77, .2); color: #ff8a8d; }
+  .infg-tag.ok { background: rgba(74, 222, 128, .2); color: #6ee7b7; }
+  .infg-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .infg-spark { background: var(--surface-2); border-radius: 14px; padding: 14px; display: grid; gap: 6px; }
+  .infg-spark-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--soft); }
+  .infg-spark-top b { color: var(--ink); }
+  .infg-dl-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .infg-dl { background: var(--surface); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 18px; display: grid; gap: 10px; align-content: space-between; }
+  .infg-dl h4 { margin: 0; font-size: 17px; font-weight: 600; }
+  .infg-dl p { margin: 0; font-size: 13px; color: var(--soft); }
+  @media (max-width: 900px) {
+    .infg-head, .infg-grid, .infg-dl-grid, .infg-charts { grid-template-columns: 1fr; }
+    .infg-kpis, .infg-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .infg-gauge-row { grid-template-columns: 1fr; justify-items: start; }
+  }
+</style>
+
+  <div class="infg-wrap">
+    <div class="infg-head">
+      <div class="copy">
+        <h2 id="in-h" class="rv">Indian English,<br>heard right.</h2>
+      </div>
+      <p class="rv" style="--i:1">Fine-tuned locally on <b>AI4Bharat Svarah</b> (19 states) + real conversations from <b>Raj Shamani's Figuring Out</b> &amp; <b>Nikhil Kamath</b>. Smaller on disk, faster on GPU, and downloadable right from GitHub Releases.</p>
+    </div>
+
+    <div class="infg-kpis rv" style="--i:1">
+      <div class="infg-kpi accent"><b>8.12% WER</b><span>-15.0% relative errors vs stock Whisper-small (9.55%)</span></div>
+      <div class="infg-kpi"><b>244.6 MB</b><span>49% smaller on disk (int8 CT2 vs 486 MB stock)</span></div>
+      <div class="infg-kpi"><b>300 ms</b><span>Median GPU inference latency on laptop RTX 4050</span></div>
+      <div class="infg-kpi"><b>3,294 + 2,253</b><span>Indian speech clips &amp; real Whisper error pairs trained</span></div>
+    </div>
+
+    <div class="infg-grid rv" style="--i:2">
+      <div class="infg-card" id="infgBench">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <h3>Interactive Benchmark</h3>
+          <div class="infg-pills" role="group" aria-label="Benchmark dataset">
+            <button type="button" class="infg-pill" data-ib="svarah" aria-pressed="true">Svarah (19 States)</button>
+            <button type="button" class="infg-pill" data-ib="podcast" aria-pressed="false">Raj Shamani Podcast</button>
+            <button type="button" class="infg-pill" data-ib="size" aria-pressed="false">Size &amp; Speed</button>
+          </div>
+        </div>
+        <div class="infg-gauge-row">
+          <div class="infg-ring" aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="10"/>
+              <circle id="infgArc" cx="60" cy="60" r="48" fill="none" stroke="#4ade80" stroke-width="10" stroke-linecap="round" stroke-dasharray="301.6" stroke-dashoffset="24.5" style="transition:stroke-dashoffset .55s var(--ease)"/>
+            </svg>
+            <div class="ring-val"><strong id="infgRingNum">91.9%</strong><small id="infgRingSub">Word Accuracy</small></div>
+          </div>
+          <div class="infg-bars" id="infgBars"></div>
+        </div>
+        <div class="infg-charts">
+          <div class="infg-spark">
+            <div class="infg-spark-top"><span>Whisper-Small-IN Val Loss</span><b>1.78 &rarr; 0.45</b></div>
+            <svg viewBox="0 0 420 110" style="width:100%;height:84px">
+              <polyline fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linejoin="round" points="15.9,22.5 27.3,34.2 38.7,18.2 50.2,55.9 61.6,74.3 73.0,77.7 84.4,48.4 95.8,34.6 107.2,87.2 118.7,74.6 130.1,57.7 141.5,68.8 152.9,82.2 164.3,86.0 175.7,49.3 187.2,88.3 198.6,54.3 210.0,53.2 221.4,84.7 232.8,70.4 244.3,85.2 255.7,67.2 267.1,76.6 278.5,55.0 289.9,54.7 301.3,93.6 312.8,83.5 324.2,80.6 335.6,88.8 347.0,84.6 358.4,83.3 369.8,72.1 381.3,65.1 392.7,52.1 404.1,95.4 406.0,81.0"/>
+            </svg>
+          </div>
+          <div class="infg-spark">
+            <div class="infg-spark-top"><span>MIRA-IN Loss (282 steps)</span><b>Final 0.3011</b></div>
+            <svg viewBox="0 0 420 110" style="width:100%;height:84px">
+              <polyline fill="none" stroke="#7895B2" stroke-width="2.5" stroke-linejoin="round" points="15.4,45.7 26.5,34.8 37.6,29.4 48.8,26.5 59.9,64.1 71.0,59.1 82.1,45.4 93.2,30.1 104.4,95.6 115.5,67.6 126.6,55.8 137.7,27.8 148.8,51.5 160.0,56.3 171.1,86.5 182.2,58.4 193.3,24.7 204.4,61.3 215.6,90.9 226.7,69.1 237.8,79.5 248.9,86.8 260.0,71.5 271.2,85.6 282.3,30.6 293.4,75.3 304.5,18.1 315.6,67.7 326.8,74.9 337.9,53.2 349.0,27.6 360.1,28.6 371.2,48.8 382.4,81.6 393.5,92.6 404.6,62.9 406.0,77.6"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="infg-card" id="infgSim">
+        <h3>Try Real Pronunciation Fixes (Live MIRA-IN Pipeline)</h3>
+        <div class="infg-flow" aria-hidden="true">
+          <div class="infg-node"><small>1 · Input</small><strong>Mic Audio</strong><span>16 kHz local</span></div>
+          <div class="infg-node"><small>2 · Acoustic</small><strong>Whisper-Small-IN</strong><span>244.6 MB int8</span></div>
+          <div class="infg-node"><small>3 · Phonetic</small><strong>MIRA-IN</strong><span>Qwen2.5-0.5B</span></div>
+          <div class="infg-node"><small>4 · Paste</small><strong>Exact Words</strong><span>Indian entities</span></div>
+        </div>
+        <div class="infg-pills" role="group" aria-label="Sample mishearings">
+          <button type="button" class="infg-pill" data-ip="0" aria-pressed="true">"hello i am satjian"</button>
+          <button type="button" class="infg-pill" data-ip="1" aria-pressed="false">"rajshri mani figuring out"</button>
+          <button type="button" class="infg-pill" data-ip="2" aria-pressed="false">"whsiepr flow"</button>
+          <button type="button" class="infg-pill" data-ip="3" aria-pressed="false">"adult pension use now"</button>
+          <button type="button" class="infg-pill" data-ip="4" aria-pressed="false">"kumar mangalam bera"</button>
+          <button type="button" class="infg-pill" data-ip="5" aria-pressed="false">"not good art indian words"</button>
+        </div>
+        <div class="infg-diff" aria-live="polite">
+          <div class="infg-diff-row"><span class="infg-tag bad">Stock</span><span id="infgBad">hello i am satjian and i am using vaani</span></div>
+          <div class="infg-diff-row"><span class="infg-tag ok">Vaani + MIRA</span><strong id="infgGood">Hello, I am Sachin and I am using Vaani.</strong></div>
+          <div style="font-size:12px;color:var(--soft)" id="infgMeta">Repaired Indian personal name &amp; app casing locally on-device.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="infg-dl-grid rv" style="--i:3">
+      <div class="infg-dl">
+        <div>
+          <h4>Whisper-Small-IN (.zip)</h4>
+          <p>209.6 MB download &rarr; 244.6 MB int8 CT2. Drop-in Indian-accent speech model for GPU &amp; CPU.</p>
+        </div>
+        <a class="btn big" href="https://github.com/Sachin1724/Vaani/releases/download/v1.6.0/whisper-small-in-ct2.zip">Download from GitHub</a>
+      </div>
+      <div class="infg-dl">
+        <div>
+          <h4>MIRA-IN Refiner (.zip)</h4>
+          <p>443.1 MB download &rarr; 496.0 MB int8 CT2. Qwen2.5-0.5B LoRA trained on real Indian Whisper errors.</p>
+        </div>
+        <a class="btn big light-quiet" href="https://github.com/Sachin1724/Vaani/releases/download/v1.6.0/mira-in-ct2-int8.zip">Download from GitHub</a>
+      </div>
+      <div class="infg-dl">
+        <div>
+          <h4>Full Training Report</h4>
+          <p>Inspect loss curves, dataset breakdown across 19 states + Raj Shamani podcasts, and held-out probes.</p>
+        </div>
+        <a class="btn big light-quiet" href="indian_training_report.html">Open Infographic Report</a>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+(() => {
+  const BENCH = {
+    svarah: {
+      ringPct: 91.9, ringNum: '91.9%', ringSub: 'Word Accuracy',
+      bars: [
+        { label: 'Whisper-Small-IN (245 MB int8)', val: '8.12% WER', w: 85, old: false },
+        { label: 'Whisper-Small-IN + MIRA-IN', val: '8.84% WER', w: 92.6, old: false },
+        { label: 'Stock Whisper-small (486 MB)', val: '9.55% WER', w: 100, old: true },
+      ]
+    },
+    podcast: {
+      ringPct: 76.6, ringNum: '23.4%', ringSub: 'Podcast WER (FO5)',
+      bars: [
+        { label: 'Whisper-Small-IN (Held-Out FO5)', val: '23.37% WER', w: 95.8, old: false },
+        { label: 'Stock Whisper-small (Held-Out FO5)', val: '24.39% WER', w: 100, old: true },
+      ]
+    },
+    size: {
+      ringPct: 50.3, ringNum: '-49%', ringSub: 'Disk Footprint',
+      bars: [
+        { label: 'Whisper-Small-IN · 300 ms GPU', val: '244.6 MB', w: 50.3, old: false },
+        { label: 'MIRA-IN Refiner (Qwen2.5-0.5B)', val: '496.0 MB', w: 100, old: false },
+        { label: 'Stock Whisper-small · 304 ms GPU', val: '486.2 MB', w: 98.0, old: true },
+      ]
+    }
+  };
+  const arc = document.getElementById('infgArc'), rNum = document.getElementById('infgRingNum'), rSub = document.getElementById('infgRingSub'), bars = document.getElementById('infgBars');
+  function showBench(k) {
+    const d = BENCH[k]; if (!d) return;
+    document.querySelectorAll('[data-ib]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ib === k)));
+    arc.setAttribute('stroke-dashoffset', (301.6 * (1 - d.ringPct / 100)).toFixed(1));
+    rNum.textContent = d.ringNum; rSub.textContent = d.ringSub;
+    bars.innerHTML = d.bars.map(b => `<div class="infg-bar"><div class="infg-bar-top"><span>${b.label}</span><b>${b.val}</b></div><div class="infg-track"><div class="infg-fill${b.old ? ' old' : ''}" style="width:${b.w}%"></div></div></div>`).join('');
+  }
+  document.querySelectorAll('[data-ib]').forEach(b => b.addEventListener('click', () => showBench(b.dataset.ib)));
+  showBench('svarah');
+
+  const PROBES = [
+    ['hello i am satjian and i am using vaani', 'Hello, I am Sachin and I am using Vaani.', 'Repaired Indian personal name & app casing locally on-device.'],
+    ['i was listening to the rajshri mani podcast figuring out', 'I was listening to the Raj Shamani podcast Figuring Out.', 'Fixed host & show title learned from Figuring Out episodes.'],
+    ['our tool should be more accurate than whsiepr flow', 'Our tool should be more accurate than Wispr Flow.', 'Repaired phonetically garbled product name + punctuation.'],
+    ['can you check my contribution in adult pension use now', 'Can you check my contribution in Atal Pension Yojna?', 'Fixed Indian government scheme name from Svarah acoustic confusion.'],
+    ['nikhil kamat spoke with kumar mangalam bera', 'Nikhil Kamath spoke with Kumar Mangalam Birla.', 'Corrected Indian founder surnames without rewriting sentence flow.'],
+    ['its not good art indian words and pronunciations', 'It is not good at Indian words and pronunciations.', 'Repaired vowel confusion while preserving conversational meaning.'],
+  ];
+  const badEl = document.getElementById('infgBad'), goodEl = document.getElementById('infgGood'), metaEl = document.getElementById('infgMeta');
+  document.querySelectorAll('[data-ip]').forEach(b => b.addEventListener('click', () => {
+    const idx = +b.dataset.ip, p = PROBES[idx]; if (!p) return;
+    document.querySelectorAll('[data-ip]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    badEl.textContent = p[0]; goodEl.textContent = p[1]; metaEl.textContent = p[2];
+  }));
+})();
+</script>
+
 <section class="story field-light pad" id="story" aria-labelledby="s-h">
   <h2 id="s-h" class="rv">How Odia got a voice.</h2>
   <ol class="chapters">

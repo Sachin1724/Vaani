@@ -123,7 +123,7 @@ def resolve_model_name(base_model: str, language: str) -> str:
 def engine_model_name(base_model: str, language: str, device: str) -> str:
     """Model files to load: the NPU runs OpenVINO builds of the multilingual weights ("base-ov")."""
     name = resolve_model_name(base_model, language)
-    if device == "npu" and name not in ("parakeet", "odia"):  # ONNX engines stay on the CPU
+    if device == "npu" and name not in ("parakeet", "odia", "small-in"):  # ONNX/local int8 CT2 stays off NPU
         name = name.replace(".en", "") + "-ov"
     return name
 
