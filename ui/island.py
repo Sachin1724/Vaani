@@ -289,6 +289,11 @@ class IslandPill(QWidget):
         self._active_dialect = dialect
         self.update()
 
+    def set_detected_language(self, lang_code: str):
+        if lang_code:
+            self._lang = lang_code.upper()[:6]
+            self.update()
+
     def _shape_rect(self, dims=None, snooze=None):
         w, h, _ = dims or self._dims
         x = (self.W - w) / 2
@@ -919,7 +924,7 @@ class CapsuleRouter(QObject):
     sig_paste_last = pyqtSignal()  # classic capsule's bento HUD only
     sig_retry_last = pyqtSignal()
     sig_stop_dictation = pyqtSignal()
-    _BOTH = ("populate_mics", "populate_models", "update_connected_mic", "update_language", "set_opacity", "set_hide_when_idle")
+    _BOTH = ("populate_mics", "populate_models", "update_connected_mic", "update_language", "set_detected_language", "set_opacity", "set_hide_when_idle")
 
     def __init__(self, pill, island, style="compact", follow=True):
         super().__init__()

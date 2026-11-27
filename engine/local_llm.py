@@ -16,7 +16,9 @@ import re
 # Spoken edit commands; the transcript must be only the command, so normal dictation never matches.
 _COMMAND = re.compile(
     r"^\s*(?:please\s+)?(make (?:it|this|that)|rewrite (?:it|this|that)(?: as| to be| in)?|turn (?:it|this|that) into|"
-    r"fix (?:the )?(?:grammar|spelling)|summari[sz]e (?:it|this|that)|"
+    r"convert (?:it|this|that) to|translate (?:it|this|that)? ?(?:to|into)?|polish (?:it|this|that)|"
+    r"improve (?:it|this|that)|expand (?:it|this|that)|explain (?:it|this|that)|reply to (?:it|this|that)|"
+    r"fix (?:the )?(?:grammar|spelling|punctuation)|summari[sz]e (?:it|this|that)|"
     r"shorten (?:it|this|that)|make (?:it|this|that) shorter)\b(.*?)[.!?]?\s*$", re.I)
 
 

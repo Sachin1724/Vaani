@@ -155,6 +155,7 @@ class AppBridge(QObject):
     sig_stop_recording = pyqtSignal()
     sig_amplitude = pyqtSignal(float)
     sig_realtime_text = pyqtSignal(str)
+    sig_detected_lang = pyqtSignal(str)
     sig_transcription_complete = pyqtSignal(str, int, int) # (formatted_text, word_count, latency_ms)
     sig_error = pyqtSignal(str)   # short message shown in the capsule
     sig_status = pyqtSignal(str)  # model download/load messages
@@ -224,6 +225,7 @@ class OpenFlowApp(QObject):
         self.bridge.sig_error.connect(self._handle_ui_error)
         self.bridge.sig_download.connect(self._handle_ui_download)
         self.bridge.sig_realtime_text.connect(self._handle_ui_realtime_text)
+        self.bridge.sig_detected_lang.connect(self._handle_ui_detected_lang)
         self.bridge.sig_transcription_complete.connect(self._handle_ui_complete)
         self.bridge.sig_status.connect(self._handle_status)
 
@@ -1425,7 +1427,9 @@ class OpenFlowApp(QObject):
             if self.config.get("sound_feedback", True):
                 play_paste_sound()
 
-            # Record in SQLite history
+            # Record in SQLite history (include detected language so History shows what was detected)
+            used_model = getattr(self.transcriber, "_current_loaded_name", "") or self.transcriber.model_size
+            self.bridge.sig_detected_lang.emit(detected_lang)
             self.db.add_history_entry(
                 raw_text=raw_text,
                 formatted_text=formatted,
@@ -1434,7 +1438,7 @@ class OpenFlowApp(QObject):
                 duration_seconds=duration_sec,
                 word_count=word_count,
                 tone_preset=tone,
-                model_used=self.transcriber.model_size,
+                model_used=f"{used_model} ({detected_lang})" if detected_lang else used_model,
                 device_used=self.transcriber.device,
                 latency_ms=latency_ms
             )
@@ -1510,7 +1514,15 @@ class OpenFlowApp(QObject):
         if not self.config.get("show_floating_pill", True):
             return
         self.floating_pill.update_realtime_text(text)
+        det = getattr(self.transcriber, "last_detected_lang", "")
+        if det and self.config.get("language") in ("auto", ""):
+            self.floating_pill.set_detected_language(det)
         self._update_live_dialect(text)
+
+    @pyqtSlot(str)
+    def _handle_ui_detected_lang(self, lang_code: str):
+        if self.config.get("show_floating_pill", True) and lang_code:
+            self.floating_pill.set_detected_language(lang_code)
 
     def _update_live_dialect(self, text: str):
         """Reclassify the partial transcript and update the capsule badge in place.

@@ -244,6 +244,7 @@ class Transcriber:
         self._en = None                 # "or-auto": Whisper kept loaded beside the Odia model
         self._en_loading = False
         self._slow_preview_streak = 0
+        self.last_detected_lang = ""
         self.on_progress = None         # optional callback(percent:int, model_name:str) while downloading
         self.is_loading = False
         if preload:
@@ -570,7 +571,7 @@ class Transcriber:
             # Decoding only the last 3 s dropped whatever was said between the committed phrases and that
             # window, so the live text lost words and jumped. Phrases commit at pauses, so this stays short.
             sample = _boost(audio[-16000 * 6:])
-            segments, _ = self.model.transcribe(
+            segments, info = self.model.transcribe(
                 sample,
                 **_whisper_args(self.language),
                 beam_size=1,
@@ -578,6 +579,9 @@ class Transcriber:
                 condition_on_previous_text=False,
                 vad_filter=False
             )
+            det = getattr(info, "language", "") if info else ""
+            if det:
+                self.last_detected_lang = det
             return _drop_loop(" ".join([s.text.strip() for s in segments]).strip())
         except Exception:
             return ""
@@ -747,6 +751,10 @@ class Transcriber:
 
         latency_ms = int((time.perf_counter() - start_time) * 1000)
         detected_lang = "en" if lang == "translate" else (getattr(info, "language", "") or lang)
+        self.last_detected_lang = detected_lang
+        if info and getattr(info, "language", ""):
+            prob = getattr(info, "language_probability", 0.0) or 0.0
+            print(f"[Vaani] Detected language: {detected_lang} (p={prob:.2f}) via {self._current_loaded_name or self.model_size}")
 
         return full_text, duration_seconds, latency_ms, detected_lang
 

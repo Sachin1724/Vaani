@@ -2256,6 +2256,12 @@ class FloatingPill(QWidget):
             self._update_badge_text(dialect.upper())
         self._update_indicator_mode()
 
+    def set_detected_language(self, lang_code: str):
+        """Show the live detected language (EN, HI, OR, etc.) on the capsule badge while dictating."""
+        if not lang_code:
+            return
+        self._update_badge_text(self._lang_short(lang_code))
+
     def _update_badge_text(self, text: str):
         self.lang_badge.setText(text)
         fm = self.lang_badge.fontMetrics()
