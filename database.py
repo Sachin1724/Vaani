@@ -85,6 +85,18 @@ class Database:
                     VALUES (?, ?, ?, ?)
                 """, default_terms)
 
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS learned_corrections (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    heard TEXT NOT NULL,
+                    corrected TEXT NOT NULL,
+                    context TEXT DEFAULT '',
+                    lang TEXT DEFAULT 'en',
+                    model_used TEXT DEFAULT ''
+                )
+            """)
+
             conn.commit()
 
     def add_history_entry(
@@ -214,3 +226,39 @@ class Database:
         with self._get_connection() as conn:
             conn.execute("DELETE FROM dictionary WHERE id = ?", (entry_id,))
             conn.commit()
+
+    def add_learned_correction(self, heard: str, corrected: str, context: str = "",
+                               lang: str = "en", model_used: str = "") -> int:
+        """Record a user's real-time word correction for future model fine-tuning."""
+        now = datetime.datetime.now().isoformat()
+        with self._get_connection() as conn:
+            cur = conn.execute(
+                "INSERT INTO learned_corrections (timestamp, heard, corrected, context, lang, model_used) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (now, heard.strip(), corrected.strip(), context[-300:], lang, model_used),
+            )
+            conn.commit()
+            return cur.lastrowid or 0
+
+    def get_learned_corrections(self, limit: int = 500) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM learned_corrections ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def export_learned_jsonl(self, out_path: str) -> int:
+        """Export recorded user corrections as JSONL for model fine-tuning."""
+        import json
+        rows = self.get_learned_corrections(limit=5000)
+        with open(out_path, "w", encoding="utf-8") as f:
+            for r in rows:
+                f.write(json.dumps({
+                    "heard": r["heard"],
+                    "corrected": r["corrected"],
+                    "context": r["context"],
+                    "lang": r["lang"],
+                    "model_used": r["model_used"],
+                    "timestamp": r["timestamp"],
+                }, ensure_ascii=False) + "\n")
+        return len(rows)

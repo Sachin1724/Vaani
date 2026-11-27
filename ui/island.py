@@ -63,6 +63,7 @@ class IslandPill(QWidget):
     sig_open_dashboard = pyqtSignal()
     sig_update_requested = pyqtSignal()
     sig_hide_idle_changed = pyqtSignal(bool)
+    sig_stop_dictation = pyqtSignal()
 
     def __init__(self, current_mic_name="Microphone", current_language="en", current_model="base",
                  hide_when_idle=False, follow_mouse_screen=True, position="top"):
@@ -914,8 +915,10 @@ class CapsuleRouter(QObject):
     sig_open_dashboard = pyqtSignal()
     sig_update_requested = pyqtSignal()
     sig_hide_idle_changed = pyqtSignal(bool)
+    sig_stop_dictation = pyqtSignal()
     sig_paste_last = pyqtSignal()  # classic capsule's bento HUD only
     sig_retry_last = pyqtSignal()
+    sig_stop_dictation = pyqtSignal()
     _BOTH = ("populate_mics", "populate_models", "update_connected_mic", "update_language", "set_opacity", "set_hide_when_idle")
 
     def __init__(self, pill, island, style="compact", follow=True):
@@ -924,7 +927,7 @@ class CapsuleRouter(QObject):
         self._size = (1.0, 1.0, False)
         pill.installEventFilter(self)  # whatever shows the classic capsule while the island is in use, it is hidden again
         for sig in ("sig_mic_changed", "sig_language_changed", "sig_tone_changed", "sig_model_changed",
-                    "sig_open_dashboard", "sig_update_requested", "sig_hide_idle_changed"):
+                    "sig_open_dashboard", "sig_update_requested", "sig_hide_idle_changed", "sig_stop_dictation"):
             getattr(pill, sig).connect(getattr(self, sig))
             getattr(island, sig).connect(getattr(self, sig))
         pill.sig_paste_last.connect(self.sig_paste_last)

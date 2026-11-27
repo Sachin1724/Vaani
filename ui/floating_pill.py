@@ -450,6 +450,28 @@ class MoreButton(QPushButton):
             p.drawEllipse(QRectF(self.width() / 2.0 + dx - 1.4, cy - 1.4, 2.8, 2.8))
 
 
+class StopButton(QPushButton):
+    """Round stop button shown on the capsule while dictating so hands-free/toggle mode can be stopped."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(22, 22)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setToolTip("Stop dictation")
+
+    def paintEvent(self, a0):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        hovered = self.underMouse()
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(239, 68, 68, 235 if hovered else 195))
+        p.drawEllipse(QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5))
+        p.setBrush(QColor(255, 255, 255, 245))
+        cx, cy = self.width() / 2.0, self.height() / 2.0
+        p.drawRoundedRect(QRectF(cx - 3.6, cy - 3.6, 7.2, 7.2), 1.6, 1.6)
+
+
 
 class Switch(QCheckBox):
     """iOS-style switch drawn in place of the checkbox; same API as QCheckBox (isChecked, toggled...)."""
@@ -1411,16 +1433,36 @@ class FloatingCaptionBubble(QWidget):
 
         self._cur_w = 116.0
         self._target_w = 116.0
+        self._cur_h = 34.0
+        self._target_h = 34.0
+        self._scroll_y = 0.0
+        self._target_scroll_y = 0.0
 
         self.fade_anim = QPropertyAnimation(self, b"windowOpacity")
         self.fade_anim.setDuration(220)
         self.fade_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-        # 60 FPS timer: smooth eased text reveal + damped bubble width
+        # 60 FPS timer: smooth eased text reveal + damped bubble width/height & teleprompter scroll
         self._anim_timer = QTimer(self)
         self._anim_timer.setInterval(16)
         self._anim_timer.setTimerType(Qt.TimerType.PreciseTimer)
         self._anim_timer.timeout.connect(self._on_anim_tick)
+
+    def _wrap_lines(self, text: str, max_w: float) -> list[str]:
+        if not text:
+            return []
+        lines: list[str] = []
+        cur = ""
+        for word in text.split(" "):
+            cand = f"{cur} {word}".strip() if cur else word
+            if cur and self._fm.horizontalAdvance(cand) > max_w:
+                lines.append(cur)
+                cur = word
+            else:
+                cur = cand
+        if cur:
+            lines.append(cur)
+        return lines
 
     def set_text(self, text: str, merge: bool = True):
         """Dictation passes the latest window of recognised speech, merged into one steadily growing line;
@@ -1433,9 +1475,9 @@ class FloatingCaptionBubble(QWidget):
             self._text, self._shown, self._ended = "", 0.0, False
             self._cached_layout = None
         merged = merge_preview(self._text, text) if merge else text
-        # Cap stored tail on very long paragraphs so layout measurement stays O(1)
-        if len(merged) > 240:
-            trim = merged[-240:]
+        # Cap stored tail on very long paragraphs so layout measurement stays fast
+        if len(merged) > 900:
+            trim = merged[-900:]
             if " " in trim:
                 trim = trim.split(" ", 1)[1]
             if self._text and merged.startswith(self._text):
@@ -1447,11 +1489,23 @@ class FloatingCaptionBubble(QWidget):
             return
         self._text = merged
         self._cached_layout = None
-        self._target_w = float(max(116, min(480, int(self._fm.horizontalAdvance(merged) + 34))))
+        single_w = self._fm.horizontalAdvance(merged) + 34.0
+        if single_w <= 480.0 or not merge:
+            self._target_w = float(max(116, min(480, int(single_w))))
+            self._target_h = 34.0
+            self._target_scroll_y = 0.0
+        else:
+            self._target_w = 480.0
+            lines = self._wrap_lines(merged, 480.0 - 28.0)
+            line_h = self._fm.lineSpacing() + 3.0
+            vis_lines = min(3.6, float(max(2, len(lines))))
+            self._target_h = min(116.0, max(54.0, 20.0 + vis_lines * line_h))
+            inner_h = self._target_h - 18.0
+            self._target_scroll_y = max(0.0, len(lines) * line_h - inner_h)
         if not self._anim_timer.isActive():
             self._anim_timer.start()
         if not self.isVisible() or self.windowOpacity() < 0.1:
-            self.setFixedSize(round(self._cur_w), 34)
+            self.setFixedSize(round(self._cur_w), round(self._cur_h))
             self._reposition()
             self.show()
             _force_topmost(self)
@@ -1465,14 +1519,18 @@ class FloatingCaptionBubble(QWidget):
         n = len(self._text)
         if self._shown < n:  # eased catch-up so long paragraphs stay crisp without falling behind
             self._shown = min(float(n), self._shown + max(1.1, (n - self._shown) * 0.22))
-        diff = self._target_w - self._cur_w
-        self._cur_w = self._target_w if abs(diff) <= 0.6 else self._cur_w + diff * 0.24
-        new_w = round(self._cur_w)
-        if new_w != self.width() or self.height() != 34:
-            self.setFixedSize(new_w, 34)
+        dw = self._target_w - self._cur_w
+        dh = self._target_h - self._cur_h
+        ds = self._target_scroll_y - self._scroll_y
+        self._cur_w = self._target_w if abs(dw) <= 0.6 else self._cur_w + dw * 0.24
+        self._cur_h = self._target_h if abs(dh) <= 0.6 else self._cur_h + dh * 0.22
+        self._scroll_y = self._target_scroll_y if abs(ds) <= 0.4 else self._scroll_y + ds * 0.20
+        new_w, new_h = round(self._cur_w), round(self._cur_h)
+        if new_w != self.width() or new_h != self.height():
+            self.setFixedSize(new_w, new_h)
             self._reposition()
         self.update()
-        if self._shown >= n and abs(diff) <= 0.6:
+        if self._shown >= n and abs(dw) <= 0.6 and abs(dh) <= 0.6 and abs(ds) <= 0.4:
             self._anim_timer.stop()
 
     def _reposition(self):
@@ -1489,6 +1547,8 @@ class FloatingCaptionBubble(QWidget):
         self._text, self._shown, self._ended = "", 0.0, False
         self._cached_layout = None
         self._cur_w = self._target_w = 116.0
+        self._cur_h = self._target_h = 34.0
+        self._scroll_y = self._target_scroll_y = 0.0
 
     def fade_out(self):
         self._ended = True
@@ -1539,6 +1599,50 @@ class FloatingCaptionBubble(QWidget):
         fm = self._fm
         n = int(self._shown)
         w_cur = self.width()
+
+        # Teleprompter multi-line mode for longer paragraphs
+        if self.height() > 40:
+            clip_r = rect.adjusted(10.0, 8.0, -10.0, -8.0)
+            p.save()
+            p.setClipRect(clip_r)
+            typed_all = self._text[:n]
+            lines = self._wrap_lines(typed_all, w_cur - 28.0)
+            line_h = fm.lineSpacing() + 3.0
+            mid_y = clip_r.center().y()
+            frac = self._shown - n if n < len(self._text) else 1.0
+            for idx, line_txt in enumerate(lines):
+                y_top = clip_r.top() + idx * line_h - self._scroll_y
+                y_base = y_top + fm.ascent()
+                if y_top + line_h < clip_r.top() - 4 or y_top > clip_r.bottom() + 4:
+                    continue
+                # Central highlight: lines near center stay full-bright, upper lines dim softly
+                dist = abs((y_top + line_h * 0.5) - mid_y) / max(1.0, clip_r.height() * 0.5)
+                alpha = int(max(125.0, 252.0 - 110.0 * min(1.0, dist)))
+                is_last = idx == len(lines) - 1
+                if is_last and frac < 1.0 and line_txt:
+                    ease_a = 1.0 - (1.0 - frac) ** 3
+                    dy = 4.0 * (1.0 - ease_a)
+                    head = line_txt[:-1]
+                    p.setPen(_fg(alpha))
+                    p.drawText(QPointF(14.0, y_base), head)
+                    p.setPen(_fg(int(45 + (alpha - 45) * ease_a)))
+                    p.drawText(QPointF(14.0 + fm.horizontalAdvance(head), y_base + dy), line_txt[-1])
+                else:
+                    p.setPen(_fg(alpha))
+                    p.drawText(QPointF(14.0, y_base), line_txt)
+            p.restore()
+            # Top & bottom teleprompter edge fades
+            if self._scroll_y > 1.0:
+                top_g = QLinearGradient(0, rect.top(), 0, rect.top() + 20.0)
+                top_g.setColorAt(0.0, _bgc(246))
+                top_g.setColorAt(1.0, _bgc(0))
+                p.fillRect(QRectF(rect.left() + 2, rect.top() + 1, rect.width() - 4, 20.0), QBrush(top_g))
+            bot_g = QLinearGradient(0, rect.bottom() - 14.0, 0, rect.bottom())
+            bot_g.setColorAt(0.0, _bgc(0))
+            bot_g.setColorAt(1.0, _bgc(215))
+            p.fillRect(QRectF(rect.left() + 2, rect.bottom() - 14.0, rect.width() - 4, 13.0), QBrush(bot_g))
+            return
+
         cached = self._cached_layout
         if cached and cached[0] == n and cached[1] == w_cur:
             lead, typed = cached[2], cached[3]
@@ -1797,6 +1901,7 @@ class FloatingPill(QWidget):
     sig_hide_idle_changed = pyqtSignal(bool)
     sig_paste_last = pyqtSignal()
     sig_retry_last = pyqtSignal()
+    sig_stop_dictation = pyqtSignal()
 
     LANGS = [
         ("or-auto", "Auto: Odia + English"), ("auto", "Auto Detect"), ("en-in", "English (India) / Hinglish"), ("or", "Odia / Odia-English"), ("or-mix", "Odia + English words"),
@@ -2126,6 +2231,9 @@ class FloatingPill(QWidget):
         sp = self.visualizer.sizePolicy()
         sp.setRetainSizeWhenHidden(True)
         self.visualizer.setSizePolicy(sp)
+        self.btn_stop = StopButton(self.capsule_widget)
+        self.btn_stop.clicked.connect(self.sig_stop_dictation.emit)
+        self.btn_stop.hide()
         self.btn_more = MoreButton(self.capsule_widget)
         self.btn_more.clicked.connect(self.toggle_morph_hud)
 
@@ -2185,6 +2293,7 @@ class FloatingPill(QWidget):
             self.capsule_layout.addWidget(self.text_label, 1, Qt.AlignmentFlag.AlignVCenter)
             self.capsule_layout.addWidget(self.lang_badge, 0, Qt.AlignmentFlag.AlignVCenter)
             self.capsule_layout.addWidget(self.visualizer, 0, Qt.AlignmentFlag.AlignVCenter)
+            self.capsule_layout.addWidget(self.btn_stop, 0, Qt.AlignmentFlag.AlignVCenter)
             self.capsule_layout.addWidget(self.btn_more, 0, Qt.AlignmentFlag.AlignVCenter)
             self.text_label.show()
             self._update_badge_text(self._lang_short(self.current_language))
@@ -2205,6 +2314,7 @@ class FloatingPill(QWidget):
             self.capsule_layout.addWidget(self.lang_badge, 0, Qt.AlignmentFlag.AlignVCenter)
             self.capsule_layout.addStretch(1)  # a wider capsule opens one gap here, not uneven gaps everywhere
             self.capsule_layout.addWidget(self.visualizer, 0, Qt.AlignmentFlag.AlignVCenter)
+            self.capsule_layout.addWidget(self.btn_stop, 0, Qt.AlignmentFlag.AlignVCenter)
             self.text_label.hide()
             self.text_label.setFixedWidth(0)
             self.btn_more.hide()
@@ -3147,6 +3257,8 @@ class FloatingPill(QWidget):
         self._update_badge_text(self._lang_short(self.current_language))
         self.visualizer.reset()
         self.visualizer.setVisible(True)
+        if hasattr(self, "btn_stop"):
+            self.btn_stop.setVisible(self.capsule_style != "micro")
         self.update()
 
         self.fade_anim.stop()
@@ -3184,6 +3296,8 @@ class FloatingPill(QWidget):
             self.text_label.setText("Writing")
         self.visualizer.reset()
         self.visualizer.setVisible(False)
+        if hasattr(self, "btn_stop"):
+            self.btn_stop.hide()
         self.update()
 
     def show_refining(self):
@@ -3199,6 +3313,8 @@ class FloatingPill(QWidget):
             self.text_label.setText("Refining")
         self.visualizer.reset()
         self.visualizer.setVisible(False)
+        if hasattr(self, "btn_stop"):
+            self.btn_stop.hide()
         self.update()
 
     def _hide_download_row(self):
@@ -3262,6 +3378,8 @@ class FloatingPill(QWidget):
         if self.capsule_style not in ("compact", "micro"):
             self.text_label.setText(text)
         self.visualizer.setVisible(False)
+        if hasattr(self, "btn_stop"):
+            self.btn_stop.hide()
         self.update()
         if self.capsule_style in ("compact", "micro") and hasattr(self, "caption_bubble"):
             self.caption_bubble.set_text(text, merge=False)

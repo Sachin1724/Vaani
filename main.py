@@ -297,6 +297,7 @@ class OpenFlowApp(QObject):
         self.floating_pill.sig_open_dashboard.connect(self.show_dashboard)
         self.floating_pill.sig_paste_last.connect(lambda: threading.Thread(target=self._paste_last, daemon=True).start())
         self.floating_pill.sig_retry_last.connect(self._retry_last)
+        self.floating_pill.sig_stop_dictation.connect(self._handle_pill_stop)
         self.floating_pill.set_tone(self.config.get("tone_preset", "auto"))
 
         _boot("capsule built")
@@ -655,6 +656,11 @@ class OpenFlowApp(QObject):
         field = get_text_before_cursor(0.5, full=True)
         known = {e["phrase_match"].lower() for e in self.db.get_dictionary()}
         for heard, fixed in find_corrections(pasted, field):
+            self.db.add_learned_correction(
+                heard, fixed, context=field[-200:],
+                lang=self.config.get("language", "en"),
+                model_used=self.config.get("model_size", ""),
+            )
             if heard.lower() not in known:
                 print(f"[Vaani] Learned from your edit: {heard!r} -> {fixed!r}")
                 self.db.add_dictionary_entry(heard, fixed, category="learned")
@@ -1456,6 +1462,14 @@ class OpenFlowApp(QObject):
     def _handle_ui_stop(self):
         if self.config.get("show_floating_pill", True):
             self.floating_pill.show_refining()
+
+    @pyqtSlot()
+    def _handle_pill_stop(self):
+        """Stop dictation when the user taps the Stop button on the floating capsule."""
+        with self._dictation_lock:
+            self._hands_free = False
+            if self.audio_recorder.is_recording:
+                self._stop_and_process(tail=False)
 
     @pyqtSlot(str)
     def _handle_status(self, message: str):
