@@ -110,6 +110,8 @@ def resolve_model_name(base_model: str, language: str) -> str:
         return "parakeet" if language in PARAKEET_LANGS else "base"
     if base_model == "odia":
         return "odia" if language in ODIA_LANGS else "base"
+    if base_model == "small-in":
+        return "small-in" if language in ("en", "en-in") else "small"
     clean = base_model.replace(".en", "")
     if clean.startswith("distil"):  # distilled models are English-only
         return clean if language == "en" else "medium"
@@ -727,10 +729,13 @@ class Transcriber:
             if is_urdu_hallucination and (lang in ("auto", "", "en-in", "en", "hi") or lang in ODIA_LANGS):
                 det = getattr(info, "language", "unknown") if info else "unknown"
                 print(f"[Vaani] Detected Urdu/Arabic script or misclassified language ('{det}'). Re-transcribing as Indic speech...")
-                whisper_args = _whisper_args("hi" if lang == "hi" else "en")
+                # Spoken Hindi is frequently tagged as 'ur' by Whisper; in auto/hi mode recover as Hindi ('hi'), not English.
+                recover_lang = "en" if lang in ("en", "en-in") else "hi"
+                whisper_args = _whisper_args(recover_lang)
                 initial_prompt = (
-                    "Indian English, Hinglish, Hindi, and Odia speech in Latin/Roman script or Devanagari. "
-                    "Do not output Urdu or Arabic characters."
+                    "Indian English and Hinglish speech in Latin script."
+                    if recover_lang == "en"
+                    else "हिंदी और Hinglish डिक्टेशन। शुद्ध देवनागरी या रोमन में लिखें।"
                 )
                 full_text, info = _run(vad=True)
 
