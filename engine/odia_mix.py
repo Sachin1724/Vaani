@@ -12,7 +12,10 @@ frequent word ("no" for "know") and misheard English stays in Odia script.
 """
 
 import gzip
+import json
 import os
+import re
+from pathlib import Path
 
 VIRAMA = "୍"
 CONS = set(chr(c) for c in range(0x0B15, 0x0B3A)) | {"ୟ", "ୱ"}
@@ -54,7 +57,45 @@ def key(word: str) -> str:
 
 
 _OVERRIDE = {key(k): v for k, v in OVERRIDE.items()}
+_LEARNED_PATH = Path.home() / ".vaani" / "learned_odia_mix.json"
+_learned = None
 _table = None
+_MATRA_STRIP = re.compile("[\u0B3E-\u0B4C\u0B4D\u0B01-\u0B03]")
+
+
+def _load_learned() -> dict:
+    global _learned
+    if _learned is None:
+        _learned = {}
+        try:
+            if _LEARNED_PATH.exists():
+                data = json.loads(_LEARNED_PATH.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    _learned.update({key(k): str(v) for k, v in data.items() if k and v})
+        except Exception:
+            pass
+    return _learned
+
+
+def learn(odia_word: str, english_word: str) -> bool:
+    """Persistently learn a user-corrected Odia-script -> English word mapping."""
+    ow, ew = (odia_word or "").strip(), (english_word or "").strip()
+    if not ow or not ew or not re.search("[\u0B00-\u0B7F]", ow) or not re.fullmatch(r"[A-Za-z0-9'.-]+", ew):
+        return False
+    learned = _load_learned()
+    k = key(ow)
+    sk = _MATRA_STRIP.sub("", k)
+    changed = learned.get(k) != ew
+    learned[k] = ew
+    if len(sk) >= 2 and sk not in learned:
+        learned[sk] = ew
+    if changed:
+        try:
+            _LEARNED_PATH.parent.mkdir(parents=True, exist_ok=True)
+            _LEARNED_PATH.write_text(json.dumps(learned, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+    return True
 
 
 def _load() -> dict:
@@ -68,6 +109,12 @@ def _load() -> dict:
 def english(word: str, lm=None):
     """The English word an Odia-script word spells, or None to keep it in Odia script."""
     k = key(word)
+    learned = _load_learned()
+    if k in learned:
+        return learned[k]
+    sk = _MATRA_STRIP.sub("", k)
+    if len(sk) >= 2 and sk in learned and not word in ODIA:
+        return learned[sk]
     if k in _OVERRIDE:
         return _OVERRIDE[k]
     hit = _load().get(k)
@@ -93,13 +140,72 @@ _PHONETIC_FIXES = (
     ("is buck", "is back"),
     ("come buck", "come back"),
     ("go buck", "go back"),
-    ("to thousand twenty seven", "2027"),
-    ("two thousand twenty seven", "2027"),
-    ("to thousand twenty six", "2026"),
-    ("two thousand twenty six", "2026"),
-    ("to thousand twenty five", "2025"),
-    ("two thousand twenty five", "2025"),
 )
+
+_UNITS = {
+    "zero": 0, "oh": 0, "one": 1, "two": 2, "to": 2, "three": 3, "four": 4,
+    "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19,
+}
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
+
+
+def _spoken_numbers_to_digits(text: str) -> str:
+    """Convert spoken English number/year sequences (e.g. 'two thousand twenty seven' -> '2027', 'five hundred' -> '500')."""
+    words = text.split()
+    out, i = [], 0
+    while i < len(words):
+        w0 = words[i].lower()
+        # 1. <unit> thousand ... ('two thousand twenty seven' -> '2027')
+        if i + 1 < len(words) and w0 in _UNITS and words[i + 1].lower() == "thousand":
+            val = _UNITS[w0] * 1000
+            j = i + 2
+            while j < len(words):
+                wj = words[j].lower()
+                if wj in _TENS:
+                    val += _TENS[wj]; j += 1
+                elif wj in _UNITS:
+                    val += _UNITS[wj]; j += 1
+                elif wj == "hundred" and val % 1000 in _UNITS and val % 1000 > 0:
+                    val = (val // 1000) * 1000 + (val % 1000) * 100; j += 1
+                else:
+                    break
+            out.append(str(val))
+            i = j
+            continue
+        # 2. <unit> hundred ... ('five hundred' -> '500')
+        if i + 1 < len(words) and w0 in _UNITS and words[i + 1].lower() == "hundred":
+            val = _UNITS[w0] * 100
+            j = i + 2
+            while j < len(words):
+                wj = words[j].lower()
+                if wj in _TENS:
+                    val += _TENS[wj]; j += 1
+                elif wj in _UNITS:
+                    val += _UNITS[wj]; j += 1
+                else:
+                    break
+            out.append(str(val))
+            i = j
+            continue
+        # 3. Spoken year: 'twenty <tens> [unit]' ('twenty twenty nine' -> '2029')
+        if i + 1 < len(words) and w0 == "twenty" and words[i + 1].lower() in _TENS:
+            val = 2000 + _TENS[words[i + 1].lower()]
+            j = i + 2
+            if j < len(words) and words[j].lower() in _UNITS and words[j].lower() != "to":
+                val += _UNITS[words[j].lower()]; j += 1
+            out.append(str(val))
+            i = j
+            continue
+        # 4. <twenty..ninety> <unit> -> 'twenty seven' -> '27'
+        if i + 1 < len(words) and w0 in _TENS and words[i + 1].lower() in _UNITS and words[i + 1].lower() != "to":
+            out.append(str(_TENS[w0] + _UNITS[words[i + 1].lower()]))
+            i += 2
+            continue
+        out.append(words[i])
+        i += 1
+    return " ".join(out)
 
 
 def to_mixed(text: str, lm=None) -> str:
@@ -112,7 +218,7 @@ def to_mixed(text: str, lm=None) -> str:
                 out = out[:idx] + good + out[idx + len(bad):]
                 low = out.lower()
                 idx = low.find(bad, idx + len(good))
-    return out
+    return _spoken_numbers_to_digits(out)
 
 
 if __name__ == "__main__":

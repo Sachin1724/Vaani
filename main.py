@@ -489,6 +489,7 @@ class OpenFlowApp(QObject):
         self.config["tone_preset"] = preset
         save_config(self.config)
         self.main_window.refresh_stats()
+        self.main_window.sync_settings()
         self.floating_pill.set_tone(preset)
 
     def _on_capsule_hide_idle_changed(self, hide: bool):
@@ -672,6 +673,11 @@ class OpenFlowApp(QObject):
             if heard.lower() not in known:
                 print(f"[Vaani] Learned from your edit: {heard!r} -> {fixed!r}")
                 self.db.add_dictionary_entry(heard, fixed, category="learned")
+            try:
+                from .engine.odia_mix import learn as learn_odia_mix
+            except ImportError:
+                from engine.odia_mix import learn as learn_odia_mix
+            learn_odia_mix(heard, fixed)
 
     def _voice_edit(self, raw_text: str, job: int) -> bool:
         """'Make this formal' spoken over selected text: rewrite the selection in place. False = normal dictation."""
@@ -749,6 +755,11 @@ class OpenFlowApp(QObject):
             if heard.lower() not in known:
                 self.db.add_dictionary_entry(heard, fixed, category="learned")
                 known.add(heard.lower())
+            try:
+                from .engine.odia_mix import learn as learn_odia_mix
+            except ImportError:
+                from engine.odia_mix import learn as learn_odia_mix
+            learn_odia_mix(heard, fixed)
         self.formatter.set_dictionary([e for e in self.db.get_dictionary() if e.get("category") != "snippet"])
 
         def save_clip():
@@ -802,6 +813,8 @@ class OpenFlowApp(QObject):
     def _on_capsule_tone_changed(self, tone):
         self.config["tone_preset"] = tone
         save_config(self.config)
+        if hasattr(self, "main_window"):
+            self.main_window.sync_settings()  # the dashboard shows the capsule's choice
         print(f"[Vaani] Switched tone to: {tone}")
 
     def _on_capsule_model_changed(self, model_id: str):
@@ -813,6 +826,7 @@ class OpenFlowApp(QObject):
         self._reload_transcriber_async()
         if hasattr(self, "main_window"):
             self.main_window.refresh_models()
+            self.main_window.sync_settings()
         if hasattr(self, "floating_pill"):
             self.floating_pill.populate_models(model_id)
             self.floating_pill.show_message(f"Model: {model_id.title()} Active", duration_ms=3000)
@@ -1118,6 +1132,11 @@ class OpenFlowApp(QObject):
             if heard.lower() not in known:
                 self.db.add_dictionary_entry(heard, fixed, category="learned")
                 known.add(heard.lower())
+            try:
+                from .engine.odia_mix import learn as learn_odia_mix
+            except ImportError:
+                from engine.odia_mix import learn as learn_odia_mix
+            learn_odia_mix(heard, fixed)
         self.formatter.set_dictionary([e for e in self.db.get_dictionary() if e.get("category") != "snippet"])
 
         def save_clip():
