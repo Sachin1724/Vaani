@@ -2,21 +2,25 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QStackedWidget, QScrollArea, QButtonGroup,
     QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QLineEdit,
     QComboBox, QFrame, QMessageBox, QAbstractItemView, QDoubleSpinBox, QProgressBar,
-    QListWidget, QListWidgetItem, QTextBrowser, QSplitter, QFileDialog, QInputDialog, QSlider
+    QListWidget, QListWidgetItem, QTextBrowser, QSplitter, QFileDialog, QInputDialog, QSlider, QMenu
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QUrl, QRectF, QPointF
-from PyQt6.QtGui import QFont, QIcon, QColor, QPixmap, QDesktopServices, QPainter, QPen
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QUrl, QRectF, QPointF, QEvent
+from PyQt6.QtGui import QFont, QIcon, QColor, QPixmap, QDesktopServices, QPainter, QPen, QShortcut, QKeySequence
 import pyperclip  # type: ignore[import]
 import importlib.util
+import json
 import os
 import re
+import threading
+import time
 
 try:
     from ..config import load_config, save_config, get_asset_path
     from ..database import Database
     from ..engine import hardware, model_manager
     from ..engine.audio_recorder import list_microphones
-    from ..engine.meeting import render_meeting_html
+    from ..engine.meeting import render_meeting_html, _srt_time, _cue_lines
+    from ..engine.formatter import TextFormatter
     from .styles import main_qss, COLORS
     from .floating_pill import Switch
 except (ImportError, ValueError):
@@ -24,7 +28,8 @@ except (ImportError, ValueError):
     from database import Database
     from engine import hardware, model_manager
     from engine.audio_recorder import list_microphones
-    from engine.meeting import render_meeting_html
+    from engine.meeting import render_meeting_html, _srt_time, _cue_lines
+    from engine.formatter import TextFormatter
     from ui.styles import main_qss, COLORS
     from ui.floating_pill import Switch
 
@@ -271,6 +276,7 @@ class Group(QFrame):
         while self._v.count():
             w = self._v.takeAt(0).widget()
             if w:
+                w.hide()  # deleteLater waits for the event loop; until then the old row would paint under the new one
                 w.deleteLater()
         self._n = 0
 
@@ -325,6 +331,15 @@ def _panel(*widgets) -> QFrame:
     return f
 
 
+def _gap_splitter(orientation) -> QSplitter:
+    """Splitter whose handle is a 16 px gutter between cards instead of a hairline joining them."""
+    s = QSplitter(orientation)
+    s.setObjectName("Gutter")
+    s.setHandleWidth(16)
+    s.setChildrenCollapsible(False)
+    return s
+
+
 def _style_table(t: QTableWidget):
     t.verticalHeader().setVisible(False)
     t.verticalHeader().setDefaultSectionSize(40)
@@ -336,6 +351,217 @@ def _style_table(t: QTableWidget):
     t.setFocusPolicy(Qt.FocusPolicy.NoFocus)
     t.horizontalHeader().setHighlightSections(False)
     t.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+
+# -- transcribe: cue helpers. A cue is [start_s, end_s, text, speaker, original]: `original` is what the model
+# heard (None once a split or merge leaves no single original). Edits build new lists, never change one in place.
+
+MAX_CPS, MAX_CHARS, MIN_SECONDS = 20.0, 84, 0.7  # broadcast reading limits: two lines of 42
+MEDIA_EXT = {".mp3", ".m4a", ".aac", ".wav", ".flac", ".ogg", ".opus", ".webm", ".mp4", ".mkv", ".mov"}
+SUB_EXT = {".srt", ".vtt"}
+PROJECT_EXT = ".vaani.json"
+QUALITY = (("fast", "Reads too fast"), ("long", "Too long for two lines"), ("short", "On screen too briefly"),
+           ("overlap", "Overlaps the next line"), ("past_end", "Runs past the end"), ("order", "Ends before it starts"),
+           ("empty", "No text"))
+_TS = re.compile(r"^\s*(?:(\d+):)?(?:(\d+):)?(\d+(?:[.,]\d+)?)\s*$")
+_CUE_TIME = re.compile(r"(\d[\d:.,]*)\s*-->\s*(\d[\d:.,]*)")
+_WORD = r"[\wऀ-෿]"  # \w misses Indic vowel signs, so a whole-word match could stop inside an Odia word
+_PUNCT = ".,!?;:\"'()[]“”‘’।॥…"
+
+
+def parse_ts(text: str):
+    """'00:01:02,500', '1:02.5' or '62.5' -> seconds; None if it isn't a time."""
+    m = _TS.match(text or "")
+    if not m:
+        return None
+    a, b, s = m.groups()
+    h, mins = (int(a), int(b)) if b is not None else (0, int(a or 0))
+    sec = float(s.replace(",", "."))
+    if a is not None and (sec >= 60 or (b is not None and mins >= 60)):
+        return None
+    return h * 3600 + mins * 60 + sec
+
+
+def norm_cue(c):
+    """Any [start, end, text, (speaker), (original)] -> a full cue; raises on junk."""
+    text = str(c[2])
+    return [float(c[0]), float(c[1]), text, str(c[3] or "") if len(c) > 3 else "", c[4] if len(c) > 4 else text]
+
+
+def cue_issues(cues, i: int, duration: float = 0.0):
+    """Why line i is hard to read: [(kind, message)], [] when it's fine. Kinds are QUALITY's."""
+    st, en, text = cues[i][:3]
+    dur, out = en - st, []
+    if not text.strip():
+        out.append(("empty", "No text"))
+    if dur <= 0:
+        out.append(("order", "Ends before it starts"))
+    else:
+        if dur < MIN_SECONDS:
+            out.append(("short", f"On screen only {dur:.1f} s"))
+        if len(text) / dur > MAX_CPS:
+            out.append(("fast", f"Reads fast: {len(text) / dur:.0f} characters a second"))
+    if len(text) > MAX_CHARS:
+        out.append(("long", f"{len(text)} characters won't fit on two lines of {MAX_CHARS // 2}"))
+    if i + 1 < len(cues) and cues[i + 1][0] < en - 0.001:
+        out.append(("overlap", "Overlaps the next line"))
+    if duration > 0 and en > duration + 0.05:
+        out.append(("past_end", "Runs past the end of the media"))
+    return out
+
+
+def cues_export(cues, fmt: str = "srt") -> str:
+    """SubRip, WebVTT, plain text or JSON; empty lines are dropped and long ones balanced over two lines."""
+    kept = [(c[0], c[1], " ".join(c[2].split()), c[3]) for c in cues if c[2].strip()]
+    if fmt == "json":
+        return json.dumps([{"start": round(a, 3), "end": round(b, 3), "speaker": s, "text": t} for a, b, t, s in kept],
+                          ensure_ascii=False, indent=2) + "\n"
+    if fmt == "txt":
+        out, last = [], None
+        for _, _, t, s in kept:  # a transcript names the speaker once per turn
+            out.append(f"{s}: {t}" if s and s != last else t)
+            last = s
+        return "\n".join(out) + "\n"
+    if fmt == "vtt":
+        vt = lambda t: _srt_time(t).replace(",", ".")
+        return "WEBVTT\n\n" + "\n".join(f"{vt(a)} --> {vt(b)}\n{f'<v {s}>' if s else ''}{_cue_lines(t)}\n" for a, b, t, s in kept)
+    return "\n".join(f"{n}\n{_srt_time(a)} --> {_srt_time(b)}\n{_cue_lines(t)}\n" for n, (a, b, t, _) in enumerate(kept, 1))
+
+
+def parse_subtitles(text: str):
+    """SRT or WebVTT text -> cues; a WebVTT <v Name> tag becomes the speaker."""
+    cues = []
+    for block in re.split(r"\n\s*\n", text.replace("\r", "")):
+        lines = block.strip().split("\n")
+        for k, line in enumerate(lines):
+            m = _CUE_TIME.search(line)
+            if not m:
+                continue
+            st, en = parse_ts(m.group(1)), parse_ts(m.group(2))
+            body = " ".join(lines[k + 1:])
+            voice = re.match(r"\s*<v(?:\.[^\s>]*)?\s+([^>]+)>", body)
+            body = " ".join(re.sub(r"<[^>]+>", "", body).split())
+            if st is not None and en is not None:
+                cues.append([st, en, body, voice.group(1).strip() if voice else "", body])
+            break
+    return cues
+
+
+def replace_in_cues(cues, find: str, repl: str, case: bool = False, whole: bool = False):
+    """-> (new cues, number of replacements)."""
+    if not find:
+        return cues, 0
+    pat = re.escape(find)
+    if whole:
+        pat = f"(?<!{_WORD}){pat}(?!{_WORD})"
+    rx = re.compile(pat, 0 if case else re.IGNORECASE)
+    out, n = [], 0
+    for c in cues:
+        t2, k = rx.subn(lambda _m: repl, c[2])
+        out.append(c[:2] + [t2] + c[3:])
+        n += k
+    return out, n
+
+
+def word_swaps(old: str, new: str):
+    """Words (up to 3 at a time) the user swapped between two versions of a line: [(was, now), ...]."""
+    import difflib
+    a = [w.strip(_PUNCT) for w in old.split()]
+    b = [w.strip(_PUNCT) for w in new.split()]
+    out = []
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        was, now = " ".join(a[i1:i2]).strip(), " ".join(b[j1:j2]).strip()
+        if op == "replace" and i2 - i1 <= 3 and j2 - j1 <= 3 and was and now and was != now:
+            out.append((was, now))
+    return out
+
+
+def split_cue(cue, at=None):
+    """One line into two: the text at its balanced middle, the time at `at` (the playhead) when it falls
+    inside the line, else shared by length. None for a one-word line."""
+    st, en, text, speaker = cue[:4]
+    parts = _cue_lines(text, width=0).split("\n")
+    if len(parts) < 2:
+        return None
+    cut = at if at is not None and st < at < en else st + (en - st) * len(parts[0]) / (len(parts[0]) + len(parts[1]))
+    return [st, cut, parts[0], speaker, None], [cut, en, parts[1], speaker, None]
+
+
+def shift_cues(cues, seconds: float, start: int = 0):
+    return [list(c) if i < start else [max(0.0, c[0] + seconds), max(0.0, c[1] + seconds)] + c[2:]
+            for i, c in enumerate(cues)]
+
+
+def audio_peaks(samples, buckets: int = 2000):
+    """Loudest sample per bucket, scaled 0..1, for drawing a waveform."""
+    import numpy as np
+    a = np.abs(np.asarray(samples, dtype=np.float32))
+    if not len(a):
+        return []
+    k = max(1, len(a) // buckets)
+    a = a[: len(a) // k * k].reshape(-1, k).max(axis=1)
+    return (a / (float(a.max()) or 1.0)).tolist()
+
+
+class Waveform(QWidget):
+    """Audio peaks with every subtitle line shaded on them; click or drag to seek."""
+    sig_seek = pyqtSignal(int)  # ms
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedHeight(56)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAccessibleName("Waveform")
+        self.setToolTip("Click or drag to jump. Shaded blocks are subtitle lines.")
+        self.peaks, self.cues, self.duration, self.pos, self.current = [], [], 0.0, 0.0, -1
+
+    def set_view(self, **kw):
+        for k, v in kw.items():
+            setattr(self, k, v)
+        self.update()
+
+    def _x(self, sec: float) -> float:
+        return sec / self.duration * self.width() if self.duration > 0 else 0.0
+
+    def _seek(self, e):
+        if self.duration > 0:
+            frac = max(0.0, min(1.0, e.position().x() / max(1, self.width())))
+            self.sig_seek.emit(int(frac * self.duration * 1000))
+
+    def mousePressEvent(self, a0):
+        self._seek(a0)
+
+    def mouseMoveEvent(self, a0):
+        if a0.buttons():
+            self._seek(a0)
+
+    def paintEvent(self, a0):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w, h = self.width(), self.height()
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(COLORS["bg_control"]))
+        p.drawRoundedRect(QRectF(0, 0, w, h), 8, 8)
+        if self.duration <= 0:
+            p.setPen(QColor(COLORS["text_muted"]))
+            p.drawText(QRectF(0, 0, w, h), Qt.AlignmentFlag.AlignCenter, "The waveform appears once the audio is read")
+            return
+        for i, c in enumerate(self.cues):
+            shade = QColor(COLORS["accent_primary"])
+            shade.setAlpha(110 if i == self.current else 38)
+            x0, x1 = self._x(c[0]), self._x(c[1])
+            p.setBrush(shade)
+            p.drawRect(QRectF(x0, 4, max(1.5, x1 - x0 - 1), h - 8))
+        if self.peaks:
+            ink = QColor(COLORS["text_main"])
+            ink.setAlpha(140)
+            p.setBrush(ink)
+            cols, n, mid = max(1, w // 3), len(self.peaks), h / 2.0
+            for k in range(cols):
+                bar = max(1.0, self.peaks[min(n - 1, k * n // cols)] * (h - 16))
+                p.drawRect(QRectF(k * 3, mid - bar / 2, 2, bar))
+        p.setBrush(QColor(COLORS["primary"]))
+        p.drawRect(QRectF(self._x(self.pos) - 1, 0, 2, h))
 
 
 NAV = [("Dictate", [("History", 0), ("Meeting Notes", 1), ("Vocabulary", 2)]), ("Tools", [("Transcribe", 7)]),
@@ -358,6 +584,7 @@ class MainWindow(QMainWindow):
     sig_start_file_transcribe = pyqtSignal(str, str)  # (path, language)
     sig_subtitle_corrected = pyqtSignal(float, float, str, str, str)  # (start_s, end_s, orig, edited, media_path)
     sig_toggle_live = pyqtSignal()
+    _sig_peaks = pyqtSignal(str, object, float)  # waveform read off the UI thread: (path, peaks, seconds)
 
     def __init__(self, db: Database, config: dict):
         super().__init__()
@@ -367,7 +594,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Vaani")
         self.setMinimumSize(760, 560)
-        self.resize(1000, 720)
+        self.resize(1180, 760)  # the Subtitle Studio wants its inspector beside the table
         self.setStyleSheet(main_qss(self.config.get("theme", "light")))
 
         icon_path = get_asset_path("app_icon_square.png")
@@ -934,9 +1161,7 @@ class MainWindow(QMainWindow):
         return s
 
     def _create_settings_tab(self) -> QWidget:
-        save = _btn("Save Settings", "primary", slot=self._save_settings)
-        root, body, _ = self._page("Settings", "Changes to the hotkey and capsule opacity apply at once; the rest on Save.",
-                                   actions=[save])
+        root, body, self._settings_sub = self._page("Settings", "Every change applies and saves at once.")
         hw = hardware.detect()
 
         # Speech
@@ -1078,6 +1303,7 @@ class MainWindow(QMainWindow):
         self.update_status_label = g.add(f"Version {__version__}", buttons)
         self.update_status_label.setText("")
         self.ver_label = None
+        self._wire_settings()
         return root
 
     def _refresh_system_stack(self):
@@ -1102,54 +1328,68 @@ class MainWindow(QMainWindow):
         g.add("CPU", value(cpu["status"], ok if cpu["is_active"] else off),
               f"{cpu['processor']} · {cpu['cores']} cores · {cpu['ram_gb']} GB RAM")
 
-    def _save_settings(self):
-        model_choice = self.model_combo.currentData()
-        # English-only fast variants are picked automatically per language at load time
-        selected_model_text = model_choice
-        device_choice = self.device_combo.currentData()
-        if device_choice == "npu" and not hardware.npu_name():
-            QMessageBox.warning(self, "No NPU found",
-                                "This PC has no Intel NPU that Vaani can use. It will keep running on the GPU or CPU.")
-        compute_type = "auto" if device_choice == "auto" else ("float16" if device_choice == "cuda" else "int8")
-        dev_idx = self.mic_combo.currentData()
-        hotkey = self.hotkey_input.hotkey() or "ctrl+shift"
-        tone_preset = self.tone_combo.currentData()
+    def _wire_settings(self):
+        """Each control writes only its own key the moment it changes. There is no Save button: a Save that
+        rewrote every key from this page used to undo choices made meanwhile in the capsule or the tray."""
+        self._setting_combos = {
+            self.model_combo: "model_size", self.device_combo: "device", self.capsule_style_combo: "capsule_style",
+            self.island_pos_combo: "island_position", self.mic_combo: "input_device_index",
+            self.inj_combo: "injection_method", self.trigger_combo: "trigger_mode", self.tone_combo: "tone_preset"}
+        self._setting_switches = {
+            self.cb_keep_warm: "keep_model_in_memory", self.cb_follow_mouse: "follow_mouse_screen",
+            self.cb_realtime: "realtime_preview", self.cb_hide_idle: "hide_capsule_when_idle",
+            self.cb_power_alerts: "capsule_power_alerts", self.cb_device_alerts: "capsule_device_alerts",
+            self.cb_drop_tray: "capsule_drop_tray", self.cb_autowrite: "auto_write_on_silence",
+            self.cb_sound: "sound_feedback", self.cb_voice_edits: "voice_edits", self.cb_ai_polish: "ai_polish",
+            self.cb_restore_clip: "restore_clipboard", self.cb_cursor_ctx: "use_cursor_context",
+            self.cb_learn_edits: "learn_from_edits", self.cb_autostart: "autostart"}
+        for combo, key in self._setting_combos.items():
+            combo.currentIndexChanged.connect(lambda _i, c=combo, k=key: self._set_setting(k, c.currentData()))
+        for sw, key in self._setting_switches.items():
+            sw.toggled.connect(lambda on, k=key: self._set_setting(k, on))
+        self.silence_spin.valueChanged.connect(lambda v: self._set_setting("silence_duration", float(v)))
+        self._settings_timer = QTimer(self)
+        self._settings_timer.setSingleShot(True)
+        self._settings_timer.setInterval(350)  # one save for a burst, like holding the spin box arrow
+        self._settings_timer.timeout.connect(self._apply_settings)
 
-        self.config["model_size"] = selected_model_text
-        self.config["device"] = device_choice
-        self.config["compute_type"] = compute_type
-        if hasattr(self, "capsule_style_combo"):
-            self.config["capsule_style"] = self.capsule_style_combo.currentData()
-        if hasattr(self, "island_pos_combo"):
-            self.config["island_position"] = self.island_pos_combo.currentData()
-        self.config["input_device_index"] = dev_idx
-        self.config["injection_method"] = self.inj_combo.currentData()
-        self.config["hotkey"] = hotkey
-        self.config["trigger_mode"] = self.trigger_combo.currentData()
-        self.config["tone_preset"] = tone_preset
-        self.config["silence_duration"] = float(self.silence_spin.value())
-        self.config["auto_write_on_silence"] = self.cb_autowrite.isChecked()
-        self.config["realtime_preview"] = self.cb_realtime.isChecked()
-        self.config["hide_capsule_when_idle"] = self.cb_hide_idle.isChecked()
-        self.config["capsule_power_alerts"] = self.cb_power_alerts.isChecked()
-        self.config["capsule_device_alerts"] = self.cb_device_alerts.isChecked()
-        self.config["capsule_drop_tray"] = self.cb_drop_tray.isChecked()
-        if hasattr(self, "cb_follow_mouse"):
-            self.config["follow_mouse_screen"] = self.cb_follow_mouse.isChecked()
-        self.config["sound_feedback"] = self.cb_sound.isChecked()
-        self.config["voice_edits"] = self.cb_voice_edits.isChecked()
-        self.config["ai_polish"] = self.cb_ai_polish.isChecked()
-        if hasattr(self, "cb_keep_warm"):
-            self.config["keep_model_in_memory"] = self.cb_keep_warm.isChecked()
-        self.config["restore_clipboard"] = self.cb_restore_clip.isChecked()
-        self.config["use_cursor_context"] = self.cb_cursor_ctx.isChecked()
-        self.config["learn_from_edits"] = self.cb_learn_edits.isChecked()
-        self.config["autostart"] = self.cb_autostart.isChecked()
+    def _set_setting(self, key: str, value):
+        if key == "device":
+            if value == "npu" and not hardware.npu_name():
+                QMessageBox.warning(self, "No NPU Found",
+                                    "This PC has no Intel NPU that Vaani can use. It will keep running on the GPU or CPU.")
+            self.config["compute_type"] = "auto" if value == "auto" else ("float16" if value == "cuda" else "int8")
+        self.config[key] = value
+        self._engine_touched = getattr(self, "_engine_touched", False) or key in ("model_size", "device")
+        self._settings_timer.start()
 
+    def _apply_settings(self):
         save_config(self.config)
         self.config_changed.emit(self.config)
-        self._refresh_system_stack()
-        QMessageBox.information(self, "Saved", "Settings updated.")
+        if self._engine_touched:
+            self._engine_touched = False
+            self._refresh_system_stack()
+        self._settings_sub.setText("Saved. Every change applies and saves at once.")
+        QTimer.singleShot(2500, lambda: self._settings_sub.setText("Every change applies and saves at once."))
+
+    def sync_settings(self):
+        """Show values changed elsewhere (capsule, tray, Model Library) without saving them back."""
+        if not hasattr(self, "_setting_combos"):
+            return
+        for combo, key in self._setting_combos.items():
+            if key == "input_device_index":
+                continue  # refresh_devices rebuilds the microphone list
+            want = str(self.config.get(key, "")).replace(".en", "") if key == "model_size" else self.config.get(key)
+            i = combo.findData(want)
+            if i >= 0 and i != combo.currentIndex():
+                combo.blockSignals(True)
+                combo.setCurrentIndex(i)
+                combo.blockSignals(False)
+        for sw, key in self._setting_switches.items():
+            if key in self.config and bool(self.config[key]) != sw.isChecked():
+                sw.blockSignals(True)
+                sw.setChecked(bool(self.config[key]))
+                sw.blockSignals(False)
 
     def _pct_slider(self, key: str):
         """Slider (50-200 %) with a value label; applies live like the opacity slider."""
@@ -1299,69 +1539,130 @@ class MainWindow(QMainWindow):
         self.update_status_label.setText(f"Update check: {message}")
         self.update_status_label.show()
 
-    # -- about --------------------------------------------------------------
+    # -- transcribe: Subtitle Studio ----------------------------------------
+    # Workspace = media (video, live caption, waveform) over the subtitle table, a settings inspector on the
+    # right and an action bar along the bottom. Flow: open -> generate (lines stream in) -> review -> export.
+
+    C_NUM, C_START, C_END, C_SPEAKER, C_CPS, C_TEXT = range(6)
 
     def _create_tools_tab(self) -> QWidget:
-        root, body, _ = self._page("Transcribe", "Upload audio or video, play it live, edit timestamps in real time, and export .SRT.")
-        g, _ = self._section(body, "Tools")
-        g.add("Transcribe a file", _btn("Choose file…", "primary", True, self.sig_transcribe_file.emit),
-              "Audio or video: MP3, M4A, WAV, MP4, MKV and more. Odia, English and Hindi.")
-        self.live_btn = _btn("Start", small=True, slot=self.sig_toggle_live.emit)
-        g.add("Live transcribe what's playing", self.live_btn,
-              "Captions for YouTube, a podcast or a lecture as it plays, from your speakers. Your microphone stays off.")
+        self._media_path, self._project_path, self._duration = "", "", 0.0
+        self._cues, self._undo, self._redo = [], [], []  # history holds whole cue lists
+        self._dirty, self._playing_row, self._fix, self._gen_started = False, -1, None, 0.0
 
-        # Interactive Video & Live SRT Studio (uses Vaani Group card + hairline separators)
-        self._media_path = ""
-        self._media_segments = []  # list of [start_s, end_s]
-        self._orig_texts = []      # original ASR text per row to detect user edits
-        self._studio_card = QFrame()
-        self._studio_card.setObjectName("Group")
-        sv = QVBoxLayout(self._studio_card)
-        sv.setContentsMargins(0, 0, 0, 0)
-        sv.setSpacing(0)
+        self.live_btn = _btn("Live Captions", small=True, slot=self.sig_toggle_live.emit)
+        self.live_btn.setToolTip("Captions for whatever your speakers play: YouTube, a podcast, a lecture. Your microphone stays off.")
+        root, body, _ = self._page("Transcribe", "Subtitles for podcasts, interviews and videos. Generate, review, export.",
+                                   actions=[self.live_btn], scroll=False)
 
-        # Header bar: file name + live status badge + language + actions
-        top_wrap = QWidget()
-        top_bar = QHBoxLayout(top_wrap)
-        top_bar.setContentsMargins(16, 12, 16, 12)
-        top_bar.setSpacing(10)
+        self._tx_stack = QStackedWidget(root)
+        self._tx_stack.addWidget(self._build_drop_zone())
+        work = QWidget()
+        wv = QVBoxLayout(work)
+        wv.setContentsMargins(0, 0, 0, 0)
+        wv.setSpacing(12)
+        split = _gap_splitter(Qt.Orientation.Horizontal)
+        split.addWidget(self._build_workspace())
+        self._inspector = self._build_inspector()
+        split.addWidget(self._inspector)
+        split.setStretchFactor(0, 1)
+        split.setStretchFactor(1, 0)
+        wv.addLayout(self._build_media_bar())
+        wv.addWidget(split, 1)
+        wv.addWidget(self._build_action_bar())
+        self._tx_stack.addWidget(work)
+        body.addWidget(self._tx_stack, 1)
+        self._tx_work = work
 
-        self._studio_file_lbl = QLabel("No file loaded")
-        self._studio_file_lbl.setObjectName("RowLabel")
-        self._studio_status = QLabel("Ready")
-        self._studio_status.setProperty("badge", "accent")
-        top_bar.addWidget(self._studio_file_lbl, 1)
-        top_bar.addWidget(self._studio_status)
+        for keys, slot in (("Ctrl+Space", self._toggle_media_play), ("Alt+Left", lambda: self._seek_by(-5000)),
+                           ("Alt+Right", lambda: self._seek_by(5000)), ("Ctrl+[", lambda: self._set_time_from_playhead(0)),
+                           ("Ctrl+]", lambda: self._set_time_from_playhead(1)), ("Ctrl+Z", self._undo_edit),
+                           ("Ctrl+Y", self._redo_edit), ("Ctrl+Shift+Z", self._redo_edit), ("Ctrl+F", self._find_edit.setFocus),
+                           ("Ctrl+K", self._split_cue), ("Ctrl+M", self._merge_cues), ("Ctrl+Return", self._insert_cue),
+                           ("Ctrl+R", self._restore_original), ("F8", self._next_problem),
+                           ("Ctrl+S", self._save_project), ("Ctrl+E", lambda: self._export_cues("srt"))):
+            sc = QShortcut(QKeySequence(keys), work)
+            sc.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+            sc.activated.connect(slot)
+        sc = QShortcut(QKeySequence(QKeySequence.StandardKey.Delete), self._cue_table)
+        sc.setContext(Qt.ShortcutContext.WidgetShortcut)  # not while a cell editor has focus
+        sc.activated.connect(self._delete_cues)
+        self._sig_peaks.connect(self._on_peaks)
 
-        self._studio_lang = QComboBox()
-        self._studio_lang.setToolTip("Spoken language of this file")
-        for code, lbl in [("auto", "Auto (EN/HI/OR)"), ("or-auto", "Odia + EN"), ("or", "Odia (ଓଡ଼ିଆ)"), ("hi", "Hindi"), ("en-in", "English (IN)")]:
-            self._studio_lang.addItem(lbl, code)
-        top_bar.addWidget(self._studio_lang)
+        self._tx_root = root
+        root.setAcceptDrops(True)
+        root.installEventFilter(self)
+        self._render_cues()
+        return root
 
-        self._studio_out_mode = QComboBox()
-        self._studio_out_mode.setToolTip("Subtitle output script")
-        for mode, lbl in [("keep", "Keep Spoken"), ("en", "Translate → EN"), ("or", "Odia Only")]:
-            self._studio_out_mode.addItem(lbl, mode)
-        top_bar.addWidget(self._studio_out_mode)
+    def _build_drop_zone(self) -> QFrame:
+        zone = QFrame()
+        zone.setObjectName("DropZone")
+        v = QVBoxLayout(zone)
+        v.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.setSpacing(6)
+        for text, name in (("Drop a podcast, interview or video here", "DropTitle"),
+                           ("MP3, M4A, WAV, MP4, MKV and more, in Odia, Hindi and English.\n"
+                            "To keep editing, drop an .srt or .vtt file or a saved Vaani project.", "RowSub")):
+            lbl = _label(text, name, wrap=True)
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            v.addWidget(lbl)
+        v.addSpacing(10)
+        row = QHBoxLayout()
+        row.addStretch()
+        row.addWidget(_btn("Choose File…", "primary", slot=self._choose_file))
+        row.addStretch()
+        v.addLayout(row)
+        return zone
 
-        self._studio_play_btn = _btn("Play", small=True, slot=self._toggle_media_play)
-        self._studio_play_btn.setEnabled(False)
-        self._studio_start_btn = _btn("Start Transcribing", "primary", True, self._start_media_transcribe)
-        self._studio_start_btn.setEnabled(False)
-        self._studio_save_btn = _btn("Save .SRT", small=True, slot=self._save_media_srt)
-        self._studio_save_btn.setEnabled(False)
-        top_bar.addWidget(self._studio_play_btn)
-        top_bar.addWidget(self._studio_start_btn)
-        top_bar.addWidget(self._studio_save_btn)
-        sv.addWidget(top_wrap)
-        s1 = QFrame(); s1.setObjectName("Sep"); sv.addWidget(s1)
+    def _build_workspace(self) -> QSplitter:
+        vsplit = _gap_splitter(Qt.Orientation.Vertical)
+        vsplit.setMinimumWidth(520)
+        vsplit.addWidget(self._build_media_card())
+        vsplit.addWidget(self._build_cue_editor())
+        vsplit.setStretchFactor(0, 0)
+        vsplit.setStretchFactor(1, 1)
+        return vsplit
 
-        # Video Stage + Transport Scrubber
-        stage_wrap = QWidget()
-        stage_lay = QVBoxLayout(stage_wrap)
-        stage_lay.setContentsMargins(16, 14, 16, 12)
-        stage_lay.setSpacing(10)
+    def _build_media_bar(self) -> QHBoxLayout:
+        """What's open, how long, what state; playback switches and the panel toggle on the right."""
+        bar = QHBoxLayout()
+        bar.setSpacing(8)
+        self._studio_file_lbl = _label("No media", "RowLabel")
+        self._media_meta = _label("", "RowMeta")
+        self._studio_status = _badge("Ready", "accent")
+        bar.addWidget(self._studio_file_lbl)
+        bar.addWidget(self._media_meta)
+        bar.addWidget(self._studio_status)
+        bar.addStretch()
+        self._loop_btn, self._follow = Switch(""), Switch("")
+        self._follow.setChecked(True)
+        for sw, text, tip in ((self._loop_btn, "Loop line", "Replay the selected line while you fix it"),
+                              (self._follow, "Follow", "Keep the line being played in view")):
+            lbl = _label(text, "SectionFooter")
+            lbl.setBuddy(sw)
+            sw.setAccessibleName(text)
+            sw.setToolTip(tip)
+            bar.addWidget(lbl)
+            bar.addWidget(sw)
+            bar.addSpacing(8)
+        bar.addWidget(_btn("Open…", small=True, slot=self._choose_file))
+        self._panel_btn = _btn("Settings", small=True)
+        self._panel_btn.setCheckable(True)
+        self._panel_btn.setChecked(True)
+        self._panel_btn.setToolTip("Show or hide the settings panel")
+        self._panel_btn.toggled.connect(lambda on: self._inspector.setVisible(on))
+        bar.addWidget(self._panel_btn)
+        return bar
+
+    def _build_media_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("Group")
+        v = QVBoxLayout(card)
+        v.setContentsMargins(16, 16, 16, 16)
+        v.setSpacing(12)
+        top = QHBoxLayout()
+        top.setSpacing(16)
 
         self._media_player = None
         self._audio_out = None
@@ -1369,9 +1670,7 @@ class MainWindow(QMainWindow):
             from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
             from PyQt6.QtMultimediaWidgets import QVideoWidget
             self._video_widget = QVideoWidget()
-            self._video_widget.setMinimumHeight(230)
-            self._video_widget.setMaximumHeight(300)
-            self._video_widget.setStyleSheet("background: #0F141A; border-radius: 10px;")
+            self._video_widget.setStyleSheet("background: #0F141A;")
             self._media_player = QMediaPlayer(self)
             self._audio_out = QAudioOutput(self)
             self._media_player.setAudioOutput(self._audio_out)
@@ -1379,59 +1678,699 @@ class MainWindow(QMainWindow):
             self._media_player.positionChanged.connect(self._on_media_pos)
             self._media_player.durationChanged.connect(self._on_media_dur)
             self._media_player.playbackStateChanged.connect(self._on_media_state)
-            stage_lay.addWidget(self._video_widget)
+            self._media_player.hasVideoChanged.connect(self._video_widget.setVisible)  # a podcast gets no empty box
+            self._video_widget.hide()
         except Exception:
-            self._video_widget = QLabel("Video preview unavailable in this environment")
-            self._video_widget.setObjectName("RowMeta")
-            stage_lay.addWidget(self._video_widget)
+            self._video_widget = _label("Video preview isn't available on this PC. You can still edit and export.", "Empty", wrap=True)
+            self._video_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._video_widget.setFixedSize(288, 162)  # 16:9
+        top.addWidget(self._video_widget)
 
-        scrub_row = QHBoxLayout()
-        scrub_row.setSpacing(10)
-        self._studio_time_lbl = QLabel("00:00 / 00:00")
-        self._studio_time_lbl.setObjectName("RowMeta")
-        self._studio_scrubber = QSlider(Qt.Orientation.Horizontal)
-        self._studio_scrubber.setRange(0, 0)
-        self._studio_scrubber.sliderMoved.connect(lambda pos: self._media_player and self._media_player.setPosition(pos))
-        scrub_row.addWidget(self._studio_scrubber, 1)
-        scrub_row.addWidget(self._studio_time_lbl)
-        stage_lay.addLayout(scrub_row)
-        sv.addWidget(stage_wrap)
-        s2 = QFrame(); s2.setObjectName("Sep"); sv.addWidget(s2)
+        side = QVBoxLayout()
+        side.setSpacing(8)
+        self._caption = _label("", "CaptionPreview", wrap=True)  # the line on screen now, as the viewer reads it
+        self._caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._caption.setMinimumHeight(48)
+        side.addWidget(self._caption, 1)
 
-        # Word-wrapped, inline-editable SRT Subtitle Table
-        table_wrap = QWidget()
-        table_lay = QVBoxLayout(table_wrap)
-        table_lay.setContentsMargins(16, 12, 16, 16)
-        table_lay.setSpacing(6)
-        hint = QLabel("Click any timestamp to jump the video · Click subtitle text to edit before saving .SRT")
-        hint.setObjectName("SectionFooter")
-        table_lay.addWidget(hint)
+        transport = QHBoxLayout()
+        transport.setSpacing(8)
+        self._studio_play_btn = _btn("Play", small=True, slot=self._toggle_media_play)
+        self._studio_play_btn.setToolTip("Play or pause (Ctrl+Space)")
+        self._speed = self._combo([(f"{r:g}×", r) for r in (0.5, 0.75, 1.0, 1.25, 1.5, 2.0)], 1.0, width=88)
+        self._speed.setAccessibleName("Playback speed")
+        self._speed.currentIndexChanged.connect(
+            lambda _i: self._media_player and self._media_player.setPlaybackRate(self._speed.currentData()))
+        self._studio_time_lbl = _label("00:00 / 00:00", "TimeCode")
+        for w in (_btn("−5 s", small=True, slot=lambda: self._seek_by(-5000)), self._studio_play_btn,
+                  _btn("+5 s", small=True, slot=lambda: self._seek_by(5000)), self._speed):
+            transport.addWidget(w)
+        transport.addStretch()
+        transport.addWidget(self._studio_time_lbl)
+        side.addLayout(transport)
 
-        self._srt_table = QTableWidget(0, 3)
-        self._srt_table.setHorizontalHeaderLabels(["Start", "End", "Subtitle Text (editable)"])
-        self._srt_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self._srt_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self._srt_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self._srt_table.setWordWrap(True)
-        self._srt_table.setTextElideMode(Qt.TextElideMode.ElideNone)
-        self._srt_table.setMinimumHeight(230)
-        self._srt_table.cellClicked.connect(self._seek_to_subtitle_row)
-        self._srt_table.cellChanged.connect(self._on_srt_cell_changed)
-        table_lay.addWidget(self._srt_table)
-        sv.addWidget(table_wrap)
+        timing = QHBoxLayout()
+        timing.setSpacing(8)
+        for text, tip, slot in (("Set Start", "Start the selected line at the playhead (Ctrl+[)", lambda: self._set_time_from_playhead(0)),
+                                ("Set End", "End the selected line at the playhead (Ctrl+])", lambda: self._set_time_from_playhead(1)),
+                                ("Shift Times…", "Move the selected line and every line after it", self._shift_cues)):
+            b = _btn(text, small=True, slot=slot)
+            b.setToolTip(tip)
+            timing.addWidget(b)
+        timing.addStretch()
+        side.addLayout(timing)
+        top.addLayout(side, 1)
+        v.addLayout(top)
 
-        self._studio_card.hide()
-        body.addWidget(self._studio_card)
-        body.addStretch()
-        return root
+        self._wave = Waveform(card)
+        self._wave.sig_seek.connect(lambda ms: self._media_player and self._media_player.setPosition(ms))
+        v.addWidget(self._wave)
+        return card
+
+    def _build_cue_editor(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("Group")
+        v = QVBoxLayout(card)
+        v.setContentsMargins(16, 16, 16, 12)
+        v.setSpacing(12)
+
+        tools = QHBoxLayout()
+        tools.setSpacing(8)
+        self._find_edit = QLineEdit()
+        self._find_edit.setPlaceholderText("Find…")
+        self._find_edit.setAccessibleName("Find in subtitles")
+        self._find_edit.setToolTip("Enter jumps to the next match (Ctrl+F)")
+        self._find_edit.setClearButtonEnabled(True)
+        self._find_edit.textChanged.connect(self._count_matches)
+        self._find_edit.returnPressed.connect(self._find_next)
+        self._replace_edit = QLineEdit()
+        self._replace_edit.setPlaceholderText("Replace with…")
+        self._replace_edit.setAccessibleName("Replace with")
+        self._replace_edit.returnPressed.connect(self._replace_all)
+        self._case_btn = _btn("Aa", small=True, slot=self._count_matches)
+        self._case_btn.setCheckable(True)
+        self._case_btn.setToolTip("Match case")
+        self._case_btn.setAccessibleName("Match case")
+        tools.addWidget(self._find_edit, 1)
+        tools.addWidget(self._replace_edit, 1)
+        tools.addWidget(self._case_btn)
+        tools.addWidget(_btn("Replace All", small=True, slot=self._replace_all))
+        v.addLayout(tools)
+
+        edit = QHBoxLayout()
+        edit.setSpacing(8)
+        for text, tip, slot in (("Insert", "New line after the selected one (Ctrl+Enter)", self._insert_cue),
+                                ("Split", "Split the selected line at the playhead, or in the middle (Ctrl+K)", self._split_cue),
+                                ("Merge", "Join the selected lines, or this line and the next (Ctrl+M)", self._merge_cues),
+                                ("Restore", "Put back what the model heard for the selected lines (Ctrl+R)", self._restore_original)):
+            b = _btn(text, small=True, slot=slot)
+            b.setToolTip(tip)
+            edit.addWidget(b)
+        del_btn = _btn("Delete", "danger", True, self._delete_cues)
+        del_btn.setToolTip("Delete the selected lines (Delete). Undo brings them back.")
+        edit.addWidget(del_btn)
+        edit.addStretch()
+        self._undo_btn = _btn("Undo", small=True, slot=self._undo_edit)
+        self._redo_btn = _btn("Redo", small=True, slot=self._redo_edit)
+        for b, keys in ((self._undo_btn, "Ctrl+Z"), (self._redo_btn, "Ctrl+Y")):
+            b.setToolTip(keys)
+            edit.addWidget(b)
+        v.addLayout(edit)
+
+        # Word corrector: one fixed word offers to fix the same mistake in every other line
+        self._fix_bar = QFrame()
+        self._fix_bar.setObjectName("FixBar")
+        fb = QHBoxLayout(self._fix_bar)
+        fb.setContentsMargins(12, 6, 6, 6)
+        fb.setSpacing(8)
+        self._fix_lbl = _label("", "RowSub", wrap=True)
+        self._fix_all_btn = _btn("", small=True, slot=self._fix_everywhere)
+        close = _ClearButton(self._fix_bar)
+        close.setCursor(Qt.CursorShape.PointingHandCursor)
+        close.setToolTip("Dismiss")
+        close.setAccessibleName("Dismiss")
+        close.clicked.connect(self._fix_bar.hide)
+        fb.addWidget(self._fix_lbl, 1)
+        fb.addWidget(self._fix_all_btn)
+        fb.addWidget(close)
+        self._fix_bar.hide()
+        v.addWidget(self._fix_bar)
+
+        t = QTableWidget(0, 6)
+        t.setHorizontalHeaderLabels(["#", "Start", "End", "Speaker", "CPS", "Text"])
+        _style_table(t)
+        t.setFocusPolicy(Qt.FocusPolicy.StrongFocus)  # keyboard editing and the Delete shortcut need focus
+        t.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked | QAbstractItemView.EditTrigger.SelectedClicked
+                          | QAbstractItemView.EditTrigger.EditKeyPressed | QAbstractItemView.EditTrigger.AnyKeyPressed)
+        t.setWordWrap(True)
+        t.setTextElideMode(Qt.TextElideMode.ElideNone)
+        t.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        t.customContextMenuRequested.connect(self._cue_menu)
+        hh = t.horizontalHeader()
+        for c in range(self.C_TEXT):
+            hh.setSectionResizeMode(c, QHeaderView.ResizeMode.ResizeToContents)
+        hh.setSectionResizeMode(self.C_TEXT, QHeaderView.ResizeMode.Stretch)
+        # ponytail: re-measures every row on a width change; fine for a few thousand lines
+        hh.sectionResized.connect(lambda c, _o, _n: c == self.C_TEXT and t.resizeRowsToContents())
+        t.horizontalHeaderItem(self.C_CPS).setToolTip(f"Characters a second. Over {MAX_CPS:.0f} is hard to read in time.")
+        t.horizontalHeaderItem(self.C_NUM).setToolTip("A dot marks a line you've edited")
+        t.cellClicked.connect(self._seek_to_subtitle_row)
+        t.cellChanged.connect(self._on_cue_edited)
+        self._cue_table = t
+        self._cue_empty = _label("Press Generate Subtitles and lines appear here as they're heard.\n"
+                                 "Or press Insert to write subtitles by hand.", "Empty", wrap=True)
+        self._cue_empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.addWidget(t, 1)
+        v.addWidget(self._cue_empty, 1)
+        return card
+
+    def _build_inspector(self) -> QScrollArea:
+        area = QScrollArea()
+        area.setWidgetResizable(True)
+        area.setFrameShape(QFrame.Shape.NoFrame)
+        area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        area.setFixedWidth(300)
+        # wheel and touchpad still scroll it; a bar would push the cards off the page's right edge
+        area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        inner = QWidget()
+        body = QVBoxLayout(inner)
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(20)
+        body.setAlignment(Qt.AlignmentFlag.AlignTop)
+        area.setWidget(inner)
+
+        g, _ = self._section(body, "Transcription")
+        self._studio_lang = self._combo([("Auto-detect", "auto"), ("Mixed: Odia, Eng, Hindi", "or-auto"), ("Odia (ଓଡ଼ିଆ)", "or"),
+                                         ("Hindi", "hi"), ("English (India)", "en-in")], "auto", width=168)
+        self._studio_out_mode = self._combo([("As spoken", "keep"), ("Translate to English", "en"), ("Odia only", "or")],
+                                            "keep", width=168)
+        for combo, text in ((self._studio_lang, "Spoken"), (self._studio_out_mode, "Subtitles")):
+            combo.setAccessibleName(text)
+        g.add("Spoken", self._studio_lang)
+        g.add("Subtitles", self._studio_out_mode)
+        self._studio_out_mode.setToolTip("As spoken keeps each language in its own script")
+        self._model_row_sub = g.add("Model", _btn("Change", small=True, slot=lambda: self.select_page(3)), "")
+        fix = _btn("Fix Words", small=True, slot=self._apply_vocabulary)
+        fix.setToolTip("Apply names and terms from your Vocabulary to every line")
+        g.add("Vocabulary", fix)
+
+        self._quality_group, _ = self._section(body, "Quality checks", action=_btn("Next", small=True, slot=self._next_problem))
+        self._speaker_group, _ = self._section(body, "Speakers", action=_btn("Rename…", small=True, slot=self._rename_speaker))
+
+        g, _ = self._section(body, "Project", "Saved projects keep your edits and the model's original text.")
+        g.add("Save project", _btn("Save", small=True, slot=self._save_project))
+        g.add("Clear all lines", _btn("Clear", "danger", True, self._clear_cues))
+        return area
+
+    def _build_action_bar(self) -> QFrame:
+        bar = QFrame()
+        bar.setObjectName("ActionBar")
+        h = QHBoxLayout(bar)
+        h.setContentsMargins(16, 12, 12, 12)
+        h.setSpacing(12)
+        self._gen_bar = QProgressBar()
+        self._gen_bar.setRange(0, 100)
+        self._gen_bar.setTextVisible(False)
+        self._gen_bar.setFixedWidth(140)
+        self._gen_bar.hide()
+        self._tx_count = _label("", "RowMeta")
+        self._tx_note = _label("", "RowSub")
+        self._tx_note.setMinimumWidth(0)
+        h.addWidget(self._gen_bar)
+        h.addWidget(self._tx_count)
+        h.addWidget(self._tx_note, 1)
+        self._studio_start_btn = _btn("Generate Subtitles", "primary", slot=self._start_media_transcribe)
+        self._export_btn = _btn("Export…", "primary")
+        menu = QMenu(self._export_btn)
+        for text, fmt in (("Subtitles (.srt)", "srt"), ("Web captions (.vtt)", "vtt"),
+                          ("Transcript (.txt)", "txt"), ("Data with speakers (.json)", "json")):
+            menu.addAction(text, lambda f=fmt: self._export_cues(f))
+        self._export_btn.setMenu(menu)
+        self._export_btn.setToolTip("Ctrl+E exports .srt straight away")
+        h.addWidget(self._studio_start_btn)
+        h.addWidget(self._export_btn)
+        return bar
+
+    def eventFilter(self, obj, ev):
+        if obj is getattr(self, "_tx_root", None):
+            kind = ev.type()
+            if kind in (QEvent.Type.DragEnter, QEvent.Type.Drop):
+                urls = ev.mimeData().urls() if ev.mimeData().hasUrls() else []
+                path = urls[0].toLocalFile() if urls else ""
+                if self._file_kind(path):
+                    ev.acceptProposedAction()
+                    if kind == QEvent.Type.Drop:
+                        self._open_file(path)
+                    return True
+            elif kind == QEvent.Type.Resize:  # a narrow window gives the table the room; Settings brings the panel back
+                wide = obj.width() >= 900
+                if wide != getattr(self, "_tx_wide", None):
+                    self._tx_wide = wide
+                    self._panel_btn.setChecked(wide)
+        return super().eventFilter(obj, ev)
+
+    # opening: media, subtitle files, projects ------------------------------
 
     @staticmethod
-    def _fmt_srt_ts(sec: float) -> str:
-        ms = max(0, int(round(sec * 1000)))
-        h, rem = divmod(ms, 3600000)
-        m, rem = divmod(rem, 60000)
-        s, ms = divmod(rem, 1000)
-        return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+    def _file_kind(path: str) -> str:
+        low = (path or "").lower()
+        if low.endswith(PROJECT_EXT):
+            return "project"
+        ext = os.path.splitext(low)[1]
+        return "media" if ext in MEDIA_EXT else "subs" if ext in SUB_EXT else ""
+
+    def _choose_file(self):
+        media = " ".join(f"*{e}" for e in sorted(MEDIA_EXT))
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Open", os.path.dirname(self._media_path),
+            f"Media, subtitles or projects ({media} *.srt *.vtt *{PROJECT_EXT});;Audio or video ({media});;"
+            f"Subtitles (*.srt *.vtt);;Vaani projects (*{PROJECT_EXT})")
+        if path:
+            self._open_file(path)
+
+    def _open_file(self, path: str):
+        kind = self._file_kind(path)
+        if kind == "media":
+            self.load_media_file(path)
+        elif kind == "subs":
+            self._import_subtitles(path)
+        elif kind == "project":
+            self._open_project(path)
+
+    def _keep_edits(self, question: str) -> bool:
+        """True when it's fine to drop the current lines: nothing unsaved, or the user says so."""
+        if not (self._dirty and self._cues):
+            return True
+        return QMessageBox.question(self, "Unsaved Subtitles", question,
+                                    QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+                                    QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Discard
+
+    def _set_media(self, path: str):
+        """Point the player and waveform at a file ('' = none) without touching the lines."""
+        self._media_path, self._duration = path, 0.0
+        name = os.path.basename(path) if path else "No media"
+        self._studio_file_lbl.setText(self._studio_file_lbl.fontMetrics().elidedText(name, Qt.TextElideMode.ElideMiddle, 320))
+        self._studio_file_lbl.setToolTip(path)
+        self._media_meta.setText("")
+        self._wave.set_view(peaks=[], duration=0.0, pos=0.0)
+        if self._media_player is not None:
+            self._media_player.setSource(QUrl.fromLocalFile(path) if path else QUrl())
+        if path:
+            self._read_waveform(path)
+        self._set_studio_badge("Ready" if path else "No media", "accent" if path else "plain")
+
+    def _show_lines(self, cues, note: str = ""):
+        self._cues, self._undo, self._redo, self._dirty = cues, [], [], False
+        self._fix_bar.hide()
+        self._render_cues()
+        self._note(note)
+        self._tx_stack.setCurrentIndex(1)
+        self.select_page(7)
+
+    def load_media_file(self, path: str):
+        """Open a video/audio file in the Studio, ready to play and generate subtitles."""
+        if not self._keep_edits("You have subtitle edits you haven't saved or exported. Discard them and open the new file?"):
+            return
+        self._project_path = ""
+        self._set_media(path)
+        self._show_lines([])
+
+    def _import_subtitles(self, path: str):
+        try:
+            with open(path, encoding="utf-8-sig", errors="replace") as fh:
+                cues = parse_subtitles(fh.read())
+        except OSError as e:
+            QMessageBox.warning(self, "Couldn't Open Subtitles", f"{e.strerror or e}. Check the file and try again.")
+            return
+        if not cues:
+            QMessageBox.warning(self, "No Subtitles Found", "That file has no timed lines. Choose an .srt or .vtt subtitle file.")
+            return
+        if not self._keep_edits("Opening these subtitles replaces your unsaved edits. Continue?"):
+            return
+        stem = os.path.splitext(path)[0]
+        media = next((stem + e for e in sorted(MEDIA_EXT) if os.path.exists(stem + e)), "")
+        if media or not self._media_path:  # the video next to the subtitles, else keep what's open
+            self._set_media(media)
+        self._project_path = ""
+        self._show_lines(cues, f"Opened {len(cues)} lines from {os.path.basename(path)}.")
+
+    def _open_project(self, path: str):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+            cues = [norm_cue(c) for c in data["cues"]]
+            media = str(data.get("media") or "")
+        except (OSError, ValueError, KeyError, TypeError, IndexError) as e:
+            QMessageBox.warning(self, "Couldn't Open Project", f"This isn't a readable Vaani project ({e}).")
+            return
+        if not self._keep_edits("Opening this project replaces your unsaved edits. Continue?"):
+            return
+        self._set_media(media if media and os.path.exists(media) else "")
+        self._project_path = path
+        moved = media and not self._media_path
+        self._show_lines(cues, "The media file has moved. Open it again to play along." if moved
+                         else f"Opened {os.path.basename(path)}.")
+
+    def _save_project(self):
+        if not self._cues and not self._media_path:
+            return
+        out = self._project_path
+        if not out:
+            default = (os.path.splitext(self._media_path)[0] if self._media_path else "subtitles") + PROJECT_EXT
+            out, _ = QFileDialog.getSaveFileName(self, "Save Project", default, f"Vaani projects (*{PROJECT_EXT})")
+            if not out:
+                return
+            if not out.lower().endswith(PROJECT_EXT):
+                out = os.path.splitext(out)[0] + PROJECT_EXT
+        try:
+            with open(out, "w", encoding="utf-8") as fh:
+                json.dump({"version": 1, "media": self._media_path, "cues": self._cues}, fh, ensure_ascii=False, indent=1)
+        except OSError as e:
+            QMessageBox.warning(self, "Couldn't Save Project", f"{e.strerror or e}. Choose another folder and try again.")
+            return
+        self._project_path, self._dirty = out, False
+        self._update_cue_footer()
+        self._note(f"Saved {os.path.basename(out)}.")
+
+    def _read_waveform(self, path: str):
+        def work():
+            try:
+                from faster_whisper.audio import decode_audio
+                audio = decode_audio(path, sampling_rate=8000)  # 8 kHz is plenty for a picture
+                self._sig_peaks.emit(path, audio_peaks(audio), len(audio) / 8000.0)
+            except Exception as e:
+                print(f"[Vaani] No waveform for {path}: {e}")
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_peaks(self, path: str, peaks, seconds: float):
+        if path == self._media_path:
+            if self._duration <= 0:
+                self._set_duration(seconds)
+            self._wave.set_view(peaks=peaks)
+
+    def _set_duration(self, seconds: float):
+        self._duration = seconds
+        self._media_meta.setText(_srt_time(seconds)[:8] if seconds else "")
+        self._wave.set_view(duration=seconds)
+        self._render_cues()  # "runs past the end" depends on it
+
+    # cue table ------------------------------------------------------------
+
+    def _cue_row(self, r: int):
+        st, en, text, speaker, orig = self._cues[r]
+        issues = cue_issues(self._cues, r, self._duration)
+        edited = orig is not None and orig != text
+        mono = QFont("Consolas", 10)  # fixed-width digits so times line up
+        ink = QColor(COLORS["danger"] if issues else COLORS["text_muted"])
+        cells = (f"{r + 1} •" if edited else str(r + 1), _srt_time(st), _srt_time(en), speaker,
+                 f"{len(text) / (en - st):.0f}" if en > st else "–", text)
+        tip = "\n".join(m for _, m in issues)
+        if edited:
+            tip = f"Edited. The model heard: {orig}" + (f"\n{tip}" if tip else "")
+        for c, val in enumerate(cells):
+            it = QTableWidgetItem(val)
+            if c in (self.C_NUM, self.C_CPS):
+                it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                it.setForeground(ink)
+                it.setToolTip(tip)
+            elif c == self.C_SPEAKER:
+                it.setForeground(QColor(COLORS["text_muted"]))  # text_secondary is rgba() in dark, which QColor can't parse
+            if c in (self.C_START, self.C_END, self.C_CPS):
+                it.setFont(mono)
+            self._cue_table.setItem(r, c, it)
+
+    def _render_cues(self):
+        t = self._cue_table
+        t.blockSignals(True)
+        t.setRowCount(len(self._cues))
+        for r in range(len(self._cues)):
+            self._cue_row(r)
+        t.blockSignals(False)
+        t.resizeRowsToContents()
+        self._playing_row = -1
+        self._wave.set_view(cues=self._cues)
+        if self._media_player is not None:
+            self._mark_playing(self._cue_at(self._media_player.position() / 1000.0))
+        self._update_cue_footer()
+
+    def _update_cue_footer(self):
+        n = len(self._cues)
+        counts = {}
+        for i in range(n):
+            for kind, _ in cue_issues(self._cues, i, self._duration):
+                counts[kind] = counts.get(kind, 0) + 1
+        bad = sum(1 for i in range(n) if cue_issues(self._cues, i, self._duration))
+        self._cue_table.setVisible(bool(n))
+        self._cue_empty.setVisible(not n)
+        self._tx_count.setText(f"{n} line{'s' if n != 1 else ''}" + (f" · {bad} to check" if bad else "")
+                               + (" · Unsaved" if self._dirty else ""))
+        self._export_btn.setEnabled(bool(n))
+        self._undo_btn.setEnabled(bool(self._undo))
+        self._redo_btn.setEnabled(bool(self._redo))
+        if self._studio_start_btn.text() != "Generating…":
+            self._studio_start_btn.setEnabled(bool(self._media_path))
+            self._studio_start_btn.setText("Generate Again" if n else "Generate Subtitles")
+            self._studio_start_btn.setObjectName("" if n else "PrimaryButton")  # once there are lines, Export leads
+            self._export_btn.setObjectName("PrimaryButton" if n else "")
+            for b in (self._studio_start_btn, self._export_btn):
+                b.style().unpolish(b)
+                b.style().polish(b)
+
+        self._quality_group.clear()
+        rows = [(label, counts[kind]) for kind, label in QUALITY if counts.get(kind)]
+        for label, k in rows:
+            self._quality_group.add(label, _label(str(k), "RowValue"))
+        if not rows:
+            self._quality_group.add("Every line passes" if n else "No lines yet")
+        self._speaker_group.clear()
+        speakers = {}
+        for c in self._cues:
+            if c[3]:
+                speakers[c[3]] = speakers.get(c[3], 0) + 1
+        for name, k in speakers.items():
+            self._speaker_group.add(name, _label(f"{k} line{'s' if k != 1 else ''}", "RowValue"))
+        if not speakers:
+            self._speaker_group.add("No speakers yet")
+        self._model_row_sub.setText(self.config.get("model_size", "") or "Default")
+        self._model_row_sub.setVisible(True)
+
+    def _note(self, text: str):
+        self._tx_note.setText(text)
+
+    def _commit(self, cues, note: str = ""):
+        """Every edit goes through here, so it can be undone."""
+        self._undo.append(self._cues)
+        del self._undo[:-200]
+        self._redo.clear()
+        self._cues, self._dirty = cues, True
+        self._render_cues()
+        self._note(note)
+
+    def _undo_edit(self):
+        if self._undo:
+            self._redo.append(self._cues)
+            self._cues, self._dirty = self._undo.pop(), True
+            self._render_cues()
+            self._note("Undone.")
+
+    def _redo_edit(self):
+        if self._redo:
+            self._undo.append(self._cues)
+            self._cues, self._dirty = self._redo.pop(), True
+            self._render_cues()
+            self._note("Redone.")
+
+    def _selected_rows(self):
+        rows = sorted({i.row() for i in self._cue_table.selectionModel().selectedRows()})
+        cur = self._cue_table.currentRow()
+        return rows or ([cur] if 0 <= cur < len(self._cues) else [])
+
+    def _select_row(self, r: int):
+        if 0 <= r < self._cue_table.rowCount():
+            self._cue_table.selectRow(r)
+            self._cue_table.scrollToItem(self._cue_table.item(r, 0), QAbstractItemView.ScrollHint.EnsureVisible)
+
+    def _cue_menu(self, pos):
+        r = self._cue_table.rowAt(pos.y())
+        if r < 0:
+            return
+        if r not in self._selected_rows():
+            self._select_row(r)
+        menu = QMenu(self)
+        for text, slot in (("Play From Here", lambda: self._play_from(r)), ("Insert After", self._insert_cue),
+                           ("Split", self._split_cue), ("Merge", self._merge_cues), ("Restore Original", self._restore_original),
+                           ("Rename Speaker…", lambda: self._rename_speaker(self._cues[r][3])), ("Delete", self._delete_cues)):
+            menu.addAction(text, slot)
+        menu.exec(self._cue_table.viewport().mapToGlobal(pos))
+
+    def _on_cue_edited(self, r: int, c: int):
+        if not 0 <= r < len(self._cues) or c not in (self.C_START, self.C_END, self.C_SPEAKER, self.C_TEXT):
+            return
+        val = self._cue_table.item(r, c).text()
+        new = [list(x) for x in self._cues]
+        old = self._cues[r][2]
+        if c == self.C_TEXT:
+            new[r][2] = " ".join(val.split())
+            if new[r][2] == old:
+                return
+        elif c == self.C_SPEAKER:
+            new[r][3] = val.strip()
+        else:
+            t = parse_ts(val)
+            if t is None:
+                self._cue_table.blockSignals(True)
+                self._cue_row(r)
+                self._cue_table.blockSignals(False)
+                self._note("Type a time like 00:01:02,500 or 62.5.")
+                return
+            new[r][c - self.C_START] = t
+        # re-rendering inside cellChanged would delete the item whose editor is still closing
+        QTimer.singleShot(0, lambda: self._commit(new))
+        if c == self.C_TEXT and old:
+            self._offer_fix(old, new[r][2], r, new)
+            self.sig_subtitle_corrected.emit(new[r][0], new[r][1], old, new[r][2], self._media_path)
+
+    def _offer_fix(self, old: str, text: str, row: int, cues):
+        swaps = word_swaps(old, text)
+        if not swaps:
+            return self._fix_bar.hide()
+        was, now = swaps[0]
+        case = was.lower() == now.lower()  # a capitalisation fix must not count lines already right
+        _, n = replace_in_cues([c for i, c in enumerate(cues) if i != row], was, now, case=case, whole=True)
+        if not n:
+            return self._fix_bar.hide()
+        self._fix = (was, now, case)
+        self._fix_lbl.setText(f"“{was}” → “{now}”. {n} more {'place has' if n == 1 else 'places have'} “{was}”.")
+        self._fix_all_btn.setText(f"Fix {n} More")
+        self._fix_bar.show()
+
+    def _fix_everywhere(self):
+        if self._fix:
+            was, now, case = self._fix
+            new, n = replace_in_cues(self._cues, was, now, case=case, whole=True)
+            self._fix_bar.hide()
+            if n:
+                self._commit(new, f"Fixed “{was}” in {n} more place{'s' if n != 1 else ''}.")
+
+    def _apply_vocabulary(self):
+        fmt = TextFormatter([e for e in self.db.get_dictionary() if e.get("category") != "snippet"])
+        new = [c[:2] + [fmt._apply_dictionary(c[2])] + c[3:] for c in self._cues]
+        n = sum(x[2] != y[2] for x, y in zip(new, self._cues))
+        if n:
+            self._commit(new, f"Fixed words in {n} line{'s' if n != 1 else ''} from your Vocabulary.")
+        else:
+            self._note("No Vocabulary words to fix. Add names and terms on the Vocabulary page.")
+
+    def _restore_original(self):
+        rows = [r for r in self._selected_rows() if self._cues[r][4] is not None and self._cues[r][4] != self._cues[r][2]]
+        if not rows:
+            return self._note("The selected lines already match what the model heard, or were split or merged.")
+        new = [list(c) for c in self._cues]
+        for r in rows:
+            new[r][2] = new[r][4]
+        self._commit(new, f"Restored {len(rows)} line{'s' if len(rows) != 1 else ''}.")
+
+    def _rename_speaker(self, name: str = ""):
+        names = sorted({c[3] for c in self._cues if c[3]})
+        if not names:
+            return self._note("No speakers to rename. Type a name in the Speaker column.")
+        if name not in names:
+            name, ok = QInputDialog.getItem(self, "Rename Speaker", "Speaker:", names, 0, False)
+            if not ok:
+                return
+        new_name, ok = QInputDialog.getText(self, "Rename Speaker", f"New name for {name}:", text=name)
+        new_name = new_name.strip()
+        if ok and new_name and new_name != name:
+            self._commit([c[:3] + [new_name if c[3] == name else c[3]] + c[4:] for c in self._cues],
+                         f"Renamed {name} to {new_name}.")
+
+    def _insert_cue(self):
+        rows = self._selected_rows()
+        r = rows[-1] + 1 if rows else len(self._cues)
+        pos = self._media_player.position() / 1000.0 if self._media_player is not None else 0.0
+        st = self._cues[r - 1][1] if r else pos
+        nxt = self._cues[r][0] if r < len(self._cues) else st + 2.0
+        new = [list(c) for c in self._cues]
+        new.insert(r, [st, max(st + 0.5, min(st + 2.0, nxt)), "", self._cues[r - 1][3] if r else "", None])
+        self._commit(new)
+        self._select_row(r)
+        self._cue_table.setCurrentCell(r, self.C_TEXT)
+        self._cue_table.editItem(self._cue_table.item(r, self.C_TEXT))
+
+    def _split_cue(self):
+        rows = self._selected_rows()
+        if not rows:
+            return
+        r = rows[0]
+        at = self._media_player.position() / 1000.0 if self._media_player is not None else None
+        parts = split_cue(self._cues[r], at)
+        if not parts:
+            return self._note("A one-word line can't be split.")
+        self._commit(self._cues[:r] + list(parts) + self._cues[r + 1:], "Split into 2 lines.")
+        self._select_row(r)
+
+    def _merge_cues(self):
+        rows = self._selected_rows()
+        if not rows:
+            return
+        a, b = (rows[0], rows[-1]) if len(rows) > 1 else (rows[0], rows[0] + 1)
+        if b >= len(self._cues):
+            return self._note("Select a line that has another after it.")
+        span = self._cues[a:b + 1]
+        merged = [span[0][0], max(c[1] for c in span), " ".join(c[2] for c in span if c[2].strip()), span[0][3], None]
+        self._commit(self._cues[:a] + [merged] + self._cues[b + 1:], f"Merged {len(span)} lines.")
+        self._select_row(a)
+
+    def _delete_cues(self):
+        rows = set(self._selected_rows())
+        if rows:
+            n = len(rows)
+            self._commit([c for i, c in enumerate(self._cues) if i not in rows],
+                         f"Deleted {n} line{'s' if n != 1 else ''}. Ctrl+Z brings {'them' if n != 1 else 'it'} back.")
+
+    def _clear_cues(self):
+        if self._cues:
+            n = len(self._cues)
+            self._commit([], f"Cleared {n} line{'s' if n != 1 else ''}. Ctrl+Z brings them back.")
+
+    def _set_time_from_playhead(self, which: int):
+        rows = self._selected_rows()
+        if not rows or self._media_player is None:
+            return self._note("Select a line, then play to the moment it should " + ("start." if which == 0 else "end."))
+        new = [list(c) for c in self._cues]
+        new[rows[0]][which] = self._media_player.position() / 1000.0
+        self._commit(new)
+        self._select_row(rows[0])
+
+    def _shift_cues(self):
+        if not self._cues:
+            return
+        rows = self._selected_rows()
+        start = rows[0] if rows else 0
+        secs, ok = QInputDialog.getDouble(self, "Shift Times", f"Seconds to move line {start + 1} and every line after it.\n"
+                                          "Negative moves them earlier.", 0.0, -36000.0, 36000.0, 2)
+        if ok and secs:
+            n = len(self._cues) - start
+            self._commit(shift_cues(self._cues, secs, start), f"Moved {n} line{'s' if n != 1 else ''} by {secs:+.2f} s.")
+
+    def _next_problem(self):
+        bad = [i for i in range(len(self._cues)) if cue_issues(self._cues, i, self._duration)]
+        if not bad:
+            return self._note("Every line passes the checks.")
+        cur = self._cue_table.currentRow()
+        r = next((i for i in bad if i > cur), bad[0])
+        self._select_row(r)
+        self._note(" · ".join(m for _, m in cue_issues(self._cues, r, self._duration)))
+
+    def _matches(self, q: str):
+        if self._case_btn.isChecked():
+            return [i for i, c in enumerate(self._cues) if q in c[2]]
+        return [i for i, c in enumerate(self._cues) if q.lower() in c[2].lower()]
+
+    def _count_matches(self):
+        q = self._find_edit.text()
+        n = len(self._matches(q)) if q else 0
+        self._note((f"{n} line{'s' if n != 1 else ''} match. Enter jumps to the next." if n else "No matches.") if q else "")
+
+    def _find_next(self):
+        q = self._find_edit.text()
+        m = self._matches(q) if q else []
+        if not m:
+            return self._note("No matches." if q else "")
+        cur = self._cue_table.currentRow()
+        self._select_row(next((i for i in m if i > cur), m[0]))
+
+    def _replace_all(self):
+        q = self._find_edit.text()
+        if not q:
+            return self._find_edit.setFocus()
+        new, n = replace_in_cues(self._cues, q, self._replace_edit.text(), case=self._case_btn.isChecked())
+        if n:
+            self._commit(new, f"Replaced {n} match{'es' if n != 1 else ''}.")
+        else:
+            self._note("No matches.")
+
+    # player ---------------------------------------------------------------
 
     @staticmethod
     def _fmt_mmss(ms: int) -> str:
@@ -1444,45 +2383,54 @@ class MainWindow(QMainWindow):
         self._studio_status.style().unpolish(self._studio_status)
         self._studio_status.style().polish(self._studio_status)
 
+    def _cue_at(self, sec: float) -> int:
+        return next((i for i, c in enumerate(self._cues) if c[0] <= sec < c[1]), -1)
+
+    def _mark_playing(self, r: int):
+        """▶ in the # column of the line on screen now; the selection stays the editor's."""
+        if r == self._playing_row:
+            return
+        t = self._cue_table
+        t.blockSignals(True)
+        if 0 <= self._playing_row < len(self._cues):
+            self._cue_row(self._playing_row)
+        if 0 <= r < len(self._cues):
+            t.item(r, 0).setText("▶")
+            t.item(r, 0).setForeground(QColor(COLORS["accent_text"]))
+        t.blockSignals(False)
+        self._playing_row = r
+        self._caption.setText(self._cues[r][2] if r >= 0 else "")
+        self._wave.set_view(current=r)
+        if r >= 0 and self._follow.isChecked() and t.state() != QAbstractItemView.State.EditingState:
+            t.scrollToItem(t.item(r, 0), QAbstractItemView.ScrollHint.EnsureVisible)
+
+    def _seek_by(self, ms: int):
+        if self._media_player is not None:
+            self._media_player.setPosition(max(0, self._media_player.position() + ms))
+
     def _on_media_dur(self, dur_ms: int):
-        self._studio_scrubber.setRange(0, max(0, dur_ms))
+        if dur_ms > 0:
+            self._set_duration(dur_ms / 1000.0)
         cur = self._media_player.position() if self._media_player else 0
         self._studio_time_lbl.setText(f"{self._fmt_mmss(cur)} / {self._fmt_mmss(dur_ms)}")
 
     def _on_media_pos(self, pos_ms: int):
-        if not self._studio_scrubber.isSliderDown():
-            self._studio_scrubber.setValue(pos_ms)
         dur = self._media_player.duration() if self._media_player else 0
         self._studio_time_lbl.setText(f"{self._fmt_mmss(pos_ms)} / {self._fmt_mmss(dur)}")
         sec = pos_ms / 1000.0
-        for r, (st, en) in enumerate(self._media_segments):
-            if st <= sec <= en:
-                self._srt_table.selectRow(r)
-                break
+        self._wave.set_view(pos=sec)
+        rows = self._selected_rows()
+        if self._loop_btn.isChecked() and rows and sec >= self._cues[rows[0]][1]:
+            self._media_player.setPosition(int(self._cues[rows[0]][0] * 1000))
+            return
+        self._mark_playing(self._cue_at(sec))
 
     def _on_media_state(self, state):
         from PyQt6.QtMultimedia import QMediaPlayer
         self._studio_play_btn.setText("Pause" if state == QMediaPlayer.PlaybackState.PlayingState else "Play")
 
-    def load_media_file(self, path: str):
-        """Show the uploaded video/audio in the Transcribe tab with Play & Start buttons."""
-        self._media_path = path
-        self._media_segments.clear()
-        self._orig_texts.clear()
-        self._srt_table.setRowCount(0)
-        self._studio_file_lbl.setText(os.path.basename(path))
-        self._set_studio_badge("Ready", "accent")
-        self._studio_play_btn.setEnabled(self._media_player is not None)
-        self._studio_start_btn.setEnabled(True)
-        self._studio_start_btn.setText("Start Transcribing")
-        self._studio_save_btn.setEnabled(False)
-        if self._media_player is not None:
-            self._media_player.setSource(QUrl.fromLocalFile(path))
-        self._studio_card.show()
-        self.select_page(7)
-
     def _toggle_media_play(self):
-        if self._media_player is None:
+        if self._media_player is None or not self._media_path:
             return
         from PyQt6.QtMultimedia import QMediaPlayer
         if self._media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
@@ -1490,17 +2438,28 @@ class MainWindow(QMainWindow):
         else:
             self._media_player.play()
 
-    def _start_media_transcribe(self):
-        if not self._media_path:
-            return
-        self._media_segments.clear()
-        self._orig_texts.clear()
-        self._srt_table.setRowCount(0)
-        self._studio_start_btn.setEnabled(False)
-        self._studio_start_btn.setText("Transcribing…")
-        self._set_studio_badge("Live", "active")
-        if self._media_player is not None:
+    def _play_from(self, row: int):
+        self._seek_to_subtitle_row(row, self.C_NUM)
+        if self._media_player is not None and self._media_path:
             self._media_player.play()
+
+    def _seek_to_subtitle_row(self, row: int, col: int):
+        if self._media_player is not None and 0 <= row < len(self._cues) and col in (self.C_NUM, self.C_START, self.C_END, self.C_CPS):
+            self._media_player.setPosition(int(self._cues[row][0] * 1000))
+
+    # generate (lines stream in) -> export ---------------------------------
+
+    def _start_media_transcribe(self):
+        if not self._media_path or not self._keep_edits("Generating again replaces the lines you've edited. Continue?"):
+            return
+        self._show_lines([])
+        self._studio_start_btn.setEnabled(False)
+        self._studio_start_btn.setText("Generating…")
+        self._set_studio_badge("Generating", "active")
+        self._gen_started = time.monotonic()
+        self._gen_bar.setValue(0)
+        self._gen_bar.show()
+        self._note("Listening… lines appear as they're heard.")
         lang = self._studio_lang.currentData() or "auto"
         out_mode = self._studio_out_mode.currentData() or "keep"
         if out_mode == "en":
@@ -1510,70 +2469,66 @@ class MainWindow(QMainWindow):
         self.sig_start_file_transcribe.emit(self._media_path, lang)
 
     def add_subtitle_segment(self, start_s: float, end_s: float, speaker: str, text: str):
-        """Append a live transcribed segment to the editable timestamp table."""
-        self._srt_table.blockSignals(True)
-        row = self._srt_table.rowCount()
-        self._srt_table.insertRow(row)
-        self._media_segments.append([start_s, end_s])
-        self._orig_texts.append(text)
-        ts_font = QFont("Consolas", 10)
-        s_item = QTableWidgetItem(self._fmt_srt_ts(start_s))
-        s_item.setFont(ts_font)
-        s_item.setFlags(s_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        e_item = QTableWidgetItem(self._fmt_srt_ts(end_s))
-        e_item.setFont(ts_font)
-        e_item.setFlags(e_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        t_item = QTableWidgetItem(text)
-        self._srt_table.setItem(row, 0, s_item)
-        self._srt_table.setItem(row, 1, e_item)
-        self._srt_table.setItem(row, 2, t_item)
-        self._srt_table.blockSignals(False)
-        self._srt_table.resizeRowsToContents()
-        self._srt_table.scrollToBottom()
-        self._studio_save_btn.setEnabled(True)
+        """A line heard while generating: appended live, editable at once."""
+        # ponytail: streamed lines bypass history, so undo resets; an old snapshot would drop lines heard since
+        self._undo.clear()
+        self._redo.clear()
+        text = " ".join(text.split())
+        self._cues = self._cues + [[start_s, end_s, text, speaker or "", text]]
+        t, n = self._cue_table, len(self._cues)
+        t.blockSignals(True)
+        t.setRowCount(n)
+        for r in range(max(0, n - 2), n):  # the previous line may now overlap this one
+            self._cue_row(r)
+        t.blockSignals(False)
+        t.resizeRowToContents(n - 1)
+        if self._follow.isChecked() and t.state() != QAbstractItemView.State.EditingState:
+            t.scrollToBottom()
+        self._wave.set_view(cues=self._cues)
+        if self._duration > 0 and self._gen_started:
+            done = min(1.0, end_s / self._duration)
+            left = (time.monotonic() - self._gen_started) * (1 - done) / max(done, 0.01)
+            self._gen_bar.setValue(int(done * 100))
+            self._note(f"Generating… {done:.0%} · about {max(1, round(left / 60))} min left")
+        self._update_cue_footer()
 
     def finish_media_transcribe(self, default_srt_path: str):
-        self._studio_start_btn.setEnabled(True)
-        self._studio_start_btn.setText("Re-transcribe")
+        self._gen_started = 0.0
+        self._gen_bar.hide()
+        self._studio_start_btn.setText("Generate Again")
+        self._update_cue_footer()
         if default_srt_path:
-            self._set_studio_badge("Ready to save .SRT", "active")
+            self._set_studio_badge("Generated", "active")
+            self._studio_status.setToolTip(default_srt_path)
+            self._note(f"Done. A copy is saved as {os.path.basename(default_srt_path)}; export again after you edit.")
+        else:
+            self._set_studio_badge("Stopped", "plain")
+            self._note("Stopped before any speech was found.")
 
-    def _on_srt_cell_changed(self, row: int, col: int):
-        self._srt_table.resizeRowsToContents()
-        if col != 2 or not (0 <= row < len(self._orig_texts)):
+    def _export_cues(self, fmt: str):
+        if not self._cues:
             return
-        edited = (self._srt_table.item(row, 2).text() or "").strip()
-        orig = self._orig_texts[row]
-        if edited and edited != orig:
-            st, en = self._media_segments[row]
-            self._orig_texts[row] = edited
-            self.sig_subtitle_corrected.emit(st, en, orig, edited, self._media_path)
-
-    def _seek_to_subtitle_row(self, row: int, col: int):
-        if self._media_player is not None and 0 <= row < len(self._media_segments) and col < 2:
-            self._media_player.setPosition(int(self._media_segments[row][0] * 1000))
-
-    def _save_media_srt(self):
-        if not self._media_path or self._srt_table.rowCount() == 0:
+        ext, kind = {"srt": (".srt", "SubRip subtitles"), "vtt": (".vtt", "WebVTT captions"),
+                     "txt": (".txt", "Plain text"), "json": (".json", "JSON")}[fmt]
+        default = (os.path.splitext(self._media_path)[0] if self._media_path else "subtitles") + ext
+        out, _ = QFileDialog.getSaveFileName(self, "Export Subtitles", default, f"{kind} (*{ext})")
+        if not out:
             return
-        default_srt = os.path.splitext(self._media_path)[0] + ".srt"
-        out_path, _ = QFileDialog.getSaveFileName(self, "Save Subtitles (.srt)", default_srt, "SubRip Subtitles (*.srt)")
-        if not out_path:
+        try:
+            with open(out, "w", encoding="utf-8-sig" if fmt == "srt" else "utf-8") as fh:
+                fh.write(cues_export(self._cues, fmt))
+        except OSError as e:
+            QMessageBox.warning(self, "Couldn't Export", f"{e.strerror or e}. Choose another folder and try again.")
             return
-        blocks = []
-        for r in range(self._srt_table.rowCount()):
-            st = self._srt_table.item(r, 0).text()
-            en = self._srt_table.item(r, 1).text()
-            txt = (self._srt_table.item(r, 2).text() or "").strip()
-            if txt:
-                blocks.append(f"{len(blocks) + 1}\n{st} --> {en}\n{txt}\n")
-        with open(out_path, "w", encoding="utf-8-sig") as fh:
-            fh.write("\n".join(blocks))
-        self._studio_file_lbl.setText(f"Saved: {os.path.basename(out_path)}")
+        self._dirty = False
+        self._update_cue_footer()
+        self._note(f"Exported {os.path.basename(out)}.")
 
     def set_live_running(self, running: bool):
         """Mirrors the tray's "Transcribe What's Playing" check mark."""
-        self.live_btn.setText("Stop" if running else "Start")
+        self.live_btn.setText("Stop Live Captions" if running else "Live Captions")
+
+    # -- about --------------------------------------------------------------
 
     def _create_about_tab(self) -> QWidget:
         try:

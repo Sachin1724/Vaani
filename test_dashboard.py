@@ -62,3 +62,22 @@ if __name__ == "__main__":
     test_wheel_is_left_to_the_page_unless_focused()
     test_every_page_builds_and_nav_matches()
     print("ok")
+
+
+def test_settings_save_on_change_without_undoing_the_capsule():
+    saved = []
+    mw.save_config = lambda cfg: saved.append(dict(cfg))
+    try:
+        w = MainWindow(Database(":memory:"), dict(load_config()))
+        w.tone_combo.setCurrentIndex(w.tone_combo.findData("email"))
+        QTest.qWait(500)  # past the 350 ms batch
+        assert saved and saved[-1]["tone_preset"] == "email"
+
+        w.config["tone_preset"] = "bullets"  # the capsule picks a tone...
+        w.sync_settings()
+        assert w.tone_combo.currentData() == "bullets"
+        w.cb_sound.setChecked(not w.cb_sound.isChecked())  # ...and a later change here keeps it
+        QTest.qWait(500)
+        assert saved[-1]["tone_preset"] == "bullets" and saved[-1]["sound_feedback"] == w.cb_sound.isChecked()
+    finally:
+        mw.save_config = lambda *_: None

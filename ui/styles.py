@@ -98,6 +98,16 @@ QPushButton#PrimaryButton:pressed {{ background-color: {primary_press}; }}
 QPushButton#PrimaryButton:disabled {{ background-color: {tint_strong}; color: {text_muted}; }}
 QPushButton#DangerButton {{ background-color: rgba(239, 68, 68, 0.14); color: {danger}; }}
 QPushButton#DangerButton:hover {{ background-color: rgba(239, 68, 68, 0.24); }}
+QPushButton[small="true"]:checked {{ background: {primary}; color: {primary_text}; }}
+QPushButton::menu-indicator {{ image: none; width: 0; }}
+
+/* Transcribe */
+QFrame#DropZone {{ background: {bg_card}; border: 1.5px dashed {tint_line}; border-radius: 12px; }}
+QLabel#DropTitle {{ font-family: {display}; font-size: 18px; font-weight: 600; }}
+QLabel#CaptionPreview {{ background: #0F141A; color: #F5EFE6; border-radius: 8px; padding: 8px 12px; font-size: 14px; }}
+QLabel#TimeCode {{ color: {text_secondary}; font-family: Consolas, monospace; font-size: 12px; }}
+QFrame#FixBar {{ background: rgba(120, 149, 178, 0.18); border-radius: 8px; }}
+QFrame#ActionBar {{ background: {bg_card}; border: 1px solid {border_glass}; border-radius: 12px; }}
 
 /* Inputs */
 QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox {{
@@ -136,6 +146,7 @@ QListWidget::item:selected {{ background: rgba(120, 149, 178, 0.28); color: {tex
 QListWidget::item:hover:!selected {{ background: {tint}; }}
 QTextBrowser {{ background: transparent; border: none; }}
 QSplitter::handle {{ background: {border_glass}; width: 1px; }}
+QSplitter#Gutter::handle {{ background: transparent; }}
 
 /* Scrollbar */
 QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}
