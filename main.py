@@ -164,6 +164,8 @@ class AppBridge(QObject):
     sig_update_ready = pyqtSignal(str)                     # (installer_path)
     sig_meeting_line = pyqtSignal(str, str)                # (speaker, text) live caption
     sig_meeting_saved = pyqtSignal(str)                    # note title, "" when nothing was said
+    sig_file_segment = pyqtSignal(float, float, str, str)  # (start_s, end_s, speaker, text)
+    sig_file_done = pyqtSignal(str)                        # default srt path
     sig_mic_changed = pyqtSignal()                         # some app started/stopped using a mic
     sig_device_alert = pyqtSignal(dict)                    # power / peripheral alert (device_monitor.py)
 
@@ -310,6 +312,9 @@ class OpenFlowApp(QObject):
         self.main_window.sig_theme.connect(self.floating_pill.set_theme)
         self.main_window.sig_capsule_size.connect(self._apply_capsule_size)
         self.main_window.sig_transcribe_file.connect(self._transcribe_file)
+        self.main_window.sig_start_file_transcribe.connect(self._run_file_transcription)
+        self.bridge.sig_file_segment.connect(self.main_window.add_subtitle_segment)
+        self.bridge.sig_file_done.connect(self.main_window.finish_media_transcribe)
         self.main_window.sig_toggle_live.connect(self._toggle_playing)
         self.main_window.sig_model_switch_requested.connect(self._on_request_switch_model)
         self.main_window.sig_model_download_requested.connect(self._on_request_download_model)
@@ -1017,6 +1022,10 @@ class OpenFlowApp(QObject):
             "Audio or video (*.mp3 *.m4a *.aac *.wav *.flac *.ogg *.opus *.webm *.mp4 *.mkv *.mov);;All files (*)")
         if not path:
             return
+        self.main_window.load_media_file(path)
+        self.show_dashboard()
+
+    def _run_file_transcription(self, path: str):
         name = os.path.basename(path)
         self.floating_pill.show_message(f"Transcribing {name}…", duration_ms=4000)
 
@@ -1025,19 +1034,23 @@ class OpenFlowApp(QObject):
 
         def work():
             try:
-                session = MeetingSession(self.transcriber, self._meeting_language(), keep_loaded, mic=False)
+                session = MeetingSession(
+                    self.transcriber, self._meeting_language(), keep_loaded, mic=False,
+                    on_segment=lambda st, en, who, txt: self.bridge.sig_file_segment.emit(st, en, who, txt),
+                )
                 lines = session.transcribe_file(path)
             except Exception as e:
                 print(f"[Vaani] Could not transcribe {path}: {e}")
                 self.bridge.sig_error.emit("Couldn't read that file")
+                self.bridge.sig_file_done.emit("")
                 return
-            # movie.mp4 -> movie.srt beside it, so video players load the subtitles on their own
             srt = os.path.splitext(path)[0] + ".srt"
-            if os.path.exists(srt):  # never overwrite subtitles the user already has; players load movie.*.srt too
+            if os.path.exists(srt):
                 srt = os.path.splitext(path)[0] + ".openflow.srt"
             if not os.access(os.path.dirname(path) or ".", os.W_OK):
                 srt = self._subtitle_path(os.path.splitext(name)[0])
             self._save_notes(lines, name, lines[-1][0] if lines else 0.0, srt)
+            self.bridge.sig_file_done.emit(srt)
 
         threading.Thread(target=work, daemon=True).start()
 

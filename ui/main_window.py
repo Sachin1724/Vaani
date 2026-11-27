@@ -355,6 +355,7 @@ class MainWindow(QMainWindow):
     sig_capsule_size = pyqtSignal()          # width / height / auto-scale changed; read the values from config
     sig_theme = pyqtSignal(str)              # "light" / "dark": applies at once to the dashboard and the capsule
     sig_transcribe_file = pyqtSignal()       # Tools: same actions as the tray menu
+    sig_start_file_transcribe = pyqtSignal(str)
     sig_toggle_live = pyqtSignal()
 
     def __init__(self, db: Database, config: dict):
@@ -1300,15 +1301,155 @@ class MainWindow(QMainWindow):
     # -- about --------------------------------------------------------------
 
     def _create_tools_tab(self) -> QWidget:
-        root, body, _ = self._page("Transcribe", "Turn any audio into text, on this PC. Transcripts are saved in Meeting Notes.")
+        root, body, _ = self._page("Transcribe", "Upload audio or video, play it live, edit timestamps in real time, and export .SRT.")
         g, _ = self._section(body, "Tools")
         g.add("Transcribe a file", _btn("Choose file…", "primary", True, self.sig_transcribe_file.emit),
-              "Audio or video: MP3, M4A, WAV, MP4, MKV and more. Odia, English and your other languages.")
+              "Audio or video: MP3, M4A, WAV, MP4, MKV and more. Odia, English and Hindi.")
         self.live_btn = _btn("Start", small=True, slot=self.sig_toggle_live.emit)
         g.add("Live transcribe what's playing", self.live_btn,
               "Captions for YouTube, a podcast or a lecture as it plays, from your speakers. Your microphone stays off.")
+
+        # Interactive Video & Live SRT Studio
+        self._media_path = ""
+        self._media_segments = []  # list of [start_s, end_s]
+        self._studio_card = QFrame()
+        self._studio_card.setObjectName("Card")
+        sv = QVBoxLayout(self._studio_card)
+        sv.setContentsMargins(16, 16, 16, 16)
+        sv.setSpacing(12)
+
+        top_bar = QHBoxLayout()
+        self._studio_file_lbl = QLabel("No file loaded — click Choose file… above")
+        self._studio_file_lbl.setObjectName("Muted")
+        top_bar.addWidget(self._studio_file_lbl, 1)
+        self._studio_play_btn = _btn("Play / Pause", small=True, slot=self._toggle_media_play)
+        self._studio_play_btn.setEnabled(False)
+        self._studio_start_btn = _btn("Start Transcribing", "primary", True, self._start_media_transcribe)
+        self._studio_start_btn.setEnabled(False)
+        self._studio_save_btn = _btn("Save .SRT", small=True, slot=self._save_media_srt)
+        self._studio_save_btn.setEnabled(False)
+        top_bar.addWidget(self._studio_play_btn)
+        top_bar.addWidget(self._studio_start_btn)
+        top_bar.addWidget(self._studio_save_btn)
+        sv.addLayout(top_bar)
+
+        self._media_player = None
+        self._audio_out = None
+        try:
+            from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+            from PyQt6.QtMultimediaWidgets import QVideoWidget
+            self._video_widget = QVideoWidget()
+            self._video_widget.setMinimumHeight(220)
+            self._video_widget.setMaximumHeight(280)
+            self._media_player = QMediaPlayer(self)
+            self._audio_out = QAudioOutput(self)
+            self._media_player.setAudioOutput(self._audio_out)
+            self._media_player.setVideoOutput(self._video_widget)
+            sv.addWidget(self._video_widget)
+        except Exception:
+            self._video_widget = QLabel("Video preview unavailable in this environment")
+            sv.addWidget(self._video_widget)
+
+        self._srt_table = QTableWidget(0, 3)
+        self._srt_table.setHorizontalHeaderLabels(["Start", "End", "Subtitle Text (click to edit)"])
+        self._srt_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self._srt_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self._srt_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        self._srt_table.setMinimumHeight(210)
+        self._srt_table.cellClicked.connect(self._seek_to_subtitle_row)
+        sv.addWidget(self._srt_table)
+
+        self._studio_card.hide()
+        body.addWidget(self._studio_card)
         body.addStretch()
         return root
+
+    @staticmethod
+    def _fmt_srt_ts(sec: float) -> str:
+        ms = max(0, int(round(sec * 1000)))
+        h, rem = divmod(ms, 3600000)
+        m, rem = divmod(rem, 60000)
+        s, ms = divmod(rem, 1000)
+        return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+    def load_media_file(self, path: str):
+        """Show the uploaded video/audio in the Transcribe tab with Play & Start buttons."""
+        self._media_path = path
+        self._media_segments.clear()
+        self._srt_table.setRowCount(0)
+        self._studio_file_lbl.setText(os.path.basename(path))
+        self._studio_play_btn.setEnabled(self._media_player is not None)
+        self._studio_start_btn.setEnabled(True)
+        self._studio_start_btn.setText("Start Transcribing")
+        self._studio_save_btn.setEnabled(False)
+        if self._media_player is not None:
+            self._media_player.setSource(QUrl.fromLocalFile(path))
+        self._studio_card.show()
+        self.select_page(7)
+
+    def _toggle_media_play(self):
+        if self._media_player is None:
+            return
+        from PyQt6.QtMultimedia import QMediaPlayer
+        if self._media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self._media_player.pause()
+        else:
+            self._media_player.play()
+
+    def _start_media_transcribe(self):
+        if not self._media_path:
+            return
+        self._media_segments.clear()
+        self._srt_table.setRowCount(0)
+        self._studio_start_btn.setEnabled(False)
+        self._studio_start_btn.setText("Transcribing…")
+        if self._media_player is not None:
+            self._media_player.play()
+        self.sig_start_file_transcribe.emit(self._media_path)
+
+    def add_subtitle_segment(self, start_s: float, end_s: float, speaker: str, text: str):
+        """Append a live transcribed segment to the editable timestamp table."""
+        row = self._srt_table.rowCount()
+        self._srt_table.insertRow(row)
+        self._media_segments.append([start_s, end_s])
+        s_item = QTableWidgetItem(self._fmt_srt_ts(start_s))
+        s_item.setFlags(s_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        e_item = QTableWidgetItem(self._fmt_srt_ts(end_s))
+        e_item.setFlags(e_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        t_item = QTableWidgetItem(text)
+        self._srt_table.setItem(row, 0, s_item)
+        self._srt_table.setItem(row, 1, e_item)
+        self._srt_table.setItem(row, 2, t_item)
+        self._srt_table.scrollToBottom()
+        self._studio_save_btn.setEnabled(True)
+
+    def finish_media_transcribe(self, default_srt_path: str):
+        self._studio_start_btn.setEnabled(True)
+        self._studio_start_btn.setText("Re-transcribe")
+        if default_srt_path:
+            self._studio_file_lbl.setText(f"{os.path.basename(self._media_path)} · Ready to save .SRT")
+
+    def _seek_to_subtitle_row(self, row: int, col: int):
+        if self._media_player is not None and 0 <= row < len(self._media_segments) and col < 2:
+            self._media_player.setPosition(int(self._media_segments[row][0] * 1000))
+
+    def _save_media_srt(self):
+        if not self._media_path or self._srt_table.rowCount() == 0:
+            return
+        default_srt = os.path.splitext(self._media_path)[0] + ".srt"
+        out_path, _ = QFileDialog.getSaveFileName(self, "Save Subtitles (.srt)", default_srt, "SubRip Subtitles (*.srt)")
+        if not out_path:
+            return
+        blocks = []
+        for r in range(self._srt_table.rowCount()):
+            st = self._srt_table.item(r, 0).text()
+            en = self._srt_table.item(r, 1).text()
+            txt = (self._srt_table.item(r, 2).text() or "").strip()
+            if txt:
+                blocks.append(f"{len(blocks) + 1}\n{st} --> {en}\n{txt}\n")
+        with open(out_path, "w", encoding="utf-8-sig") as fh:
+            fh.write("\n".join(blocks))
+        self._studio_file_lbl.setText(f"Saved: {os.path.basename(out_path)}")
 
     def set_live_running(self, running: bool):
         """Mirrors the tray's "Transcribe What's Playing" check mark."""

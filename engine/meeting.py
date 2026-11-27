@@ -354,11 +354,13 @@ class MeetingSession:
     """Records mic + call audio, transcribes each utterance in the background, reports captions."""
 
     def __init__(self, transcriber, language: str, on_line: Callable[[str, str], None],
-                 mic_device: Optional[int] = None, mic: bool = True):
+                 mic_device: Optional[int] = None, mic: bool = True,
+                 on_segment: Optional[Callable[[float, float, str, str], None]] = None):
         self.transcriber = transcriber
         self.mic = mic  # False: only what the speakers play (podcasts, videos)
         self.language = language
         self.on_line = on_line
+        self.on_segment = on_segment
         self.mic_device = mic_device
         self.lines: List[Tuple[float, str, str]] = []
         self.started = 0.0
@@ -447,7 +449,13 @@ class MeetingSession:
             return
         who = "You" if src == "mic" else speakers.label(audio)
         start = t0 - self.started
-        self.lines.append(Line(start, who, text, start + _voice_seconds(audio)))
+        end = start + _voice_seconds(audio)
+        self.lines.append(Line(start, who, text, end))
+        if self.on_segment is not None:
+            try:
+                self.on_segment(start, end, who, text)
+            except Exception:
+                pass
         try:
             self.on_line(who, text)
         except Exception:
