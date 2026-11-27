@@ -3355,6 +3355,8 @@ class FloatingPill(QWidget):
         elif hasattr(self, "caption_bubble"):
             self.caption_bubble.set_text(f"Downloading {model} · {percent}%", merge=False)
         self.visualizer.setVisible(False)
+        if hasattr(self, "btn_stop"):
+            self.btn_stop.hide()
         self.hide_timer.stop()
         self.fade_anim.stop()
         if not self.is_expanded_hud:
@@ -3406,6 +3408,8 @@ class FloatingPill(QWidget):
         if self.capsule_style not in ("compact", "micro"):
             self.text_label.setText(f"Pasted {word_count} words")
         self.visualizer.setVisible(False)
+        if hasattr(self, "btn_stop"):
+            self.btn_stop.hide()
         self.update()
         self.hide_timer.stop()
         self.hide_timer.start(1400)
