@@ -146,10 +146,7 @@ class IslandPill(QWidget):
 
     def _build_panel(self):
         self.lang_row = ValueRow("Language", self.font_family, self)
-        for code, label in FloatingPill.LANGS:
-            self.lang_row.addItem(label, code)
-            if code == self.current_language:
-                self.lang_row.setCurrentIndex(self.lang_row.count() - 1)
+        self.lang_row.fill([(label, code) for code, label in FloatingPill.LANGS], self.current_language)
         self.model_row = ValueRow("Model", self.font_family, self)
         self.mic_row = ValueRow("Microphone", self.font_family, self)
         self.tone_row = ValueRow("Style", self.font_family, self)

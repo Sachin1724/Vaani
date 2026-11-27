@@ -1,4 +1,5 @@
 import ctypes
+from typing import Optional
 import math
 import re
 import time
@@ -11,7 +12,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import (
     Qt, QTimer, QPoint, QPointF, QRect, QRectF, QSize, QPropertyAnimation, QVariantAnimation,
-    QEasingCurve, pyqtSignal
+    QEasingCurve, QEvent, pyqtSignal
 )
 from PyQt6.QtGui import (
     QRegion,
@@ -687,6 +688,19 @@ class ValueRow(QWidget):
             self._idx = 0
         self.update()
 
+    def fill(self, items, current=None):
+        """(label, data) pairs; data None is a section heading, shown greyed out and never picked."""
+        self.clear()
+        for label, data in items:
+            self.addItem(label, data)
+            if data is None:
+                self.setItemEnabled(self.count() - 1, False)
+            elif data == current:
+                self._idx = self.count() - 1
+        if self._idx in self._disabled:  # never rest on a heading
+            self._idx = next((i for i in range(self.count()) if i not in self._disabled), -1)
+        self.update()
+
     def count(self):
         return len(self._items)
 
@@ -736,7 +750,11 @@ class ValueRow(QWidget):
         self.update()
         if a0.button() != Qt.MouseButton.LeftButton or not self._items:
             return
+        self.open_menu()
 
+    def open_menu(self, anchor: Optional[QWidget] = None):
+        """The pop-up list of choices, below `anchor` (this row by default), or above it near the screen edge."""
+        anchor = anchor or self
         pill = self.window()
         has_topmost_timer = hasattr(pill, "_topmost_timer") and isinstance(pill, FloatingPill)
         if has_topmost_timer:
@@ -773,11 +791,11 @@ class ValueRow(QWidget):
         QTimer.singleShot(0, lambda: (_force_topmost(menu), menu.raise_()))
 
         try:
-            pos = self.mapToGlobal(QPoint(0, self.height() + 2))
+            pos = anchor.mapToGlobal(QPoint(0, anchor.height() + 2))
             scr = QGuiApplication.screenAt(pos) or QApplication.primaryScreen()
             need = menu.sizeHint().height()
             if scr and pos.y() + need > scr.availableGeometry().bottom():
-                pos = self.mapToGlobal(QPoint(0, -need - 2))  # no room below: open above the tile
+                pos = anchor.mapToGlobal(QPoint(0, -need - 2))  # no room below: open above the tile
             menu.exec(pos)
         finally:
             if has_topmost_timer and pill.isVisible():
@@ -1917,11 +1935,23 @@ class FloatingPill(QWidget):
     sig_stop_dictation = pyqtSignal()
 
     LANGS = [
-        ("or-auto", "Auto: Odia + English"), ("auto", "Auto Detect"), ("en-in", "English (India) / Hinglish"), ("or", "Odia / Odia-English"), ("or-mix", "Odia + English words"),
-        ("or-en", "Odia → English"), ("hi", "Hindi"), ("en", "English (US/UK)"), ("translate", "Any language → English"),
-        ("es", "Spanish"), ("fr", "French"), ("de", "German"), ("zh", "Chinese"), ("ja", "Japanese"),
-        ("pt", "Portuguese"), ("it", "Italian"), ("ar", "Arabic"), ("ru", "Russian"),
-        ("ko", "Korean"), ("nl", "Dutch"), ("tr", "Turkish"),
+        ("auto", "Auto Detect"), ("or-auto", "Auto: Odia + English"), ("translate", "Any language → English"),
+        (None, "India"),
+        ("en-in", "English (India) / Hinglish"), ("hi", "Hindi · हिन्दी"), ("or", "Odia · ଓଡ଼ିଆ"),
+        ("or-mix", "Odia + English words"), ("or-en", "Odia → English"),
+        ("bn", "Bengali · বাংলা"), ("ta", "Tamil · தமிழ்"), ("te", "Telugu · తెలుగు"), ("mr", "Marathi · मराठी"),
+        ("gu", "Gujarati · ગુજરાતી"), ("kn", "Kannada · ಕನ್ನಡ"), ("ml", "Malayalam · മലയാളം"), ("pa", "Punjabi · ਪੰਜਾਬੀ"),
+        ("ur", "Urdu · اردو"), ("as", "Assamese · অসমীয়া"), ("ne", "Nepali · नेपाली"), ("sa", "Sanskrit · संस्कृतम्"),
+        ("sd", "Sindhi · سنڌي"),
+        (None, "World"),
+        ("en", "English (US/UK)"), ("es", "Spanish · Español"), ("fr", "French · Français"), ("de", "German · Deutsch"),
+        ("pt", "Portuguese · Português"), ("it", "Italian · Italiano"), ("nl", "Dutch · Nederlands"),
+        ("ru", "Russian · Русский"), ("uk", "Ukrainian · Українська"), ("pl", "Polish · Polski"), ("tr", "Turkish · Türkçe"),
+        ("ar", "Arabic · العربية"), ("fa", "Persian · فارسی"), ("he", "Hebrew · עברית"), ("zh", "Chinese · 中文"),
+        ("ja", "Japanese · 日本語"), ("ko", "Korean · 한국어"), ("id", "Indonesian · Bahasa Indonesia"), ("ms", "Malay · Bahasa Melayu"),
+        ("vi", "Vietnamese · Tiếng Việt"), ("th", "Thai · ไทย"), ("tl", "Filipino · Tagalog"), ("sw", "Swahili · Kiswahili"),
+        ("el", "Greek · Ελληνικά"), ("sv", "Swedish · Svenska"), ("da", "Danish · Dansk"), ("no", "Norwegian · Norsk"),
+        ("fi", "Finnish · Suomi"), ("cs", "Czech · Čeština"), ("ro", "Romanian · Română"), ("hu", "Hungarian · Magyar"),
     ]
     TONES = [
         ("auto", "Auto"), ("smart_clean", "Smart Clean"), ("developer", "Developer"), ("email", "Email"),
@@ -2238,6 +2268,9 @@ class FloatingPill(QWidget):
         self.lang_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._style(self.lang_badge,
                     lambda: f"QLabel {{ color: {FG_DIM}; background: {FILL}; border-radius: 10px; padding: 0px 5px; }}")
+        self.lang_badge.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.lang_badge.setToolTip("Language · click to switch")
+        self.lang_badge.installEventFilter(self)
 
         self.visualizer = WaveformBars(self.capsule_widget, num_bars=7)
         # hidden while writing/pasted, but its slot stays: the spinner and badge don't jump sideways
@@ -2986,12 +3019,17 @@ class FloatingPill(QWidget):
 
     def populate_languages(self):
         self.lang_combo.blockSignals(True)
-        self.lang_combo.clear()
-        for code, label in self.LANGS:
-            self.lang_combo.addItem(label, code)
-            if code == self.current_language:
-                self.lang_combo.setCurrentIndex(self.lang_combo.count() - 1)
+        self.lang_combo.fill([(label, code) for code, label in self.LANGS], self.current_language)
         self.lang_combo.blockSignals(False)
+
+    def eventFilter(self, obj, ev):
+        """A click on the language badge opens the language list right there, no settings panel needed."""
+        if obj is getattr(self, "lang_badge", None) and ev.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease):
+            if ev.button() == Qt.MouseButton.LeftButton and hasattr(self, "lang_combo"):
+                if ev.type() == QEvent.Type.MouseButtonRelease:
+                    self.lang_combo.open_menu(self.lang_badge)
+                return True  # the capsule must not also take it as a click to open the panel or a drag
+        return super().eventFilter(obj, ev)
 
     def populate_models(self, active_model=None):
         if active_model is not None:
