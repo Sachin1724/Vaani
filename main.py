@@ -313,6 +313,7 @@ class OpenFlowApp(QObject):
         self.main_window.sig_capsule_size.connect(self._apply_capsule_size)
         self.main_window.sig_transcribe_file.connect(self._transcribe_file)
         self.main_window.sig_start_file_transcribe.connect(self._run_file_transcription)
+        self.main_window.sig_subtitle_corrected.connect(self._on_subtitle_corrected)
         self.bridge.sig_file_segment.connect(self.main_window.add_subtitle_segment)
         self.bridge.sig_file_done.connect(self.main_window.finish_media_transcribe)
         self.main_window.sig_toggle_live.connect(self._toggle_playing)
@@ -736,6 +737,54 @@ class OpenFlowApp(QObject):
                 self.bridge.sig_status.emit("Odia → English ready")
         threading.Thread(target=work, daemon=True).start()
 
+    def _on_subtitle_corrected(self, start_s: float, end_s: float, orig_text: str, edited_text: str, media_path: str):
+        """Learn from subtitle edits immediately and save (audio_clip, corrected_text) for retraining."""
+        known = {e["phrase_match"].lower() for e in self.db.get_dictionary()}
+        for heard, fixed in find_corrections(orig_text, edited_text):
+            self.db.add_learned_correction(
+                heard, fixed, context=edited_text[-200:],
+                lang=self.config.get("language", "auto"),
+                model_used=self.config.get("model_size", ""),
+            )
+            if heard.lower() not in known:
+                self.db.add_dictionary_entry(heard, fixed, category="learned")
+                known.add(heard.lower())
+        self.formatter.set_dictionary([e for e in self.db.get_dictionary() if e.get("category") != "snippet"])
+
+        def save_clip():
+            import json, wave, numpy as np
+            from pathlib import Path
+            clips_dir = Path.home() / ".vaani" / "training_clips"
+            clips_dir.mkdir(parents=True, exist_ok=True)
+            wav_path = ""
+            if media_path and os.path.exists(media_path):
+                try:
+                    from faster_whisper.audio import decode_audio
+                    audio = decode_audio(media_path, sampling_rate=16000)
+                    s0, s1 = max(0, int(start_s * 16000)), min(len(audio), int(end_s * 16000))
+                    seg = (np.clip(audio[s0:s1], -1.0, 1.0) * 32767.0).astype(np.int16)
+                    if len(seg) > 800:
+                        wav_file = clips_dir / f"sub_{int(time.time() * 1000)}.wav"
+                        with wave.open(str(wav_file), "wb") as wf:
+                            wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(16000)
+                            wf.writeframes(seg.tobytes())
+                        wav_path = str(wav_file)
+                except Exception as e:
+                    print(f"[Vaani] Could not slice subtitle clip: {e}")
+            rec = {"audio": wav_path, "raw": orig_text, "corrected": edited_text, "start_s": start_s, "end_s": end_s, "ts": time.time()}
+            with open(clips_dir / "manifest.jsonl", "a", encoding="utf-8") as mf:
+                mf.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            sync_url = (self.config.get("training_sync_url") or "").strip()
+            if sync_url:
+                try:
+                    import urllib.request
+                    req = urllib.request.Request(sync_url, data=json.dumps(rec).encode("utf-8"), headers={"Content-Type": "application/json"})
+                    urllib.request.urlopen(req, timeout=5)
+                except Exception as se:
+                    print(f"[Vaani] Training sync skipped ({se})")
+
+        threading.Thread(target=save_clip, daemon=True).start()
+
     def _reload_transcriber_async(self, language=None):
         """Model swap can download hundreds of MB; never block the UI thread."""
         cfg = self.config
@@ -1035,9 +1084,11 @@ class OpenFlowApp(QObject):
 
         def work():
             try:
+                self.formatter.set_dictionary([e for e in self.db.get_dictionary() if e.get("category") != "snippet"])
                 session = MeetingSession(
                     self.transcriber, use_lang, keep_loaded, mic=False,
                     on_segment=lambda st, en, who, txt: self.bridge.sig_file_segment.emit(st, en, who, txt),
+                    transform_text=self.formatter._apply_dictionary,
                 )
                 lines = session.transcribe_file(path)
             except Exception as e:
@@ -1054,6 +1105,54 @@ class OpenFlowApp(QObject):
             self.bridge.sig_file_done.emit(srt)
 
         threading.Thread(target=work, daemon=True).start()
+
+    def _on_subtitle_corrected(self, start_s: float, end_s: float, orig_text: str, edited_text: str, media_path: str):
+        """Learn from subtitle edits immediately and save (audio_clip, corrected_text) for retraining."""
+        known = {e["phrase_match"].lower() for e in self.db.get_dictionary()}
+        for heard, fixed in find_corrections(orig_text, edited_text):
+            self.db.add_learned_correction(
+                heard, fixed, context=edited_text[-200:],
+                lang=self.config.get("language", "auto"),
+                model_used=self.config.get("model_size", ""),
+            )
+            if heard.lower() not in known:
+                self.db.add_dictionary_entry(heard, fixed, category="learned")
+                known.add(heard.lower())
+        self.formatter.set_dictionary([e for e in self.db.get_dictionary() if e.get("category") != "snippet"])
+
+        def save_clip():
+            import json, wave, numpy as np
+            from pathlib import Path
+            clips_dir = Path.home() / ".vaani" / "training_clips"
+            clips_dir.mkdir(parents=True, exist_ok=True)
+            wav_path = ""
+            if media_path and os.path.exists(media_path):
+                try:
+                    from faster_whisper.audio import decode_audio
+                    audio = decode_audio(media_path, sampling_rate=16000)
+                    s0, s1 = max(0, int(start_s * 16000)), min(len(audio), int(end_s * 16000))
+                    seg = (np.clip(audio[s0:s1], -1.0, 1.0) * 32767.0).astype(np.int16)
+                    if len(seg) > 800:
+                        wav_file = clips_dir / f"sub_{int(time.time() * 1000)}.wav"
+                        with wave.open(str(wav_file), "wb") as wf:
+                            wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(16000)
+                            wf.writeframes(seg.tobytes())
+                        wav_path = str(wav_file)
+                except Exception as e:
+                    print(f"[Vaani] Could not slice subtitle clip: {e}")
+            rec = {"audio": wav_path, "raw": orig_text, "corrected": edited_text, "start_s": start_s, "end_s": end_s, "ts": time.time()}
+            with open(clips_dir / "manifest.jsonl", "a", encoding="utf-8") as mf:
+                mf.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            sync_url = (self.config.get("training_sync_url") or "").strip()
+            if sync_url:
+                try:
+                    import urllib.request
+                    req = urllib.request.Request(sync_url, data=json.dumps(rec).encode("utf-8"), headers={"Content-Type": "application/json"})
+                    urllib.request.urlopen(req, timeout=5)
+                except Exception as se:
+                    print(f"[Vaani] Training sync skipped ({se})")
+
+        threading.Thread(target=save_clip, daemon=True).start()
 
     def _on_meeting_line(self, who: str, text: str):
         self._last_activity = time.monotonic()  # keep the model loaded for the whole call

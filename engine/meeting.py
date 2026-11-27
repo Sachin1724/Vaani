@@ -355,12 +355,14 @@ class MeetingSession:
 
     def __init__(self, transcriber, language: str, on_line: Callable[[str, str], None],
                  mic_device: Optional[int] = None, mic: bool = True,
-                 on_segment: Optional[Callable[[float, float, str, str], None]] = None):
+                 on_segment: Optional[Callable[[float, float, str, str], None]] = None,
+                 transform_text: Optional[Callable[[str], str]] = None):
         self.transcriber = transcriber
         self.mic = mic  # False: only what the speakers play (podcasts, videos)
         self.language = language
         self.on_line = on_line
         self.on_segment = on_segment
+        self.transform_text = transform_text
         self.mic_device = mic_device
         self.lines: List[Tuple[float, str, str]] = []
         self.started = 0.0
@@ -444,6 +446,8 @@ class MeetingSession:
                 initial_prompt=prompt,
             )
             text = text.strip()
+            if text and self.transform_text is not None:
+                text = self.transform_text(text).strip()
             # If an Auto video/call has Odia speech, lock subsequent chunks to 'or-auto' so mixed
             # Odia+English sentences aren't misclassified as broken English.
             if self.language in ("auto", "") and det_lang == "or":

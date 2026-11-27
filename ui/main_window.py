@@ -356,6 +356,7 @@ class MainWindow(QMainWindow):
     sig_theme = pyqtSignal(str)              # "light" / "dark": applies at once to the dashboard and the capsule
     sig_transcribe_file = pyqtSignal()       # Tools: same actions as the tray menu
     sig_start_file_transcribe = pyqtSignal(str, str)  # (path, language)
+    sig_subtitle_corrected = pyqtSignal(float, float, str, str, str)  # (start_s, end_s, orig, edited, media_path)
     sig_toggle_live = pyqtSignal()
 
     def __init__(self, db: Database, config: dict):
@@ -1312,6 +1313,7 @@ class MainWindow(QMainWindow):
         # Interactive Video & Live SRT Studio (uses Vaani Group card + hairline separators)
         self._media_path = ""
         self._media_segments = []  # list of [start_s, end_s]
+        self._orig_texts = []      # original ASR text per row to detect user edits
         self._studio_card = QFrame()
         self._studio_card.setObjectName("Group")
         sv = QVBoxLayout(self._studio_card)
@@ -1414,7 +1416,7 @@ class MainWindow(QMainWindow):
         self._srt_table.setTextElideMode(Qt.TextElideMode.ElideNone)
         self._srt_table.setMinimumHeight(230)
         self._srt_table.cellClicked.connect(self._seek_to_subtitle_row)
-        self._srt_table.cellChanged.connect(lambda _r, _c: self._srt_table.resizeRowsToContents())
+        self._srt_table.cellChanged.connect(self._on_srt_cell_changed)
         table_lay.addWidget(self._srt_table)
         sv.addWidget(table_wrap)
 
@@ -1466,6 +1468,7 @@ class MainWindow(QMainWindow):
         """Show the uploaded video/audio in the Transcribe tab with Play & Start buttons."""
         self._media_path = path
         self._media_segments.clear()
+        self._orig_texts.clear()
         self._srt_table.setRowCount(0)
         self._studio_file_lbl.setText(os.path.basename(path))
         self._set_studio_badge("Ready", "accent")
@@ -1491,6 +1494,7 @@ class MainWindow(QMainWindow):
         if not self._media_path:
             return
         self._media_segments.clear()
+        self._orig_texts.clear()
         self._srt_table.setRowCount(0)
         self._studio_start_btn.setEnabled(False)
         self._studio_start_btn.setText("Transcribing…")
@@ -1511,6 +1515,7 @@ class MainWindow(QMainWindow):
         row = self._srt_table.rowCount()
         self._srt_table.insertRow(row)
         self._media_segments.append([start_s, end_s])
+        self._orig_texts.append(text)
         ts_font = QFont("Consolas", 10)
         s_item = QTableWidgetItem(self._fmt_srt_ts(start_s))
         s_item.setFont(ts_font)
@@ -1532,6 +1537,17 @@ class MainWindow(QMainWindow):
         self._studio_start_btn.setText("Re-transcribe")
         if default_srt_path:
             self._set_studio_badge("Ready to save .SRT", "active")
+
+    def _on_srt_cell_changed(self, row: int, col: int):
+        self._srt_table.resizeRowsToContents()
+        if col != 2 or not (0 <= row < len(self._orig_texts)):
+            return
+        edited = (self._srt_table.item(row, 2).text() or "").strip()
+        orig = self._orig_texts[row]
+        if edited and edited != orig:
+            st, en = self._media_segments[row]
+            self._orig_texts[row] = edited
+            self.sig_subtitle_corrected.emit(st, en, orig, edited, self._media_path)
 
     def _seek_to_subtitle_row(self, row: int, col: int):
         if self._media_player is not None and 0 <= row < len(self._media_segments) and col < 2:
