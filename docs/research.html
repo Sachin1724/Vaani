@@ -495,6 +495,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 44px; curs
 <nav class="sn" aria-label="Main"><div class="sn-in">
   <a class="sn-brand" href="index.html"><span class="sn-mark" aria-hidden="true"><i style="--h:40"></i><i style="--h:80"></i><i style="--h:100"></i><i style="--h:60"></i><i style="--h:85"></i></span>Vaani</a>
   <ul>
+    <li><a href="products.html">Products</a></li>
     <li><a href="app.html">Windows</a></li>
     <li><a href="android.html">Android</a></li>
     <li><a href="research.html" aria-current="page">Research</a></li>
@@ -960,6 +961,44 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 44px; curs
       <img src="img/island-listen-hd.png" width="472" height="80" loading="lazy" alt="The Vaani island while listening: a red dot, a live waveform and the language badge">
       <figcaption><strong>What you see while it listens.</strong>The island only wakes up for real sound: a red dot, a live waveform and the language it expects.</figcaption>
     </figure>
+  </div>
+</section>
+
+<section class="sec" id="custom-stack" aria-labelledby="cs-h">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="cs-h" class="rv">Custom models &amp; open-source stack.</h2>
+      <p class="rv" style="--d:1">What we run from open-source packages versus the custom fine-tuned models and dialect systems we built and own.</p>
+    </div>
+    <div class="method rv">
+      <div class="col">
+        <h3>Open-source packages</h3>
+        <ul>
+          <li><strong>Faster-Whisper &amp; CTranslate2:</strong> Int8/float16 local inference runtime for English, Hindi, and global languages.</li>
+          <li><strong>IndicConformer (AI4Bharat):</strong> Base acoustic CTC model for Odia and Hindi scripts.</li>
+          <li><strong>OmniVoice (Apache-2.0):</strong> Zero-shot multilingual voice synthesis base runtime.</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Vaani custom-trained models</h3>
+        <ul>
+          <li><strong>Whisper-Small-IN (244.6 MB):</strong> Fine-tuned on 19-state AI4Bharat Svarah + Indian podcasts (8.12% WER vs 9.55% baseline).</li>
+          <li><strong>MIRA V2 (496 MB):</strong> Qwen2.5-0.5B LoRA trained on 3,185 English, Odia, and Hindi/Hinglish refinement pairs.</li>
+          <li><strong>odia_mix Resolver:</strong> Probabilistic WordLM + phonetic override layer keeping English terms in English inside Odia.</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Proprietary Vaani IP</h3>
+        <ul>
+          <li><strong>Bidirectional Dialect Engine:</strong> Converts between Standard Odia and Sambalpuri, Ganjami, Kalahandia, Anugulia, and Baleswari.</li>
+          <li><strong>Self-Learning Audio-Edit Loop:</strong> Captures real-time user corrections + exact audio slices for continuous model improvement.</li>
+          <li><strong>Confidence-Gated Auto Rescue:</strong> Routes misclassified Indic audio automatically to IndicConformer in real time.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="dl rv">
+      <a class="btn dark" href="products.html">Explore Products &amp; Pricing</a>
+    </div>
   </div>
 </section>
 
