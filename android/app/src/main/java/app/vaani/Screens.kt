@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -35,6 +36,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -46,10 +48,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.io.File
 import java.text.DateFormat
 import java.util.Date
 
@@ -60,6 +64,7 @@ class AppState(val ctx: Context) {
     var toast by mutableStateOf<String?>(null)
     var query by mutableStateOf("")
     val history = mutableStateListOf<Entry>()
+    val notes = mutableStateListOf<Note>()
     var serviceOn by mutableStateOf(false)
     var micOk by mutableStateOf(false)
     var batteryOk by mutableStateOf(true)
@@ -76,6 +81,7 @@ class AppState(val ctx: Context) {
         batteryOk = pm?.isIgnoringBatteryOptimizations(ctx.packageName) ?: true
         lang = prefs.getString("lang", "or") ?: "or"
         history.clear(); history.addAll(Db.get(ctx).all())
+        notes.clear(); notes.addAll(Db.get(ctx).notes())
         rev++
     }
 
@@ -85,6 +91,29 @@ class AppState(val ctx: Context) {
     fun copy(text: String) {
         (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Vaani", text))
         say("Copied")
+    }
+
+    fun share(text: String) {
+        val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }
+        ctx.startActivity(Intent.createChooser(send, "Share note").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    /** The chosen language's model folder, or null after sending the user to the Models tab to download it. */
+    private fun modelDir(): File? {
+        val m = Models.all.firstOrNull { it.id == lang }
+        if (m == null || !Models.installed(ctx, m)) {
+            say("Download the ${langName(lang)} model first")
+            tab = 2
+            return null
+        }
+        return Models.dir(ctx, lang)
+    }
+
+    /** One loaded speech model, shared by the playground and notes (loading one takes seconds and ~200 MB). */
+    @Synchronized private fun engine(l: String, dir: File): SpeechEngine {
+        sandboxEngine?.let { if (it.lang == l) return it }
+        sandboxEngine?.close()
+        return SpeechEngine(l, dir).also { sandboxEngine = it }
     }
 
     var sandboxText by mutableStateOf("")
@@ -115,12 +144,8 @@ class AppState(val ctx: Context) {
             say("Microphone permission needed")
             return
         }
-        val model = Models.all.firstOrNull { it.id == lang }
-        if (model == null || !Models.installed(ctx, model)) {
-            say("${langName(lang)} model not installed. Visit Models tab.")
-            return
-        }
-        val dir = Models.dir(ctx, lang)
+        if (noteRecording) { say("Stop the note first"); return }
+        val dir = modelDir() ?: return
         isRecordingSandbox = true
         sandboxStatus = "Listening..."
         sandboxText = ""
@@ -138,12 +163,7 @@ class AppState(val ctx: Context) {
         sandboxStreaming = true
 
         Thread {
-            runCatching {
-                if (sandboxEngine == null || sandboxEngine?.lang != lang) {
-                    sandboxEngine?.close()
-                    sandboxEngine = SpeechEngine(lang, dir)
-                }
-            }.onFailure {
+            runCatching { engine(lang, dir) }.onFailure {
                 ui.post {
                     isRecordingSandbox = false
                     sandboxStatus = null
@@ -200,6 +220,96 @@ class AppState(val ctx: Context) {
         sandboxRecorder = null
         sandboxStatus = "Processing..."
     }
+
+    // -- notes: a call or lecture, one line per sentence -------------------------------------------
+
+    val noteLines = mutableStateListOf<String>()
+    var noteLive by mutableStateOf("")       // the sentence being heard right now
+    var noteRecording by mutableStateOf(false)
+    var noteSeconds by mutableStateOf(0)
+    var noteLevel by mutableStateOf(0f)
+    private var noteRec: LevelRecorder? = null
+    @Volatile private var noteRunning = false
+
+    fun toggleNotes(activity: Activity) = if (noteRecording) stopNotes() else startNotes(activity)
+
+    private fun startNotes(activity: Activity) {
+        if (isRecordingSandbox) { say("Stop the dictation first"); return }
+        if (!micOk) {
+            activity.requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+            say("Microphone permission needed")
+            return
+        }
+        val dir = modelDir() ?: return
+        val noteLang = lang
+        var r = LevelRecorder { l -> ui.post { noteLevel = l } }
+        if (!r.start()) { say("Microphone is busy"); return }
+        noteLines.clear(); noteLive = ""; noteSeconds = 0
+        noteRec = r; noteRunning = true; noteRecording = true
+        val started = System.currentTimeMillis()
+        ui.post(object : Runnable {  // the clock runs from the tap, not from when the model finishes loading
+            override fun run() {
+                if (!noteRecording) return
+                noteSeconds = ((System.currentTimeMillis() - started) / 1000).toInt()
+                ui.postDelayed(this, 500)
+            }
+        })
+
+        Thread {
+            val e = runCatching { engine(noteLang, dir) }.getOrElse {
+                noteRunning = false; r.stop()
+                ui.post { noteRecording = false; say("Failed to load speech engine") }
+                return@Thread
+            }
+            fun line(text: String) {
+                if (text.isNotBlank()) {
+                    val formatted = TextFormatter.format(text, noteLang, isFinal = true)
+                    ui.post { noteLines.add(formatted); noteLive = "" }
+                }
+            }
+            var tail = 0
+            while (noteRunning) {
+                Thread.sleep(500)
+                val cur = r.length
+                if (cur - tail < 8000) continue
+                val heard = r.peak(tail, cur) >= 0.006f
+                if ((r.quietFor(700) && cur - tail > 32000) || cur - tail > 16000 * 12) {  // a sentence ended, or 12 s passed
+                    line(if (heard) runCatching { e.transcribe(r.samples(tail, cur), isFinal = true) }.getOrDefault("") else "")
+                    tail = cur
+                    if (cur > 16000 * 75) {
+                        // ponytail: the recorder holds 90 s, so a fresh one starts at a sentence break (~50 ms unheard)
+                        r.stop()
+                        r = LevelRecorder { l -> ui.post { noteLevel = l } }
+                        if (!r.start()) { noteRunning = false; ui.post { say("Microphone is busy") } }
+                        noteRec = r
+                        tail = 0
+                    }
+                } else if (heard) {
+                    val t = runCatching { e.transcribe(r.samples(tail, cur)) }.getOrDefault("")
+                    ui.post { noteLive = t }
+                }
+            }
+            Thread.sleep(150)
+            val cur = r.length
+            if (cur - tail >= 1600 && r.peak(tail, cur) >= 0.006f)
+                line(runCatching { e.transcribe(r.samples(tail, cur), isFinal = true) }.getOrDefault(""))
+            ui.post {
+                noteRecording = false; noteLevel = 0f; noteLive = ""
+                val text = noteLines.joinToString("\n")
+                if (text.isNotBlank()) {
+                    Db.get(ctx).addNote(noteLang, noteSeconds, text)
+                    refresh()
+                    say("Note saved")
+                } else say("Nothing was heard")
+            }
+        }.start()
+    }
+
+    private fun stopNotes() {
+        noteRunning = false
+        noteRec?.stop()
+        noteRec = null
+    }
 }
 
 @Composable
@@ -208,7 +318,7 @@ fun App(s: AppState) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) {
                 Crossfade(s.tab, label = "tab") { t ->
-                    when (t) { 0 -> HistoryScreen(s); 1 -> NotesScreen(); 2 -> ModelsScreen(s); else -> SettingsScreen(s) }
+                    when (t) { 0 -> HistoryScreen(s); 1 -> NotesScreen(s); 2 -> ModelsScreen(s); else -> SettingsScreen(s) }
                 }
             }
             TabBar(s.tab) { s.tab = it }
@@ -227,6 +337,16 @@ private fun ago(ts: Long): String {
 }
 
 private fun langName(l: String) = when (l) { "or" -> "Odia"; "en" -> "English"; "hi" -> "Hindi"; else -> l }
+private fun mmss(sec: Int) = "%d:%02d".format(sec / 60, sec % 60)
+
+@Composable
+private fun LevelBars(level: Float) =
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        for (i in 0 until 14) {
+            val barHeight = (4.dp + (level * 22f * ((i % 4 + 1) / 3f)).dp).coerceIn(4.dp, 26.dp)
+            Box(Modifier.weight(1f).height(barHeight).clip(RoundedCornerShape(2.dp)).background(if (i < 10) C.accent else C.red))
+        }
+    }
 
 // ------------------------------------------------------------------ History
 
@@ -251,14 +371,7 @@ fun DictationPlayground(s: AppState) {
                 }
             }
 
-            if (s.isRecordingSandbox) {
-                Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    for (i in 0 until 14) {
-                        val barHeight = (4.dp + (s.sandboxLevel * 22f * ((i % 4 + 1) / 3f)).dp).coerceIn(4.dp, 26.dp)
-                        Box(Modifier.weight(1f).height(barHeight).clip(RoundedCornerShape(2.dp)).background(if (i < 10) C.accent else C.red))
-                    }
-                }
-            }
+            if (s.isRecordingSandbox) LevelBars(s.sandboxLevel)
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -326,12 +439,57 @@ private fun Modifier.heightIn48() = this.then(Modifier.height(36.dp))
 // ------------------------------------------------------------------ Notes (meetings, lectures)
 
 @Composable
-fun NotesScreen() = Column(Modifier.fillMaxSize()) {
-    Title("Notes", "Record a call or a lecture and get notes.")
-    Group(Modifier.padding(horizontal = 16.dp)) {
-        Column(Modifier.padding(20.dp)) {
-            T("Coming next", 17, FontWeight.SemiBold)
-            T("This will record with the microphone, write the transcript as you go, and keep each sentence on its own line, like the Windows app.", 15, c = C.text2, modifier = Modifier.padding(top = 6.dp), line = 22)
+fun NotesScreen(s: AppState) {
+    val ctx = LocalContext.current
+    val activity = ctx as? Activity
+    val view = LocalView.current
+    DisposableEffect(s.noteRecording) {  // a long lecture must not end because the screen went to sleep
+        view.keepScreenOn = s.noteRecording
+        onDispose { view.keepScreenOn = false }
+    }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
+        item { Title("Notes", "Record a call or a lecture. Each sentence lands on its own line.") }
+        item {
+            Group(Modifier.padding(horizontal = 16.dp).padding(bottom = 6.dp)) {
+                Column(Modifier.padding(18.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        T(if (s.noteRecording) "RECORDING" else "NEW NOTE", 12, FontWeight.Bold, c = if (s.noteRecording) C.red else C.accent, font = AkiraExpanded)
+                        Box(Modifier.clip(RoundedCornerShape(6.dp)).background(C.surface2).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                            T(if (s.noteRecording) mmss(s.noteSeconds) else langName(s.lang).uppercase(), 11, FontWeight.Bold, c = C.text2)
+                        }
+                    }
+                    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp).heightIn(min = 96.dp).clip(RoundedCornerShape(12.dp)).background(C.bg).padding(14.dp)) {
+                        if (s.noteLines.isEmpty() && s.noteLive.isEmpty()) {
+                            T(if (s.noteRecording) "Listening..." else "Tap Record and keep the phone near whoever is speaking. Keep Vaani open while it records; speech stays on this phone.",
+                                15, c = if (s.noteRecording) C.text2 else C.text3, line = 22)
+                        } else {
+                            s.noteLines.forEach { T(it, 16, line = 23, modifier = Modifier.padding(bottom = 6.dp)) }
+                            if (s.noteLive.isNotEmpty()) T(s.noteLive, 16, c = C.text2, line = 23)
+                        }
+                    }
+                    if (s.noteRecording) LevelBars(s.noteLevel)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        PillButton(if (s.noteRecording) "Stop and Save" else "Record", primary = !s.noteRecording, small = true) {
+                            activity?.let { s.toggleNotes(it) }
+                        }
+                    }
+                }
+            }
+        }
+        if (s.notes.isNotEmpty()) item { SectionLabel("Saved notes") }
+        items(s.notes, key = { it.id }) { n ->
+            Group(Modifier.padding(horizontal = 16.dp).padding(bottom = 10.dp).press { s.copy(n.text) }) {
+                Column(Modifier.padding(16.dp)) {
+                    T(n.text, 16, max = 6, line = 23)
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        T("${langName(n.lang)}  ·  ${mmss(n.seconds)}  ·  ${ago(n.ts)}", 13, c = C.text3)
+                        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                            Box(Modifier.heightIn48().press { s.share(n.text) }, contentAlignment = Alignment.CenterEnd) { T("Share", 14, FontWeight.Medium, C.accent) }
+                            Box(Modifier.heightIn48().press { Db.get(ctx).deleteNote(n.id); s.refresh() }, contentAlignment = Alignment.CenterEnd) { T("Delete", 14, FontWeight.Medium, C.red) }
+                        }
+                    }
+                }
+            }
         }
     }
 }
