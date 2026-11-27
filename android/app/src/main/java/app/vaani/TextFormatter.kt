@@ -30,7 +30,7 @@ object TextFormatter {
         "lets" to "let's",
         "theres" to "there's",
         "heres" to "here's",
-        "youre" to "youre",
+        "youre" to "you're",
         "you're" to "you're",
         "theyre" to "they're",
         "weve" to "we've",
@@ -43,10 +43,35 @@ object TextFormatter {
         "hadnt" to "hadn't"
     )
 
+    /** Indian personal names, brands, and place names frequently mis-heard by generic ASR models. */
+    private val INDIAN_ENTITIES = mapOf(
+        "vaani" to "Vaani",
+        "wispr" to "Wispr",
+        "whsiepr" to "Wispr",
+        "sachin" to "Sachin",
+        "satjian" to "Sachin",
+        "rajshri" to "Raj Shamani",
+        "rajshrimani" to "Raj Shamani",
+        "nikhil" to "Nikhil",
+        "nikhilkamath" to "Nikhil Kamath",
+        "kamat" to "Kamath",
+        "bhubaneshwar" to "Bhubaneswar",
+        "bhubneshwar" to "Bhubaneswar",
+        "bengaluru" to "Bengaluru",
+        "mumbai" to "Mumbai",
+        "dilli" to "Delhi",
+        "hydrabad" to "Hyderabad",
+        "hydrabad" to "Hyderabad",
+        "chennai" to "Chennai"
+    )
+
+    private val TRAILING_PUNCT = Regex("[.,!?;:]+\$")
+
     private val QUESTION_STARTERS = setOf(
         "what", "why", "how", "who", "whom", "whose", "where", "when", "which",
         "can", "could", "would", "should", "is", "are", "am", "do", "does", "did",
-        "will", "wont", "have", "has", "had", "haven", "hasn", "aren", "isn"
+        "will", "wont", "have", "has", "had", "haven", "hasn", "aren", "isn",
+        "shall", "may", "might", "must", "need", "dare"
     )
 
     fun format(text: String, lang: String, isFinal: Boolean = false): String {
@@ -59,11 +84,16 @@ object TextFormatter {
         // English formatting
         val words = clean.split(' ').toMutableList()
         for (i in words.indices) {
-            val lower = words[i].lowercase(Locale.ROOT)
-            if (lower == "i") {
-                words[i] = "I"
-            } else {
-                CONTRACTIONS[lower]?.let { words[i] = it }
+            val raw = words[i]
+            // Strip trailing punctuation for lookup, restore after substitution
+            val trailingPunct = TRAILING_PUNCT.find(raw)?.value ?: ""
+            val stripped = if (trailingPunct.isNotEmpty()) raw.dropLast(trailingPunct.length) else raw
+            val lower = stripped.lowercase(Locale.ROOT)
+
+            when {
+                lower == "i" -> words[i] = "I$trailingPunct"
+                INDIAN_ENTITIES.containsKey(lower) -> words[i] = INDIAN_ENTITIES[lower]!! + trailingPunct
+                CONTRACTIONS.containsKey(lower) -> words[i] = CONTRACTIONS[lower]!! + trailingPunct
             }
         }
 

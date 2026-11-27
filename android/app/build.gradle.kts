@@ -12,14 +12,14 @@ val signing = Properties().apply {
 }
 
 android {
-    namespace = "app.openflow"
+    namespace = "app.vaani"
     compileSdk = 34
     defaultConfig {
-        applicationId = "app.openflow"
+        applicationId = "app.vaani"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.1.2-beta"
+        versionCode = 4
+        versionName = "0.2.0-beta"
         ndk { abiFilters += "arm64-v8a" }   // the speech runtime ships for 64-bit ARM phones only
     }
     signingConfigs {
@@ -32,7 +32,9 @@ android {
     }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (signing.containsKey("ks.file")) signingConfig = signingConfigs.getByName("beta")
         }
     }

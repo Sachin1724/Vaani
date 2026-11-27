@@ -11,11 +11,11 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://sachin1724.github.io/Vaani/android.html">
 <meta property="og:title" content="Vaani for Android: private voice typing">
-<meta property="og:description" content="Speak Odia, English or Hindi into any app. On-device, offline, free. Beta 0.1.2.">
+<meta property="og:description" content="Speak Odia, English or Hindi into any app. On-device, offline, free. Beta 0.2.0.">
 <meta property="og:image" content="https://sachin1724.github.io/Vaani/img/android-icon.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Vaani for Android: private voice typing">
-<meta name="twitter:description" content="Speak Odia, English or Hindi into any app. On-device, offline, free. Beta 0.1.2.">
+<meta name="twitter:description" content="Speak Odia, English or Hindi into any app. On-device, offline, free. Beta 0.2.0.">
 <meta name="twitter:image" content="https://sachin1724.github.io/Vaani/img/android-icon.png">
 <link rel="icon" href="img/android-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -43,8 +43,8 @@
   --max: 1080px;
 }
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-body { margin: 0; background: var(--canvas); color: var(--body); font: 17px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
+body { margin: 0; background: var(--canvas); color: var(--body); font: 17px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: clip; }
 h1, h2, h3, p, ul, ol, dl, dd, figure { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
 a { color: inherit; }
@@ -200,6 +200,10 @@ table.models { width: 100%; border-collapse: collapse; background: var(--paper);
   
 }
 @media (max-width: 560px) {
+  .hero { padding-top: 76px; }
+  .facts li { padding: 14px 12px; }
+  .keys div { gap: 3px; }
+  .keys div:nth-child(2) { padding-inline: 6px; }
   .cell .big { font-size: 22px; }
   .models thead { display: none; }
   .models, .models tbody, .models tr, .models td { display: block; }
@@ -230,11 +234,11 @@ table.models { width: 100%; border-collapse: collapse; background: var(--paper);
 <header class="hero" id="top">
   <div class="wrap">
     <div>
-      <span class="tag yellow rv">Beta 0.1.2</span>
+      <span class="tag yellow rv">Beta 0.2.0</span>
       <h1 class="rv" style="--i:1">Speak. Your phone types.</h1>
       <p class="lead rv" style="--i:2">Tap the small button beside any text field, say what you want to write in Odia, English or Hindi, and the words appear as you speak. The speech is turned into text on your phone; nothing is sent anywhere.</p>
       <div class="actions rv" style="--i:3">
-        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/android-v0.1.2-beta/Vaani-android-beta-0.1.2.apk">Download the APK <small>23.9 MB</small></a>
+        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/android-v0.2.0-beta/Vaani-android-beta-0.2.0.apk">Download the APK <small>20.2 MB</small></a>
         <a class="btn ghost" href="#install">How to install</a>
       </div>
       <p class="fine rv" style="--i:4">Free. Android 8.0 or later, 64-bit ARM. Not on Google Play yet.</p>
@@ -276,7 +280,7 @@ table.models { width: 100%; border-collapse: collapse; background: var(--paper);
   <div class="wrap">
     <div class="sec-head">
       <h2 id="f-h" class="rv">Built for typing with your voice</h2>
-      <p class="rv" style="--i:1">Everything in beta 0.1.2, as it works on the phone today.</p>
+      <p class="rv" style="--i:1">Everything in beta 0.2.0, as it works on the phone today.</p>
     </div>
     <div class="bento">
       <div class="cell w4 rv">
@@ -347,7 +351,7 @@ table.models { width: 100%; border-collapse: collapse; background: var(--paper);
       <p class="rv" style="--i:1">The beta is installed from the file, outside Google Play.</p>
     </div>
     <ol class="steps">
-      <li class="rv"><h3>Download the APK</h3><p>Get <code>Vaani-android-beta-0.1.2.apk</code> on your phone. It is signed, and updates install over the previous beta.</p></li>
+      <li class="rv"><h3>Download the APK</h3><p>Get <code>Vaani-android-beta-0.2.0.apk</code> on your phone. It is signed, and updates install over the previous beta.</p></li>
       <li class="rv" style="--i:1"><h3>Allow the install</h3><p>Open the file. If Android asks, allow installs from your browser or file manager, then tap Install.</p></li>
       <li class="rv"><h3>Allow the microphone</h3><p>Vaani listens only while the capsule shows the red dot.</p></li>
       <li class="rv" style="--i:1"><h3>Turn on the accessibility service</h3><p>This lets Vaani find the text field you are in and type into it.</p><p class="why">It looks only for the field that has the cursor, skips password fields, and reads that field's text so your words go in at the cursor. While you speak, it leaves the screen alone.</p></li>
@@ -378,7 +382,7 @@ table.models { width: 100%; border-collapse: collapse; background: var(--paper);
     <div class="rv" style="--i:1">
       <p>Free and open source. Tell us what breaks.</p>
       <div class="actions">
-        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/android-v0.1.2-beta/Vaani-android-beta-0.1.2.apk">Download the APK</a>
+        <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/download/android-v0.2.0-beta/Vaani-android-beta-0.2.0.apk">Download the APK</a>
         <a class="btn ghost" href="https://github.com/Sachin1724/Vaani/issues">Report a problem</a>
       </div>
     </div>

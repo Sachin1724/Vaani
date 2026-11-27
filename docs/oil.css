@@ -15,6 +15,12 @@
 .sn-cta:active { transform: scale(.97); }
 :target, [id] { scroll-margin-top: 88px; }
 @media (max-width: 1000px) { .sn ul li:not(:last-child) { display: none; } }
+@media (max-width: 600px) {
+  .sn-in { height: 60px; padding-inline: 16px; gap: 12px; }
+  .sn-brand { font-size: 16px; gap: 10px; }
+  .sn-mark { width: 44px; height: 22px; }
+  .sn-cta { min-height: 38px; padding: 0 16px; font-size: 14px; }
+}
 @media (prefers-reduced-motion: reduce) { .skip, .sn-cta, .sn ul a { transition: none; } }
 
 /* the developer, above every footer */

@@ -228,12 +228,19 @@ class FlowService : AccessibilityService() {
         baseText = cur.substring(0, minOf(s, e)); afterText = cur.substring(maxOf(s, e)); lastShown = ""
     }
 
-    private fun showLive(text: String) {
+    private fun showLive(text: String, isFinal: Boolean = false) {
         if (text == lastShown) return
         lastShown = text
         val n = editableFocus() ?: return
-        n.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
-            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, baseText + text + afterText) })
+        val full = baseText + text + afterText
+        val ok = n.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
+            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, full) })
+        if (!ok && isFinal) {
+            // Fallback for apps that reject ACTION_SET_TEXT (WebViews, some chat apps)
+            val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("vaani", full))
+            n.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+        }
         val pos = baseText.length + text.length
         n.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, Bundle().apply {
             putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, pos)
@@ -272,7 +279,7 @@ class FlowService : AccessibilityService() {
             Log.d("Vaani", "heard: $finalText")
             ui.post {
                 if (finalText.isNotEmpty()) {
-                    showLive("$finalText ")
+                    showLive("$finalText ", isFinal = true)
                     Db.get(this).add(lang(), finalText)   // History tab
                     capsule?.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 }
