@@ -459,7 +459,8 @@ class MeetingSession:
         self.lines.append(Line(start, who, text, end))
         if self.on_segment is not None:
             try:
-                self.on_segment(start, end, who, text)
+                for cs, ce, ctxt in split_subtitle_cues(start, end, text, max_chars=76):
+                    self.on_segment(cs, ce, who, _cue_lines(ctxt, width=38))
             except Exception:
                 pass
         try:
@@ -518,17 +519,47 @@ def _srt_time(t: float) -> str:
 
 
 def _cue_lines(text: str, width: int = 42) -> str:
-    """One cue's text as at most two lines of ~42 characters (the usual broadcast limit)."""
-    words, rows = text.split(), [""]
-    for w in words:
-        if rows[-1] and len(rows[-1]) + 1 + len(w) > width:
-            rows.append(w)
+    """One cue's text balanced into 1 or at most 2 lines (broadcast subtitle style)."""
+    text = " ".join(text.split())
+    if len(text) <= width:
+        return text
+    words = text.split()
+    if len(words) < 2:
+        return text
+    mid = len(text) / 2.0
+    best_i, best_diff, cur_len = 1, float("inf"), len(words[0])
+    for i in range(1, len(words)):
+        diff = abs(cur_len - mid)
+        if diff < best_diff:
+            best_diff, best_i = diff, i
+        cur_len += 1 + len(words[i])
+    return " ".join(words[:best_i]) + "\n" + " ".join(words[best_i:])
+
+
+def split_subtitle_cues(start: float, end: float, text: str, max_chars: int = 76) -> List[Tuple[float, float, str]]:
+    """Split a long utterance into readable 1-2 line subtitle cues with proportional timestamps."""
+    chunks, cur = [], ""
+    for w in text.split():
+        if cur and len(cur) + 1 + len(w) > max_chars:
+            chunks.append(cur)
+            cur = w
         else:
-            rows[-1] = f"{rows[-1]} {w}".strip()
-    return "\n".join(rows)
+            cur = f"{cur} {w}".strip()
+    if cur:
+        chunks.append(cur)
+    if not chunks:
+        return []
+    span = max(0.8, end - start)
+    total = sum(len(c) for c in chunks) or 1
+    out, t = [], start
+    for c in chunks:
+        stop = t + span * len(c) / total
+        out.append((t, stop, c))
+        t = stop
+    return out
 
 
-def srt_text(lines: List[Tuple[float, str, str]], max_chars: int = 84) -> str:
+def srt_text(lines: List[Tuple[float, str, str]], max_chars: int = 76) -> str:
     """SubRip subtitles. A cue runs until the voice stopped (Line.end; plain tuples get an estimate of
     ~15 characters a second, 1.2-7 s), held at least 1 s so it can be read, never past the next line's
     start. A long utterance is split into two-line cues with its time shared out by length."""
@@ -537,23 +568,11 @@ def srt_text(lines: List[Tuple[float, str, str]], max_chars: int = 84) -> str:
         start, _who, text = line
         nxt = lines[i + 1][0] if i + 1 < len(lines) else float("inf")
         end = getattr(line, "end", None)
-        chunks, cur = [], ""
-        for w in text.split():
-            if cur and len(cur) + 1 + len(w) > max_chars:
-                chunks.append(cur)
-                cur = w
-            else:
-                cur = f"{cur} {w}".strip()
-        if cur:
-            chunks.append(cur)
-        said = end - start if end is not None else sum(min(7.0, max(1.2, len(c) / 15.0)) for c in chunks)
+        raw_cues = split_subtitle_cues(start, start + 1.0, text, max_chars=max_chars)
+        said = end - start if end is not None else sum(min(7.0, max(1.2, len(c) / 15.0)) for _, _, c in raw_cues)
         span = max(0.1, min(nxt - start, max(1.0, said)))
-        total, t = sum(len(c) for c in chunks) or 1, start
-        for c in chunks:
-            stop = t + span * len(c) / total
-            cues.append((t, stop, c))
-            t = stop
-    return "\n".join(f"{n}\n{_srt_time(a)} --> {_srt_time(b)}\n{_cue_lines(c)}\n"
+        cues.extend(split_subtitle_cues(start, start + span, text, max_chars=max_chars))
+    return "\n".join(f"{n}\n{_srt_time(a)} --> {_srt_time(b)}\n{_cue_lines(c, width=max(32, max_chars // 2))}\n"
                      for n, (a, b, c) in enumerate(cues, 1))
 
 
