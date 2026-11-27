@@ -268,7 +268,8 @@ _USER_MODELS_DIR = Path.home() / ".vaani" / "models"
 
 _CUSTOM_MODEL_SUBDIRS: Dict[str, str] = {
     "small-in": "whisper_small_in_ct2",
-    "mira": "mira_in_ct2_int8",
+    "mira": "mira_v2_ct2_int8",
+    "mira-v2": "mira_v2_ct2_int8",
     "mira-in": "mira_in_ct2_int8",
 }
 
@@ -283,7 +284,8 @@ def _custom_model_dirs(name: str) -> List[Path]:
     sub = _CUSTOM_MODEL_SUBDIRS.get(name)
     if not sub:
         return []
-    return [_LOCAL_MODELS_DIR / sub, _USER_MODELS_DIR / sub]
+    subs = [sub, "mira_in_ct2_int8"] if name == "mira" else [sub]
+    return [d / s for s in subs for d in (_LOCAL_MODELS_DIR, _USER_MODELS_DIR)]
 
 
 def cached_path(name: str) -> Optional[str]:

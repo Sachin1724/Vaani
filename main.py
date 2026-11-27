@@ -583,7 +583,7 @@ class OpenFlowApp(QObject):
         rule-based text is pasted instead, so the LLM can only make a dictation better, never later or worse."""
         n = len(text.split())
         if (not self.config.get("ai_polish", False) or tone in ("verbatim", "bullets", "email") or "\n" in text
-                or lang not in ("en", "en-in", "auto") or n < 4 or n > 150):  # layout presets: the LLM flattens lines
+                or lang not in ("en", "en-in", "auto", "hi", "or", "or-mix", "or-auto") or n < 4 or n > 150):  # layout presets: the LLM flattens lines
             return text
         llm = self._mira()  # lightweight MIRA-IN if trained locally, else Qwen2.5-1.5B writer
         if llm is None:
