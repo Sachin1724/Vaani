@@ -1583,8 +1583,10 @@ class FloatingCaptionBubble(QWidget):
         p.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
 
         rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        # Dynamic corner radius: full pill (17px) when compact, smoothly tighter (down to 10px) as height grows
+        rad = max(10.0, 17.0 - max(0.0, rect.height() - 34.0) * 0.085)
         path = QPainterPath()
-        path.addRoundedRect(rect, 11.0, 11.0)
+        path.addRoundedRect(rect, rad, rad)
 
         # Velvety deep OLED glass
         p.fillPath(path, _bgc(246))
@@ -1593,7 +1595,6 @@ class FloatingCaptionBubble(QWidget):
         bubble_rim = QLinearGradient(0, rect.top(), 0, rect.bottom())
         bubble_rim.setColorAt(0.0, _fg(65))
         bubble_rim.setColorAt(1.0, _fg(20))
-        p.strokePath(path, QPen(QBrush(bubble_rim), 1.0))
 
         p.setFont(self._font)
         fm = self._fm
@@ -1631,17 +1632,23 @@ class FloatingCaptionBubble(QWidget):
                     p.setPen(_fg(alpha))
                     p.drawText(QPointF(14.0, y_base), line_txt)
             p.restore()
-            # Top & bottom teleprompter edge fades
+            # Top & bottom teleprompter edge fades clipped cleanly inside the rounded path
+            p.save()
+            p.setClipPath(path)
             if self._scroll_y > 1.0:
                 top_g = QLinearGradient(0, rect.top(), 0, rect.top() + 20.0)
                 top_g.setColorAt(0.0, _bgc(246))
                 top_g.setColorAt(1.0, _bgc(0))
-                p.fillRect(QRectF(rect.left() + 2, rect.top() + 1, rect.width() - 4, 20.0), QBrush(top_g))
+                p.fillRect(QRectF(rect.left(), rect.top(), rect.width(), 20.0), QBrush(top_g))
             bot_g = QLinearGradient(0, rect.bottom() - 14.0, 0, rect.bottom())
             bot_g.setColorAt(0.0, _bgc(0))
             bot_g.setColorAt(1.0, _bgc(215))
-            p.fillRect(QRectF(rect.left() + 2, rect.bottom() - 14.0, rect.width() - 4, 13.0), QBrush(bot_g))
+            p.fillRect(QRectF(rect.left(), rect.bottom() - 14.0, rect.width(), 14.0), QBrush(bot_g))
+            p.restore()
+            p.strokePath(path, QPen(QBrush(bubble_rim), 1.0))
             return
+
+        p.strokePath(path, QPen(QBrush(bubble_rim), 1.0))
 
         cached = self._cached_layout
         if cached and cached[0] == n and cached[1] == w_cur:
