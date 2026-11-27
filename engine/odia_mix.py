@@ -38,7 +38,12 @@ OVERRIDE = {"ଅଫ": "of", "ଓକେ": "OK", "ହଭ": "have", "ଏମବି�
             "ମିକ୍ସଡ": "mixed", "ରାଣ୍ଡମାଇଜିଂ": "randomizing", "ଇଜି": "easy", "ସବ୍": "sub",
             "ସବଟାଇଟଲ": "subtitle", "ଆର": "are", "ପ୍ରୋଭାଇଡିଙ୍ଗ": "providing",
             "ଲିଟରାଲ୍ଯ୍": "literally", "ତବଲ": "table", "ଟବଲ": "table", "ଲିକ": "like",
-            "ବ୍ୟାରି": "very", "ବେରି": "very", "ଭେରି": "very", "ଭ୍ୟାରି": "very", "ବକ୍": "back"}
+            "ବ୍ୟାରି": "very", "ବେରି": "very", "ଭେରି": "very", "ଭ୍ୟାରି": "very", "ବକ୍": "back",
+            # Numbers & multi-syllable English words frequently left in Odia script by IndicConformer
+            "ଟ୍ବେଣ୍ଟି": "twenty", "ଟ୍ବେନ୍ଟି": "twenty", "ଥାର୍ଟି": "thirty", "ଫର୍ଟି": "forty",
+            "ଫିଫ୍ଟି": "fifty", "ଥୋଉସଣ୍ଡ": "thousand", "ଥାଉଜାଣ୍ଡ": "thousand", "ହଣ୍ଡ୍ରେଡ": "hundred",
+            "ବ୍ୟୁଟିଫୁଲି": "beautifully", "ରିପ୍ରେଜେଣ୍ଟସ": "represents", "ଟ୍ରିଡେ": "today",
+            "ମାନିଫେଷ୍ଟ": "manifest", "ଗୋଇଙ୍ଗ": "going", "ଡାଇରେକ୍ଟିଂ": "directing", "କ୍ରିଏଟିଭିଟି": "creativity"}
 MARGIN = 0.4  # keep English terms in English even when IndicConformer emits Odia phonetics
 TABLE_PATH = os.path.join(os.path.dirname(__file__), "odia_english.tsv.gz")
 
@@ -88,6 +93,12 @@ _PHONETIC_FIXES = (
     ("is buck", "is back"),
     ("come buck", "come back"),
     ("go buck", "go back"),
+    ("to thousand twenty seven", "2027"),
+    ("two thousand twenty seven", "2027"),
+    ("to thousand twenty six", "2026"),
+    ("two thousand twenty six", "2026"),
+    ("to thousand twenty five", "2025"),
+    ("two thousand twenty five", "2025"),
 )
 
 
