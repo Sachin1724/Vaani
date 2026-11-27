@@ -140,9 +140,7 @@ def resolve(cfg: dict) -> dict:
     if device == "npu" and not npu_name():
         print("[Vaani] NPU selected but no usable Intel NPU found; using automatic device.")
         device = "auto"
-    if device == "cuda" and _cuda_recently_hung():
-        print("[Vaani] CUDA hung recently; falling back to CPU for reliability.")
-        device = "cpu"
+    # a recent CUDA freeze only steers "auto" (detect() skips the GPU for a day); choosing CUDA in Settings retries it
     if device == "auto":
         device, compute = hw["device"], hw["compute_type"]
     else:

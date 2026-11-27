@@ -55,3 +55,46 @@ def test_caption_hallucinations_are_dropped():
     assert _is_caption_phrase("Thanks for watching.") and _is_caption_phrase("Subtitles by the Amara.org community")
     assert not _is_caption_phrase("Thank you.")  # a real, short dictation
     assert not _is_caption_phrase("Thanks for watching the demo with me today.")
+
+
+def test_a_slow_long_job_is_not_taken_for_a_gpu_freeze():
+    """A call inside its own time budget is slow, not hung: waiting on it must not abandon the model
+    (that writes the CUDA-hung mark and keeps the PC on the CPU for a day). Past the budget it is a freeze."""
+    import threading
+    import time
+    import vaani.engine.transcriber as tr
+
+    def make():
+        t = tr.Transcriber.__new__(tr.Transcriber)
+        t._lock, t._abandon_guard, t._holder_loading, t._held_until = threading.RLock(), threading.Lock(), False, 0.0
+        t.abandoned = 0
+
+        def abandon():
+            t.abandoned += 1
+            t._lock = lock = threading.RLock()
+            lock.acquire()
+            return lock
+        t._abandon_hung_model = abandon
+        return t
+
+    def hold(t, budget, seconds):
+        def run():
+            with t._locked(budget=budget):
+                time.sleep(seconds)
+        th = threading.Thread(target=run)
+        th.start()
+        time.sleep(0.05)
+        with t._locked():
+            pass
+        th.join()
+
+    saved, tr._HUNG_S = tr._HUNG_S, 0.3
+    try:
+        slow = make()
+        hold(slow, budget=1.0, seconds=0.8)  # a long file still inside its budget
+        assert slow.abandoned == 0
+        frozen = make()
+        hold(frozen, budget=0.0, seconds=1.0)  # a short call that never comes back in time
+        assert frozen.abandoned == 1
+    finally:
+        tr._HUNG_S = saved

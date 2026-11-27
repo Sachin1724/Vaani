@@ -27,4 +27,10 @@ for style in ("standard", "compact", "micro"):
         if shots:
             pill.capsule_widget.grab().save(os.path.join(shots, f"{style}_{f}.png"))
 pill.set_capsule_size(1.0, 1.0, False)
+
+# resizing at rest previews the size, then settles back: never the listening look, and the rest timer runs
+pill.current_state = "idle"
+pill.set_capsule_size(1.2, 1.2, False)
+assert not pill.visualizer.isVisibleTo(pill.capsule_widget) and pill.btn_stop.isHidden()
+assert pill.hide_timer.isActive()
 print("capsule resize ok")
