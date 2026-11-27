@@ -6,11 +6,14 @@ Run with the OmniVoice environment:
   vaani/alm/odia_finetune/.venv_omni/Scripts/python.exe -m vaani.voice_studio_dashboard
 """
 import base64
+import hashlib
 import http.server
 import io
 import json
 import os
 import re
+import shutil
+import subprocess
 import threading
 import time
 import uuid
@@ -28,6 +31,9 @@ PORT = int(os.environ.get("VAANI_STUDIO_PORT", "8788"))
 
 _MODEL = None
 _MODEL_LOCK = threading.Lock()
+_GEN_LOCK = threading.Lock()
+_ENROLL_LOCK = threading.Lock()  # one enrollment at a time, so a voice's audio, profile and text stay together
+MAX_BODY = 60 * 1024 * 1024  # ~90 s of WAV, base64-encoded, with room to spare  # one take at a time: the GPU is shared and the seed is process-wide
 _TAKES = []
 
 BRAND_SAFE_MAP = [
@@ -59,21 +65,67 @@ def list_speakers():
     for wav in sorted(ENROLLED_DIR.glob("*_ref.wav")):
         stem = wav.stem[:-4] if wav.stem.endswith("_ref") else wav.stem
         meta_p = ENROLLED_DIR / f"{stem}.json"
-        ref_text = ""
+        ref_text, name = "", stem.replace("_", " ").title()
         if meta_p.exists():
             try:
                 meta = json.loads(meta_p.read_text(encoding="utf-8"))
                 ref_text = meta.get("text") or meta.get("transcript") or ""
+                name = meta.get("name") or name  # an Odia name keeps its script; the id is only for files
             except Exception:
                 pass
-        items.append({"id": stem, "name": stem.replace("_", " ").title(), "wav": str(wav), "ref_text": ref_text})
+        items.append({"id": stem, "name": name, "wav": str(wav), "ref_text": ref_text})
     return items
+
+
+# Enrollment (quality checks + speaker fingerprint) needs onnxruntime, which lives in the app's Python, not this one.
+ENROLL_SCRIPT = """
+import json, sys
+from vaani.engine.enrollment import get_enrollment_manager
+p = get_enrollment_manager().enroll_speaker(sys.argv[1], sys.argv[2], speaker_id=sys.argv[3])
+print(json.dumps({k: p[k] for k in ("speaker_id", "name", "duration_s", "snr_db", "gender")}))
+"""
+
+
+def enroll_voice(name: str, wav_bytes: bytes, text: str = "") -> dict:
+    """Save a recording as an enrolled speaker (a new one, or re-enroll an existing id)."""
+    name = name.strip()
+    if not name:
+        raise ValueError("Name the voice first.")
+    # file id: English letters as typed, else a stable hash, so the same Odia name re-enrolls the same voice
+    sid = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") or "voice_" + hashlib.md5(name.encode("utf-8")).hexdigest()[:8]
+    with _ENROLL_LOCK:
+        return _enroll(name, sid, wav_bytes, text)
+
+
+def _enroll(name: str, sid: str, wav_bytes: bytes, text: str) -> dict:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = OUT_DIR / f"enroll_{uuid.uuid4().hex[:8]}.wav"
+    tmp.write_bytes(wav_bytes)
+    py = os.environ.get("VAANI_APP_PYTHON") or shutil.which("python") or "python"
+    # this venv's launcher variables would make the other Python load this one's standard library
+    env = {k: v for k, v in os.environ.items() if k not in ("__PYVENV_LAUNCHER__", "PYTHONHOME", "PYTHONPATH", "VIRTUAL_ENV")}
+    env["PYTHONIOENCODING"] = "utf-8"
+    try:  # an argument list, no shell: the name reaches the script as one argv string
+        r = subprocess.run([py, "-c", ENROLL_SCRIPT, name, str(tmp), sid], cwd=str(ROOT.parent), capture_output=True,
+                           text=True, encoding="utf-8", errors="replace", timeout=180, env=env)
+    finally:
+        tmp.unlink(missing_ok=True)
+    if r.returncode != 0:
+        last = (r.stderr.strip().splitlines() or ["Enrollment failed"])[-1]
+        raise ValueError(last.split("quality check failed:", 1)[-1].split("Error: ", 1)[-1].strip())
+    profile = json.loads(r.stdout.strip().splitlines()[-1])
+    meta_p = ENROLLED_DIR / f"{sid}.json"
+    meta = json.loads(meta_p.read_text(encoding="utf-8"))
+    meta["text"] = text.strip()  # what was read aloud: OmniVoice clones better with the reference transcript
+    meta_p.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    return profile
 
 
 def normalize_brand_names(text: str, enabled: bool = True) -> str:
     if not enabled:
         return text
-    for bad, good in BRAND_SAFE_MAP:
+    # longest spelling first, or "ସଚିନ" would match inside "ସଚିନ୍" and strand its virama
+    for bad, good in sorted(BRAND_SAFE_MAP, key=lambda p: -len(p[0])):
         text = text.replace(bad, good)
     return text
 
@@ -108,7 +160,6 @@ HTML = r"""<!doctype html>
   h1 { margin: 0; font-size: 22px; font-weight: 600; color: var(--ink); letter-spacing: -0.025em; }
   .sub { font-size: 13px; color: var(--soft); }
   .head-r { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .chip { background: var(--surface); border: 1px solid var(--edge); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--ink); }
   .grid { display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 18px; align-items: start; }
   .card { background: var(--surface); border: 1px solid var(--edge); border-radius: var(--r); padding: 20px; display: grid; gap: 16px; }
   .card h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
@@ -139,6 +190,20 @@ HTML = r"""<!doctype html>
   .take { background: var(--bg); border: 1px solid var(--edge); border-radius: 14px; padding: 12px 14px; display: grid; gap: 8px; }
   .take-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; color: var(--soft); }
   .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); cursor: pointer; }
+  .rec-box { display: grid; gap: 10px; padding: 14px; border-radius: 16px; background: var(--bg); border: 1px solid var(--edge); transition: border-color .2s, box-shadow .2s; }
+  .rec-box.live { border-color: #B42318; box-shadow: 0 0 0 3px rgba(180,35,24,.14); }
+  .rec-box textarea { min-height: 72px; font-size: 15px; background: var(--surface); }
+  .rec-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .rec-time { font-size: 13px; color: var(--soft); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--soft); opacity: .5; }
+  .rec-box.live .dot { background: #B42318; opacity: 1; animation: blink 1s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .meter { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+  .meter span { display: block; height: 100%; background: var(--ok); transform-origin: left; transform: scaleX(0); transition: transform .08s linear; }
+  .meter.hot span { background: #B42318; }
+  .enroll-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .enroll-row input { width: 100%; border-radius: 12px; border: 1px solid var(--edge); background: var(--surface); color: var(--ink); font: inherit; padding: 10px 12px; }
+  @media (prefers-reduced-motion: reduce) { .rec-box.live .dot { animation: none; } .meter span { transition: none; } }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -153,7 +218,6 @@ HTML = r"""<!doctype html>
       </div>
     </div>
     <div class="head-r">
-      <span class="chip" id="packBadge">Studio Pack · ₹20 / 5 paragraphs</span>
       <button class="btn quiet" type="button" id="themeBtn">Theme</button>
     </div>
   </header>
@@ -166,14 +230,25 @@ HTML = r"""<!doctype html>
         <select id="speakerSel"></select>
       </label>
 
-      <div class="row-2">
-        <button class="btn quiet" type="button" id="recBtn">Record 6s Voice</button>
-        <label class="btn quiet" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer">
-          Upload .WAV
-          <input type="file" id="wavUpload" accept="audio/*" hidden>
-        </label>
+      <div class="rec-box" id="recBox">
+        <label class="fld" for="recScript">Read this aloud while recording</label>
+        <textarea id="recScript" spellcheck="false">ନମସ୍କାର, ମୁଁ ମୋ ନିଜ ସ୍ୱରରେ କଥା ହେଉଛି। ଆଜି ପାଗ ବହୁତ ଭଲ ଅଛି, and I am recording my voice for Vaani.</textarea>
+        <div class="meter" id="meter" aria-hidden="true"><span id="meterFill"></span></div>
+        <div class="rec-row">
+          <button class="btn quiet" type="button" id="recBtn">Record</button>
+          <span class="rec-time"><span class="dot"></span><span id="recTimer">Up to 10 s</span></span>
+          <label class="btn quiet" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin-left:auto">
+            Upload Audio
+            <input type="file" id="wavUpload" accept=".wav,.flac,.ogg,.mp3,audio/wav,audio/flac,audio/ogg,audio/mpeg" hidden>
+          </label>
+        </div>
+        <audio id="recPreview" controls hidden></audio>
+        <div class="enroll-row" id="enrollRow" hidden>
+          <input id="enrollName" placeholder="Voice name, e.g. sachin…" autocomplete="off" spellcheck="false" aria-label="Voice name">
+          <button class="btn" type="button" id="enrollBtn">Save as Voice</button>
+        </div>
+        <div class="sub" id="recStatus" aria-live="polite">Using the enrolled voice above.</div>
       </div>
-      <div class="sub" id="recStatus">Using enrolled voice sample</div>
 
       <label class="fld">
         Language
@@ -261,7 +336,7 @@ const PRESETS = {
   mix: 'ଆଜି ଆମେ ଓଡ଼ିଆ ପଡକାଷ୍ଟ ପାଇଁ MIRA ଏବଂ Vaani Studio ରେ ନୂଆ voice clone test କରୁଛୁ, ଯାହା very fast କାମ କରୁଛି।'
 };
 const $ = id => document.getElementById(id);
-let customRefB64 = null, parasLeft = 5;
+let customRefB64 = null, customRefText = '';
 
 $('themeBtn').onclick = () => {
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -277,47 +352,110 @@ for (const [sl, lbl, fmt] of [
 
 document.querySelectorAll('.pbtn').forEach(b => b.onclick = () => { $('paraTxt').value = PRESETS[b.dataset.p]; });
 
-fetch('/api/speakers').then(r => r.json()).then(list => {
-  $('speakerSel').innerHTML = list.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  if (list.some(s => s.id === 'sachin')) $('speakerSel').value = 'sachin';
-});
+async function loadSpeakers(pick) {
+  const list = await (await fetch('/api/speakers')).json();
+  $('speakerSel').replaceChildren(...list.map(s => new Option(s.name, s.id)));
+  const want = pick || 'sachin';
+  if (list.some(s => s.id === want)) $('speakerSel').value = want;
+}
+loadSpeakers();
+$('speakerSel').onchange = () => {  // picking a saved voice drops an unsaved recording
+  customRefB64 = null; customRefText = '';
+  $('recStatus').textContent = 'Using the enrolled voice above.';
+};
+
+const b64 = u8 => { let bin = ''; for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(bin); };
+function useRef(bytes, type, label, text) {
+  customRefB64 = b64(bytes); customRefText = text;
+  $('recPreview').src = URL.createObjectURL(new Blob([bytes], { type }));
+  $('recPreview').hidden = false;
+  $('enrollRow').hidden = false;
+  $('enrollName').value = $('enrollName').value || $('speakerSel').value || '';
+  $('recStatus').textContent = label + ' · the next take uses it. Save it to keep it as a voice.';
+}
 
 $('wavUpload').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
-  const buf = await f.arrayBuffer();
-  customRefB64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-  $('recStatus').textContent = 'Custom upload ready: ' + f.name;
+  useRef(new Uint8Array(await f.arrayBuffer()), f.type || 'audio/wav', 'Upload ready: ' + f.name, '');
+  e.target.value = '';
 };
 
-$('recBtn').onclick = async () => {
+const REC_MAX = 10, REC_MIN = 3;
+let rec = null;
+$('recBtn').onclick = () => rec ? stopRec() : startRec();
+
+async function startRec() {
+  customRefB64 = null; customRefText = '';
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }); }
+  catch (err) { $('recStatus').textContent = 'Microphone blocked (' + err.message + '). Allow it from the address bar, then press Record.'; return; }
+  const ctx = new AudioContext();
+  const src = ctx.createMediaStreamSource(stream);
+  const an = ctx.createAnalyser(); an.fftSize = 1024;
+  const proc = ctx.createScriptProcessor(4096, 1, 1);
+  const chunks = [];
+  proc.onaudioprocess = e => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  src.connect(an); src.connect(proc); proc.connect(ctx.destination);
+  rec = { ctx, stream, src, proc, chunks, t0: performance.now() };
+  $('recBtn').textContent = 'Stop'; $('recBtn').classList.add('rec'); $('recBox').classList.add('live');
+  $('recPreview').hidden = true; $('enrollRow').hidden = true;
+  $('recStatus').textContent = 'Recording. Read the line above in your normal voice.';
+  const buf = new Float32Array(an.fftSize);
+  const tick = () => {
+    if (!rec) return;
+    an.getFloatTimeDomainData(buf);
+    let peak = 0; for (const x of buf) peak = Math.max(peak, Math.abs(x));
+    $('meterFill').style.transform = `scaleX(${Math.min(1, peak * 1.6)})`;
+    $('meter').classList.toggle('hot', peak > 0.95);
+    const sec = (performance.now() - rec.t0) / 1000;
+    $('recTimer').textContent = `${sec.toFixed(1)} / ${REC_MAX} s`;
+    if (sec >= REC_MAX) return stopRec();
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function stopRec() {
+  const { ctx, stream, src, proc, chunks } = rec; rec = null;
+  proc.disconnect(); src.disconnect(); stream.getTracks().forEach(t => t.stop());
+  const rate = ctx.sampleRate; ctx.close();
+  $('recBtn').textContent = 'Record Again'; $('recBtn').classList.remove('rec'); $('recBox').classList.remove('live');
+  $('meterFill').style.transform = 'scaleX(0)'; $('meter').classList.remove('hot');
+  const len = chunks.reduce((a, c) => a + c.length, 0);
+  $('recTimer').textContent = `${(len / rate).toFixed(1)} s recorded`;
+  if (len / rate < REC_MIN) { $('recStatus').textContent = `Too short. Record at least ${REC_MIN} seconds.`; return; }
+  const pcm = new Int16Array(len);
+  let off = 0;
+  for (const c of chunks) for (let i = 0; i < c.length; i++) pcm[off++] = Math.max(-1, Math.min(1, c[i])) * 32767;
+  const wav = new ArrayBuffer(44 + pcm.byteLength), v = new DataView(wav);
+  const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); v.setUint32(4,36+pcm.byteLength,true); ws(8,'WAVEfmt '); v.setUint32(16,16,true);
+  v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,rate,true); v.setUint32(28,rate*2,true);
+  v.setUint16(32,2,true); v.setUint16(34,16,true); ws(36,'data'); v.setUint32(40,pcm.byteLength,true);
+  new Int16Array(wav, 44).set(pcm);
+  useRef(new Uint8Array(wav), 'audio/wav', `New recording (${(len / rate).toFixed(1)} s)`, $('recScript').value);
+}
+
+$('enrollBtn').onclick = async () => {
+  const name = $('enrollName').value.trim();
+  if (!name) { $('enrollName').focus(); $('recStatus').textContent = 'Name the voice first.'; return; }
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  if ([...$('speakerSel').options].some(o => (id && o.value === id) || o.textContent === name) && !confirm(`Replace the saved voice "${name}" with this recording?`)) return;
+  $('enrollBtn').disabled = true; $('enrollBtn').textContent = 'Saving…';
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const ctx = new AudioContext({ sampleRate: 16000 });
-    const src = ctx.createMediaStreamSource(stream);
-    const proc = ctx.createScriptProcessor(4096, 1, 1);
-    const chunks = [];
-    proc.onaudioprocess = e => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-    src.connect(proc); proc.connect(ctx.destination);
-    $('recBtn').classList.add('rec'); $('recBtn').textContent = 'Recording (6s)...';
-    setTimeout(() => {
-      proc.disconnect(); src.disconnect(); stream.getTracks().forEach(t => t.stop()); ctx.close();
-      $('recBtn').classList.remove('rec'); $('recBtn').textContent = 'Record 6s Voice';
-      const len = chunks.reduce((a, c) => a + c.length, 0);
-      const pcm = new Int16Array(len);
-      let off = 0;
-      for (const c of chunks) for (let i = 0; i < c.length; i++) pcm[off++] = Math.max(-1, Math.min(1, c[i])) * 32767;
-      const wav = new ArrayBuffer(44 + pcm.byteLength), v = new DataView(wav);
-      const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-      ws(0,'RIFF'); v.setUint32(4,36+pcm.byteLength,true); ws(8,'WAVEfmt '); v.setUint32(16,16,true);
-      v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,16000,true); v.setUint32(28,32000,true);
-      v.setUint16(32,2,true); v.setUint16(34,16,true); ws(36,'data'); v.setUint32(40,pcm.byteLength,true);
-      new Int16Array(wav, 44).set(pcm);
-      const u8 = new Uint8Array(wav); let bin = '';
-      for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode(...u8.subarray(i, i + 8192));
-      customRefB64 = btoa(bin);
-      $('recStatus').textContent = 'Live mic reference ready (' + (len / 16000).toFixed(1) + 's)';
-    }, 6000);
-  } catch (err) { $('recStatus').textContent = 'Mic error: ' + err.message; }
+    const r = await fetch('/api/enroll', { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, wav_b64: customRefB64, text: customRefText }) });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    await loadSpeakers(d.speaker_id);
+    customRefB64 = null; customRefText = '';
+    $('enrollRow').hidden = true;
+    $('recStatus').textContent = `Saved as ${d.name}: ${d.duration_s} s, ${d.snr_db} dB clean. It's selected above.`;
+  } catch (err) {
+    $('recStatus').textContent = 'Not saved: ' + err.message;
+  } finally {
+    $('enrollBtn').disabled = false; $('enrollBtn').textContent = 'Save as Voice';
+  }
 };
 
 $('genBtn').onclick = async () => {
@@ -327,6 +465,7 @@ $('genBtn').onclick = async () => {
     const body = {
       speaker: $('speakerSel').value,
       custom_wav_b64: customRefB64,
+      custom_ref_text: customRefText,
       text: $('paraTxt').value,
       language: $('langSel').value,
       class_temperature: parseFloat($('ctSlider').value),
@@ -340,8 +479,6 @@ $('genBtn').onclick = async () => {
     const r = await fetch('/api/generate', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
     const d = await r.json();
     if (d.error) throw new Error(d.error);
-    parasLeft = Math.max(0, parasLeft - 1);
-    $('packBadge').textContent = `Studio Pack · ${parasLeft}/5 paragraphs left (₹20)`;
     $('playerBox').style.display = 'grid';
     $('audioEl').src = d.audio_url;
     $('dlLink').href = d.audio_url;
@@ -350,7 +487,16 @@ $('genBtn').onclick = async () => {
     $('genStatus').textContent = 'Ready';
     const card = document.createElement('div');
     card.className = 'take';
-    card.innerHTML = `<div class="take-top"><span><b>${body.speaker}</b> · T=${body.class_temperature} · Speed=${body.speed}× · ${d.sec}s</span><span>${d.took}s</span></div><div>${d.spoken_text}</div><audio controls src="${d.audio_url}"></audio>`;
+    const top = document.createElement('div'), who = document.createElement('span'), took = document.createElement('span');
+    const name = document.createElement('b'), said = document.createElement('div'), audio = document.createElement('audio');
+    top.className = 'take-top';
+    name.textContent = $('speakerSel').selectedOptions[0]?.text || body.speaker;
+    who.append(name, ` · T=${body.class_temperature} · Speed=${body.speed}× · ${d.sec}s`);
+    took.textContent = `${d.took}s`;
+    top.append(who, took);
+    said.textContent = d.spoken_text;
+    audio.controls = true; audio.src = d.audio_url;
+    card.append(top, said, audio);
     if ($('takesList').querySelector('.sub')) $('takesList').innerHTML = '';
     $('takesList').prepend(card);
   } catch (e) {
@@ -402,13 +548,38 @@ class StudioHandler(http.server.BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def _read_json(self):
+        """The request body as JSON, or None after answering: a caller that isn't this page, or too big."""
+        origin = self.headers.get("Origin")
+        if origin and origin not in (f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}") or not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            self._json({"error": "Requests must come from the Voice Studio page."}, 403)
+            return None
+        ln = int(self.headers.get("Content-Length", "0"))
+        if ln > MAX_BODY:
+            self._json({"error": "That recording is too large. Use 90 seconds or less."}, 413)
+            return None
+        return json.loads(self.rfile.read(ln).decode("utf-8"))
+
     def do_POST(self):
+        if self.path == "/api/enroll":
+            try:
+                req = self._read_json()
+                if req is None:
+                    return
+                self._json(enroll_voice(req.get("name") or "", base64.b64decode(req.get("wav_b64") or ""), req.get("text") or ""))
+            except ValueError as e:
+                self._json({"error": str(e)}, 400)
+            except Exception as e:
+                self._json({"error": f"Enrollment failed: {e}"}, 500)
+            return
         if self.path != "/api/generate":
             self.send_error(404)
             return
+        tmp_ref = None
         try:
-            ln = int(self.headers.get("Content-Length", "0"))
-            req = json.loads(self.rfile.read(ln).decode("utf-8"))
+            req = self._read_json()
+            if req is None:
+                return
             text = normalize_brand_names((req.get("text") or "").strip(), req.get("brand_safe", True))
             if not text:
                 self._json({"error": "Enter a paragraph first."}, 400)
@@ -417,10 +588,11 @@ class StudioHandler(http.server.BaseHTTPRequestHandler):
             OUT_DIR.mkdir(parents=True, exist_ok=True)
             ref_path = None
             ref_text = None
-            if req.get("custom_wav_b64"):
+            if req.get("custom_wav_b64"):  # an unsaved recording: used for this take, then deleted
                 tmp_ref = OUT_DIR / f"ref_{uuid.uuid4().hex[:8]}.wav"
                 tmp_ref.write_bytes(base64.b64decode(req["custom_wav_b64"]))
                 ref_path = str(tmp_ref)
+                ref_text = (req.get("custom_ref_text") or "").strip() or None
             else:
                 spk = next((s for s in list_speakers() if s["id"] == req.get("speaker")), None)
                 if not spk:
@@ -440,15 +612,17 @@ class StudioHandler(http.server.BaseHTTPRequestHandler):
             if seed < 0:
                 seed = int(time.time() * 1000) % 100000
             t0 = time.perf_counter()
-            w = model.generate(
-                text=text,
-                language=req.get("language", "ory"),
-                ref_audio=ref_path,
-                ref_text=ref_text,
-                speed=float(req.get("speed", 1.0)),
-                generation_config=cfg,
-                seed=seed,
-            )[0]
+            with _GEN_LOCK:
+                # generate() drops **kwargs such as seed= when a generation_config is given: seed torch itself
+                torch.manual_seed(seed)
+                w = model.generate(
+                    text=text,
+                    language=req.get("language", "ory"),
+                    ref_audio=ref_path,
+                    ref_text=ref_text,
+                    speed=float(req.get("speed", 1.0)),
+                    generation_config=cfg,
+                )[0]
             w = w.detach().cpu().numpy() if hasattr(w, "detach") else np.asarray(w)
             w = w.squeeze().astype(np.float32)
             sr = model.sampling_rate
@@ -466,6 +640,9 @@ class StudioHandler(http.server.BaseHTTPRequestHandler):
             })
         except Exception as e:
             self._json({"error": str(e)}, 500)
+        finally:
+            if tmp_ref is not None:
+                tmp_ref.unlink(missing_ok=True)
 
 
 def main():

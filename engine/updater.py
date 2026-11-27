@@ -22,6 +22,12 @@ from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 DEFAULT_REPO = "Sachin1724/Vaani"
 
 
+def windows_release(releases: list) -> dict:
+    """Newest published release that ships a Windows .exe; {} when none does."""
+    return next((r for r in releases if not r.get("draft") and not r.get("prerelease")
+                 and any(a.get("name", "").lower().endswith(".exe") for a in r.get("assets", []))), {})
+
+
 def parse_version(v_str: str) -> tuple:
     """Parse version string like 'v1.0.2' or '1.0' into a comparable tuple of ints."""
     v_clean = re.sub(r'^[vV]', '', str(v_str).strip())
@@ -74,7 +80,8 @@ class AppUpdater(QObject):
         thread.start()
 
     def _check_worker(self, notify_if_current: bool):
-        api_url = f"https://api.github.com/repos/{self.repo}/releases/latest"
+        # not /releases/latest: an Android beta published after a Windows release becomes "latest" and has no .exe
+        api_url = f"https://api.github.com/repos/{self.repo}/releases?per_page=20"
         req = urllib.request.Request(
             api_url,
             headers={
@@ -90,7 +97,7 @@ class AppUpdater(QObject):
                     if notify_if_current:
                         self.sig_error.emit(f"Server returned HTTP {resp.status}")
                     return
-                data = json.loads(resp.read().decode("utf-8"))
+                data = windows_release(json.loads(resp.read().decode("utf-8")))
 
             tag_name = data.get("tag_name", "")
             remote_ver = parse_version(tag_name)
