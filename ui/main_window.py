@@ -701,7 +701,10 @@ class MainWindow(QMainWindow):
         v = QVBoxLayout(root)
         v.setContentsMargins(28, 28, 28, 0 if scroll else 24)
         v.setSpacing(0)
-        head = QHBoxLayout()
+        head_w = QWidget(root)
+        if scroll:  # header actions end where the cards end, not at the far window edge
+            head_w.setMaximumWidth(COL_W + 14)
+        head = QHBoxLayout(head_w)
         head.setSpacing(12)
         head.setContentsMargins(0, 0, 14 if scroll else 0, 0)  # scrollbar track width, so edges line up
         col = QVBoxLayout()
@@ -713,14 +716,15 @@ class MainWindow(QMainWindow):
         head.addLayout(col, 1)
         for a in actions:
             head.addWidget(a, 0, Qt.AlignmentFlag.AlignTop)
-        v.addLayout(head)
+        v.addWidget(head_w)
         v.addSpacing(16)
         if not scroll:
             return root, v, sub_lbl
         area = QScrollArea(root)
         area.setWidgetResizable(True)
         area.setFrameShape(QFrame.Shape.NoFrame)
-        area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        area.setMaximumWidth(COL_W + 14)  # the scrollbar sits beside the column, not at the window edge
         inner = QWidget()
         inner.setMaximumWidth(COL_W)
         body = QVBoxLayout(inner)
@@ -763,7 +767,8 @@ class MainWindow(QMainWindow):
         self.history_search.textChanged.connect(self.refresh_history)
         bar.addWidget(self.history_search, 1)
         bar.addWidget(_btn("Refresh", small=True, slot=self.refresh_history))
-        bar.addWidget(_btn("Clear All", "danger", small=True, slot=self._clear_history))
+        self._clear_history_btn = _btn("Clear All", "danger", small=True, slot=self._clear_history)
+        bar.addWidget(self._clear_history_btn)
         body.addLayout(bar)
         body.addSpacing(12)
 
@@ -789,6 +794,7 @@ class MainWindow(QMainWindow):
         self.history_table.setRowCount(len(rows))
         self.history_table.setVisible(bool(rows))
         self.history_empty.setVisible(not rows)
+        self._clear_history_btn.setEnabled(bool(rows) or bool(query))
         self.history_empty.setText("No matches." if query else "Nothing dictated yet.\nHold your hotkey in any app and start talking.")
 
         for idx, row in enumerate(rows):
@@ -824,11 +830,16 @@ class MainWindow(QMainWindow):
 
         bar = QHBoxLayout()
         bar.setSpacing(8)
+        self._meeting_btns = []  # need a note to act on; enabled in refresh_meetings
         for label, slot in [("Rename Speaker", self._rename_speaker), ("Copy Markdown", self._copy_meeting),
                             ("Export .md", self._export_meeting), ("Refresh", self.refresh_meetings)]:
-            bar.addWidget(_btn(label, small=True, slot=slot))
+            b = _btn(label, small=True, slot=slot)
+            bar.addWidget(b)
+            if label != "Refresh":
+                self._meeting_btns.append(b)
         bar.addStretch(1)
-        bar.addWidget(_btn("Delete", "danger", small=True, slot=self._delete_meeting))
+        self._meeting_btns.append(_btn("Delete", "danger", small=True, slot=self._delete_meeting))
+        bar.addWidget(self._meeting_btns[-1])
         body.addLayout(bar)
         body.addSpacing(12)
 
@@ -861,6 +872,8 @@ class MainWindow(QMainWindow):
             self.meeting_list.addItem(item)
         self.meeting_split.setVisible(bool(self.meeting_list.count()))
         self.meeting_empty.setVisible(not self.meeting_list.count())
+        for b in getattr(self, "_meeting_btns", []):
+            b.setEnabled(bool(self.meeting_list.count()))
         if self.meeting_list.count():
             self.meeting_list.setCurrentRow(0)
 
@@ -1084,8 +1097,8 @@ class MainWindow(QMainWindow):
         self.models_group.clear()
         self._model_progress_bars = {}
         curr_model = self.config.get("model_size", "base").replace(".en", "").lower()
-        hw = hardware.detect()
-        self.lbl_model_status_info.setText(f"Active: <b>{curr_model.title()}</b>  ·  Running on <b>{hw.get('device', 'cpu').upper()}</b>")
+        device = hardware.resolve(self.config).get("device", "cpu")  # what Settings › Run on resolves to
+        self.lbl_model_status_info.setText(f"Active: <b>{curr_model.title()}</b>  ·  Running on <b>{device.upper()}</b>")
         self.lbl_model_status_info.show()
         for m in model_manager.list_available_models(active_model=curr_model):
             self.models_group.add_widget(self._model_row(m))
@@ -1477,7 +1490,7 @@ class MainWindow(QMainWindow):
         self.card_dictations = self._make_metric_card("Dictations", "0")
         self.card_words = self._make_metric_card("Words spoken", "0")
         self.card_saved = self._make_metric_card("Typing time saved", "0 hrs")
-        self.card_speed = self._make_metric_card("Effective speed", "150 WPM")
+        self.card_speed = self._make_metric_card("Effective speed", "–")
         for i, c in enumerate((self.card_dictations, self.card_words, self.card_saved, self.card_speed)):
             grid.addWidget(c, i // 2, i % 2)
         body.addLayout(grid)
@@ -1509,6 +1522,9 @@ class MainWindow(QMainWindow):
         self.card_dictations.findChild(QLabel, "MetricValue").setText(str(stats["total_dictations"]))
         self.card_words.findChild(QLabel, "MetricValue").setText(f"{stats['total_words']:,}")
         self.card_saved.findChild(QLabel, "MetricValue").setText(f"{stats['time_saved_hours']} hrs")
+        minutes = stats["total_duration_seconds"] / 60.0
+        self.card_speed.findChild(QLabel, "MetricValue").setText(
+            f"{round(stats['total_words'] / minutes)} WPM" if minutes > 0 and stats["total_words"] else "–")
 
     # -- updates ------------------------------------------------------------
 

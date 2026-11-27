@@ -65,7 +65,8 @@ def detect() -> Dict[str, Any]:
         model = "base" if cores >= 8 and ram_gb >= 8 else "tiny"
         if gpu:
             if _cuda_recently_hung():
-                note = f"{gpu['name']} found, but CUDA stalled recently. Using the CPU for now."
+                note = (f"{gpu['name']} found, but CUDA stalled recently, so Automatic uses the CPU for a day. "
+                        "Choose GPU in Run on to use it now.")
             else:
                 note = (f"{gpu['name']} found, but CUDA is not usable. Using the CPU. "
                         f"To use the GPU run: {CUDA_FIX}")
@@ -204,8 +205,9 @@ def get_system_stack(cfg: Optional[dict] = None, transcriber=None) -> Dict[str, 
         "name": hw.get("gpu_name") or "None detected",
         "vram_gb": hw.get("vram_gb", 0),
         "cuda_available": hw.get("cuda_ok", False),
-        "status": "Active Engine (Accelerated)" if gpu_active else ("Standby (Available)" if hw.get("cuda_ok") else "Unavailable"),
-        "backend": "CTranslate2 (cuBLAS / cuDNN)" if hw.get("cuda_ok") else "None",
+        "status": "Active Engine (Accelerated)" if gpu_active else (
+            "Standby (Available)" if hw.get("cuda_ok") else "Paused (stalled recently)" if hw.get("gpu_name") else "Unavailable"),
+        "backend": "CTranslate2 (cuBLAS / cuDNN)" if hw.get("gpu_name") else "No NVIDIA driver",
         "is_active": gpu_active
     }
 
