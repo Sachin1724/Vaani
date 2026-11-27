@@ -64,8 +64,11 @@ def detect() -> Dict[str, Any]:
         device, compute = "cpu", "int8"
         model = "base" if cores >= 8 and ram_gb >= 8 else "tiny"
         if gpu:
-            note = (f"{gpu['name']} found, but CUDA is not usable. Using the CPU. "
-                    f"To use the GPU run: {CUDA_FIX}")
+            if _cuda_recently_hung():
+                note = f"{gpu['name']} found, but CUDA stalled recently. Using the CPU for now."
+            else:
+                note = (f"{gpu['name']} found, but CUDA is not usable. Using the CPU. "
+                        f"To use the GPU run: {CUDA_FIX}")
         else:
             note = "No NVIDIA GPU found. Using the CPU with a lighter model."
 
