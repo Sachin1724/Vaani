@@ -37,7 +37,8 @@ OVERRIDE = {"ଅଫ": "of", "ଓକେ": "OK", "ହଭ": "have", "ଏମବି�
             "ମଡେଲ": "model", "ଟ୍ରେଣ୍ଡ": "trained", "କଷ୍ଟମଲି": "customly", "ଅଟୋ": "auto",
             "ମିକ୍ସଡ": "mixed", "ରାଣ୍ଡମାଇଜିଂ": "randomizing", "ଇଜି": "easy", "ସବ୍": "sub",
             "ସବଟାଇଟଲ": "subtitle", "ଆର": "are", "ପ୍ରୋଭାଇଡିଙ୍ଗ": "providing",
-            "ଲିଟରାଲ୍ଯ୍": "literally", "ତବଲ": "table", "ଟବଲ": "table", "ଲିକ": "like"}
+            "ଲିଟରାଲ୍ଯ୍": "literally", "ତବଲ": "table", "ଟବଲ": "table", "ଲିକ": "like",
+            "ବ୍ୟାରି": "very", "ବେରି": "very", "ଭେରି": "very", "ଭ୍ୟାରି": "very", "ବକ୍": "back"}
 MARGIN = 0.4  # keep English terms in English even when IndicConformer emits Odia phonetics
 TABLE_PATH = os.path.join(os.path.dirname(__file__), "odia_english.tsv.gz")
 
@@ -79,8 +80,28 @@ def english(word: str, lm=None):
     return "I" if en == "i" else en
 
 
+_PHONETIC_FIXES = (
+    ("barry barry", "very very"),
+    ("berry berry", "very very"),
+    ("barry beautiful", "very beautiful"),
+    ("berry beautiful", "very beautiful"),
+    ("is buck", "is back"),
+    ("come buck", "come back"),
+    ("go buck", "go back"),
+)
+
+
 def to_mixed(text: str, lm=None) -> str:
-    return " ".join(english(w, lm) or w for w in text.split())
+    out = " ".join(english(w, lm) or w for w in text.split())
+    low = out.lower()
+    for bad, good in _PHONETIC_FIXES:
+        if bad in low:
+            idx = low.find(bad)
+            while idx != -1:
+                out = out[:idx] + good + out[idx + len(bad):]
+                low = out.lower()
+                idx = low.find(bad, idx + len(good))
+    return out
 
 
 if __name__ == "__main__":
