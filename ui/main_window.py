@@ -1309,24 +1309,35 @@ class MainWindow(QMainWindow):
         g.add("Live transcribe what's playing", self.live_btn,
               "Captions for YouTube, a podcast or a lecture as it plays, from your speakers. Your microphone stays off.")
 
-        # Interactive Video & Live SRT Studio
+        # Interactive Video & Live SRT Studio (uses Vaani Group card + hairline separators)
         self._media_path = ""
         self._media_segments = []  # list of [start_s, end_s]
         self._studio_card = QFrame()
-        self._studio_card.setObjectName("Card")
+        self._studio_card.setObjectName("Group")
         sv = QVBoxLayout(self._studio_card)
-        sv.setContentsMargins(16, 16, 16, 16)
-        sv.setSpacing(12)
+        sv.setContentsMargins(0, 0, 0, 0)
+        sv.setSpacing(0)
 
-        top_bar = QHBoxLayout()
-        self._studio_file_lbl = QLabel("No file loaded — click Choose file… above")
-        self._studio_file_lbl.setObjectName("Muted")
+        # Header bar: file name + live status badge + language + actions
+        top_wrap = QWidget()
+        top_bar = QHBoxLayout(top_wrap)
+        top_bar.setContentsMargins(16, 12, 16, 12)
+        top_bar.setSpacing(10)
+
+        self._studio_file_lbl = QLabel("No file loaded")
+        self._studio_file_lbl.setObjectName("RowLabel")
+        self._studio_status = QLabel("Ready")
+        self._studio_status.setProperty("badge", "accent")
         top_bar.addWidget(self._studio_file_lbl, 1)
+        top_bar.addWidget(self._studio_status)
+
         self._studio_lang = QComboBox()
+        self._studio_lang.setToolTip("Transcription language for this file")
         for code, lbl in [("auto", "Auto"), ("or-auto", "Odia + EN"), ("or", "Odia (ଓଡ଼ିଆ)"), ("hi", "Hindi"), ("en-in", "English (IN)")]:
             self._studio_lang.addItem(lbl, code)
         top_bar.addWidget(self._studio_lang)
-        self._studio_play_btn = _btn("Play / Pause", small=True, slot=self._toggle_media_play)
+
+        self._studio_play_btn = _btn("Play", small=True, slot=self._toggle_media_play)
         self._studio_play_btn.setEnabled(False)
         self._studio_start_btn = _btn("Start Transcribing", "primary", True, self._start_media_transcribe)
         self._studio_start_btn.setEnabled(False)
@@ -1335,7 +1346,14 @@ class MainWindow(QMainWindow):
         top_bar.addWidget(self._studio_play_btn)
         top_bar.addWidget(self._studio_start_btn)
         top_bar.addWidget(self._studio_save_btn)
-        sv.addLayout(top_bar)
+        sv.addWidget(top_wrap)
+        s1 = QFrame(); s1.setObjectName("Sep"); sv.addWidget(s1)
+
+        # Video Stage + Transport Scrubber
+        stage_wrap = QWidget()
+        stage_lay = QVBoxLayout(stage_wrap)
+        stage_lay.setContentsMargins(16, 14, 16, 12)
+        stage_lay.setSpacing(10)
 
         self._media_player = None
         self._audio_out = None
@@ -1343,25 +1361,56 @@ class MainWindow(QMainWindow):
             from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
             from PyQt6.QtMultimediaWidgets import QVideoWidget
             self._video_widget = QVideoWidget()
-            self._video_widget.setMinimumHeight(220)
-            self._video_widget.setMaximumHeight(280)
+            self._video_widget.setMinimumHeight(230)
+            self._video_widget.setMaximumHeight(300)
+            self._video_widget.setStyleSheet("background: #0F141A; border-radius: 10px;")
             self._media_player = QMediaPlayer(self)
             self._audio_out = QAudioOutput(self)
             self._media_player.setAudioOutput(self._audio_out)
             self._media_player.setVideoOutput(self._video_widget)
-            sv.addWidget(self._video_widget)
+            self._media_player.positionChanged.connect(self._on_media_pos)
+            self._media_player.durationChanged.connect(self._on_media_dur)
+            self._media_player.playbackStateChanged.connect(self._on_media_state)
+            stage_lay.addWidget(self._video_widget)
         except Exception:
             self._video_widget = QLabel("Video preview unavailable in this environment")
-            sv.addWidget(self._video_widget)
+            self._video_widget.setObjectName("RowMeta")
+            stage_lay.addWidget(self._video_widget)
+
+        scrub_row = QHBoxLayout()
+        scrub_row.setSpacing(10)
+        self._studio_time_lbl = QLabel("00:00 / 00:00")
+        self._studio_time_lbl.setObjectName("RowMeta")
+        self._studio_scrubber = QSlider(Qt.Orientation.Horizontal)
+        self._studio_scrubber.setRange(0, 0)
+        self._studio_scrubber.sliderMoved.connect(lambda pos: self._media_player and self._media_player.setPosition(pos))
+        scrub_row.addWidget(self._studio_scrubber, 1)
+        scrub_row.addWidget(self._studio_time_lbl)
+        stage_lay.addLayout(scrub_row)
+        sv.addWidget(stage_wrap)
+        s2 = QFrame(); s2.setObjectName("Sep"); sv.addWidget(s2)
+
+        # Word-wrapped, inline-editable SRT Subtitle Table
+        table_wrap = QWidget()
+        table_lay = QVBoxLayout(table_wrap)
+        table_lay.setContentsMargins(16, 12, 16, 16)
+        table_lay.setSpacing(6)
+        hint = QLabel("Click any timestamp to jump the video · Click subtitle text to edit before saving .SRT")
+        hint.setObjectName("SectionFooter")
+        table_lay.addWidget(hint)
 
         self._srt_table = QTableWidget(0, 3)
-        self._srt_table.setHorizontalHeaderLabels(["Start", "End", "Subtitle Text (click to edit)"])
+        self._srt_table.setHorizontalHeaderLabels(["Start", "End", "Subtitle Text (editable)"])
         self._srt_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self._srt_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self._srt_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self._srt_table.setMinimumHeight(210)
+        self._srt_table.setWordWrap(True)
+        self._srt_table.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self._srt_table.setMinimumHeight(230)
         self._srt_table.cellClicked.connect(self._seek_to_subtitle_row)
-        sv.addWidget(self._srt_table)
+        self._srt_table.cellChanged.connect(lambda _r, _c: self._srt_table.resizeRowsToContents())
+        table_lay.addWidget(self._srt_table)
+        sv.addWidget(table_wrap)
 
         self._studio_card.hide()
         body.addWidget(self._studio_card)
@@ -1376,12 +1425,44 @@ class MainWindow(QMainWindow):
         s, ms = divmod(rem, 1000)
         return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
+    @staticmethod
+    def _fmt_mmss(ms: int) -> str:
+        s = max(0, ms // 1000)
+        return f"{s // 60:02d}:{s % 60:02d}"
+
+    def _set_studio_badge(self, text: str, kind: str = "accent"):
+        self._studio_status.setText(text)
+        self._studio_status.setProperty("badge", kind)
+        self._studio_status.style().unpolish(self._studio_status)
+        self._studio_status.style().polish(self._studio_status)
+
+    def _on_media_dur(self, dur_ms: int):
+        self._studio_scrubber.setRange(0, max(0, dur_ms))
+        cur = self._media_player.position() if self._media_player else 0
+        self._studio_time_lbl.setText(f"{self._fmt_mmss(cur)} / {self._fmt_mmss(dur_ms)}")
+
+    def _on_media_pos(self, pos_ms: int):
+        if not self._studio_scrubber.isSliderDown():
+            self._studio_scrubber.setValue(pos_ms)
+        dur = self._media_player.duration() if self._media_player else 0
+        self._studio_time_lbl.setText(f"{self._fmt_mmss(pos_ms)} / {self._fmt_mmss(dur)}")
+        sec = pos_ms / 1000.0
+        for r, (st, en) in enumerate(self._media_segments):
+            if st <= sec <= en:
+                self._srt_table.selectRow(r)
+                break
+
+    def _on_media_state(self, state):
+        from PyQt6.QtMultimedia import QMediaPlayer
+        self._studio_play_btn.setText("Pause" if state == QMediaPlayer.PlaybackState.PlayingState else "Play")
+
     def load_media_file(self, path: str):
         """Show the uploaded video/audio in the Transcribe tab with Play & Start buttons."""
         self._media_path = path
         self._media_segments.clear()
         self._srt_table.setRowCount(0)
         self._studio_file_lbl.setText(os.path.basename(path))
+        self._set_studio_badge("Ready", "accent")
         self._studio_play_btn.setEnabled(self._media_player is not None)
         self._studio_start_btn.setEnabled(True)
         self._studio_start_btn.setText("Start Transcribing")
@@ -1407,23 +1488,30 @@ class MainWindow(QMainWindow):
         self._srt_table.setRowCount(0)
         self._studio_start_btn.setEnabled(False)
         self._studio_start_btn.setText("Transcribing…")
+        self._set_studio_badge("Live", "active")
         if self._media_player is not None:
             self._media_player.play()
         self.sig_start_file_transcribe.emit(self._media_path, self._studio_lang.currentData() or "auto")
 
     def add_subtitle_segment(self, start_s: float, end_s: float, speaker: str, text: str):
         """Append a live transcribed segment to the editable timestamp table."""
+        self._srt_table.blockSignals(True)
         row = self._srt_table.rowCount()
         self._srt_table.insertRow(row)
         self._media_segments.append([start_s, end_s])
+        ts_font = QFont("Consolas", 10)
         s_item = QTableWidgetItem(self._fmt_srt_ts(start_s))
+        s_item.setFont(ts_font)
         s_item.setFlags(s_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         e_item = QTableWidgetItem(self._fmt_srt_ts(end_s))
+        e_item.setFont(ts_font)
         e_item.setFlags(e_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         t_item = QTableWidgetItem(text)
         self._srt_table.setItem(row, 0, s_item)
         self._srt_table.setItem(row, 1, e_item)
         self._srt_table.setItem(row, 2, t_item)
+        self._srt_table.blockSignals(False)
+        self._srt_table.resizeRowsToContents()
         self._srt_table.scrollToBottom()
         self._studio_save_btn.setEnabled(True)
 
@@ -1431,7 +1519,7 @@ class MainWindow(QMainWindow):
         self._studio_start_btn.setEnabled(True)
         self._studio_start_btn.setText("Re-transcribe")
         if default_srt_path:
-            self._studio_file_lbl.setText(f"{os.path.basename(self._media_path)} · Ready to save .SRT")
+            self._set_studio_badge("Ready to save .SRT", "active")
 
     def _seek_to_subtitle_row(self, row: int, col: int):
         if self._media_player is not None and 0 <= row < len(self._media_segments) and col < 2:
