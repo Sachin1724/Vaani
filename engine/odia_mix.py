@@ -38,7 +38,7 @@ OVERRIDE = {"ଅଫ": "of", "ଓକେ": "OK", "ହଭ": "have", "ଏମବି�
             "ମିକ୍ସଡ": "mixed", "ରାଣ୍ଡମାଇଜିଂ": "randomizing", "ଇଜି": "easy", "ସବ୍": "sub",
             "ସବଟାଇଟଲ": "subtitle", "ଆର": "are", "ପ୍ରୋଭାଇଡିଙ୍ଗ": "providing",
             "ଲିଟରାଲ୍ଯ୍": "literally", "ତବଲ": "table", "ଟବଲ": "table", "ଲିକ": "like"}
-MARGIN = 1.0  # English must be e^1 likelier than the Odia reading
+MARGIN = 0.4  # keep English terms in English even when IndicConformer emits Odia phonetics
 TABLE_PATH = os.path.join(os.path.dirname(__file__), "odia_english.tsv.gz")
 
 

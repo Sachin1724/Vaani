@@ -91,7 +91,7 @@ ODIA_LANGS = {"or", "odia", "or-en", "or-mix", "or-auto"}  # "or-en": main.py tr
 # (~90 ms); an English sentence comes out of it as Odia-script spellings of English words, which
 # odia_mix turns back into English, so a mostly-English result means English was spoken and the
 # sentence is decoded again with a Whisper model kept loaded beside it.
-MIX_LANGS = {"or-mix", "or-auto"}
+MIX_LANGS = {"or", "or-mix", "or-auto"}
 
 
 def _mostly_english(text: str) -> bool:
