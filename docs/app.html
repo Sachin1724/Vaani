@@ -243,7 +243,7 @@ table.led { width: 100%; border-collapse: collapse; font-size: 16px; }
     <span class="end" aria-hidden="true"><i></i></span>
   </div>
   <div class="go">
-    <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/latest/download/Vaani-Setup.exe">Download for Windows <small>v1.7.0</small></a>
+    <a class="btn" href="https://github.com/Sachin1724/Vaani/releases/latest/download/Vaani-Setup.exe">Download for Windows <small id="dl-ver">v1.6.0</small></a>
     <p class="fine">Free, open source. Windows 10 or 11, 64-bit. <a class="link" href="#models">Compare the models</a></p>
   </div>
 </header>
@@ -466,6 +466,16 @@ table.led { width: 100%; border-collapse: collapse; font-size: 16px; }
   <p>Vaani is free and open source under the MIT license. Made by Sachidananda. Speech data: Google FLEURS (CC-BY-4.0).</p>
 </footer>
 
+<script>
+  // the button downloads GitHub's latest Windows setup; show that release's real version, not a hard-coded one
+  fetch('https://api.github.com/repos/Sachin1724/Vaani/releases?per_page=20')
+    .then(r => r.ok ? r.json() : [])
+    .then(rs => {
+      const win = rs.find(r => !r.draft && !r.prerelease && r.assets.some(a => a.name === 'Vaani-Setup.exe'));
+      if (win) document.getElementById('dl-ver').textContent = 'v' + win.tag_name.replace(/^v/i, '');
+    })
+    .catch(() => {});
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script>
