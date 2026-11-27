@@ -31,7 +31,13 @@ OVERRIDE = {"ଅଫ": "of", "ଓକେ": "OK", "ହଭ": "have", "ଏମବି�
             "ୟୁଟ୍ୟୁବ": "YouTube", "ୟୁଟୁବ": "YouTube", "ୟୁଟ୍ୟୁବ୍": "YouTube",
             "ହ୍ୱାଟସଆପ": "WhatsApp", "ୱାଟସଆପ": "WhatsApp", "ହ୍ୱାଟସ୍ଆପ୍": "WhatsApp", "ୱାଟ୍ସଆପ୍": "WhatsApp",
             "ଫେସବୁକ": "Facebook", "ଇନଷ୍ଟାଗ୍ରାମ": "Instagram", "ଇନ୍ସଟାଗ୍ରାମ": "Instagram",
-            "ଗୁଗଲ": "Google", "ଜିମେଲ": "Gmail", "ଜିମେଲ୍": "Gmail", "ଚାଟଜିପିଟି": "ChatGPT"}
+            "ଗୁଗଲ": "Google", "ଜିମେଲ": "Gmail", "ଜିମେଲ୍": "Gmail", "ଚାଟଜିପିଟି": "ChatGPT",
+            # Common English words frequently emitted in Odia script by IndicConformer
+            "ଦେୟର": "there", "ଇସ୍ୟୁଜ୍": "issues", "ଇସୁ": "issue", "ୱନଥିଙ୍ଗ": "one thing",
+            "ମଡେଲ": "model", "ଟ୍ରେଣ୍ଡ": "trained", "କଷ୍ଟମଲି": "customly", "ଅଟୋ": "auto",
+            "ମିକ୍ସଡ": "mixed", "ରାଣ୍ଡମାଇଜିଂ": "randomizing", "ଇଜି": "easy", "ସବ୍": "sub",
+            "ସବଟାଇଟଲ": "subtitle", "ଆର": "are", "ପ୍ରୋଭାଇଡିଙ୍ଗ": "providing",
+            "ଲିଟରାଲ୍ଯ୍": "literally", "ତବଲ": "table", "ଟବଲ": "table", "ଲିକ": "like"}
 MARGIN = 1.0  # English must be e^1 likelier than the Odia reading
 TABLE_PATH = os.path.join(os.path.dirname(__file__), "odia_english.tsv.gz")
 

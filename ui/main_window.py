@@ -1332,10 +1332,16 @@ class MainWindow(QMainWindow):
         top_bar.addWidget(self._studio_status)
 
         self._studio_lang = QComboBox()
-        self._studio_lang.setToolTip("Transcription language for this file")
-        for code, lbl in [("auto", "Auto"), ("or-auto", "Odia + EN"), ("or", "Odia (ଓଡ଼ିଆ)"), ("hi", "Hindi"), ("en-in", "English (IN)")]:
+        self._studio_lang.setToolTip("Spoken language of this file")
+        for code, lbl in [("auto", "Auto (EN/HI/OR)"), ("or-auto", "Odia + EN"), ("or", "Odia (ଓଡ଼ିଆ)"), ("hi", "Hindi"), ("en-in", "English (IN)")]:
             self._studio_lang.addItem(lbl, code)
         top_bar.addWidget(self._studio_lang)
+
+        self._studio_out_mode = QComboBox()
+        self._studio_out_mode.setToolTip("Subtitle output script")
+        for mode, lbl in [("keep", "Keep Spoken"), ("en", "Translate → EN"), ("or", "Odia Only")]:
+            self._studio_out_mode.addItem(lbl, mode)
+        top_bar.addWidget(self._studio_out_mode)
 
         self._studio_play_btn = _btn("Play", small=True, slot=self._toggle_media_play)
         self._studio_play_btn.setEnabled(False)
@@ -1491,7 +1497,13 @@ class MainWindow(QMainWindow):
         self._set_studio_badge("Live", "active")
         if self._media_player is not None:
             self._media_player.play()
-        self.sig_start_file_transcribe.emit(self._media_path, self._studio_lang.currentData() or "auto")
+        lang = self._studio_lang.currentData() or "auto"
+        out_mode = self._studio_out_mode.currentData() or "keep"
+        if out_mode == "en":
+            lang = "or-en" if lang in ("or", "or-auto") else "translate"
+        elif out_mode == "or":
+            lang = "or"
+        self.sig_start_file_transcribe.emit(self._media_path, lang)
 
     def add_subtitle_segment(self, start_s: float, end_s: float, speaker: str, text: str):
         """Append a live transcribed segment to the editable timestamp table."""
