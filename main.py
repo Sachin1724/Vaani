@@ -1049,7 +1049,7 @@ class OpenFlowApp(QObject):
 
     @staticmethod
     def _subtitle_path(name: str) -> str:
-        folder = os.path.join(os.path.expanduser("~"), "Videos", "OpenFlow Subtitles")
+        folder = os.path.join(os.path.expanduser("~"), "Videos", "Vaani Subtitles")
         os.makedirs(folder, exist_ok=True)
         return os.path.join(folder, re.sub(r'[<>:"/\\|?*\']+', "", name).strip() + ".srt")
 
