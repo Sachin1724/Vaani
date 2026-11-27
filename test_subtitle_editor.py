@@ -51,6 +51,7 @@ def test_helpers():
 def test_editor_flow():
     w = MainWindow(Database(":memory:"), dict(load_config()))
     w._media_path = "clip.mp4"
+    w._generating = True  # as after Generate Subtitles; lines from no run are dropped
     learned = []
     w.sig_subtitle_corrected.connect(lambda *a: learned.append(a))
     for i, text in enumerate(("we flew to odisa", "odisa is green", "the end")):
@@ -91,9 +92,14 @@ def test_editor_flow():
     w._undo_edit()
     assert len(w._cues) == 2
 
+    w._show_lines([])  # a new file: the old run's late lines must not land in it
+    w.add_subtitle_segment(9.0, 10.0, "Person 1", "late line")
+    assert w._cues == []
+
 
 def test_project_round_trip(tmp_path):
     w = MainWindow(Database(":memory:"), dict(load_config()))
+    w._generating = True
     w.add_subtitle_segment(0.0, 1.5, "Person 1", "hello there friend")
     w._dirty = True
     path = str(tmp_path / "talk.vaani.json")

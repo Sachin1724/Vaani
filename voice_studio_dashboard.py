@@ -31,7 +31,9 @@ PORT = int(os.environ.get("VAANI_STUDIO_PORT", "8788"))
 
 _MODEL = None
 _MODEL_LOCK = threading.Lock()
-_GEN_LOCK = threading.Lock()  # one take at a time: the GPU is shared and the seed is process-wide
+_GEN_LOCK = threading.Lock()
+_ENROLL_LOCK = threading.Lock()  # one enrollment at a time, so a voice's audio, profile and text stay together
+MAX_BODY = 60 * 1024 * 1024  # ~90 s of WAV, base64-encoded, with room to spare  # one take at a time: the GPU is shared and the seed is process-wide
 _TAKES = []
 
 BRAND_SAFE_MAP = [
@@ -91,6 +93,11 @@ def enroll_voice(name: str, wav_bytes: bytes, text: str = "") -> dict:
         raise ValueError("Name the voice first.")
     # file id: English letters as typed, else a stable hash, so the same Odia name re-enrolls the same voice
     sid = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") or "voice_" + hashlib.md5(name.encode("utf-8")).hexdigest()[:8]
+    with _ENROLL_LOCK:
+        return _enroll(name, sid, wav_bytes, text)
+
+
+def _enroll(name: str, sid: str, wav_bytes: bytes, text: str) -> dict:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     tmp = OUT_DIR / f"enroll_{uuid.uuid4().hex[:8]}.wav"
     tmp.write_bytes(wav_bytes)
@@ -98,7 +105,7 @@ def enroll_voice(name: str, wav_bytes: bytes, text: str = "") -> dict:
     # this venv's launcher variables would make the other Python load this one's standard library
     env = {k: v for k, v in os.environ.items() if k not in ("__PYVENV_LAUNCHER__", "PYTHONHOME", "PYTHONPATH", "VIRTUAL_ENV")}
     env["PYTHONIOENCODING"] = "utf-8"
-    try:
+    try:  # an argument list, no shell: the name reaches the script as one argv string
         r = subprocess.run([py, "-c", ENROLL_SCRIPT, name, str(tmp), sid], cwd=str(ROOT.parent), capture_output=True,
                            text=True, encoding="utf-8", errors="replace", timeout=180, env=env)
     finally:
@@ -232,7 +239,7 @@ HTML = r"""<!doctype html>
           <span class="rec-time"><span class="dot"></span><span id="recTimer">Up to 10 s</span></span>
           <label class="btn quiet" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin-left:auto">
             Upload Audio
-            <input type="file" id="wavUpload" accept="audio/*" hidden>
+            <input type="file" id="wavUpload" accept=".wav,.flac,.ogg,.mp3,audio/wav,audio/flac,audio/ogg,audio/mpeg" hidden>
           </label>
         </div>
         <audio id="recPreview" controls hidden></audio>
@@ -347,7 +354,7 @@ document.querySelectorAll('.pbtn').forEach(b => b.onclick = () => { $('paraTxt')
 
 async function loadSpeakers(pick) {
   const list = await (await fetch('/api/speakers')).json();
-  $('speakerSel').innerHTML = list.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  $('speakerSel').replaceChildren(...list.map(s => new Option(s.name, s.id)));
   const want = pick || 'sachin';
   if (list.some(s => s.id === want)) $('speakerSel').value = want;
 }
@@ -378,6 +385,7 @@ let rec = null;
 $('recBtn').onclick = () => rec ? stopRec() : startRec();
 
 async function startRec() {
+  customRefB64 = null; customRefText = '';
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }); }
   catch (err) { $('recStatus').textContent = 'Microphone blocked (' + err.message + '). Allow it from the address bar, then press Record.'; return; }
@@ -479,7 +487,16 @@ $('genBtn').onclick = async () => {
     $('genStatus').textContent = 'Ready';
     const card = document.createElement('div');
     card.className = 'take';
-    card.innerHTML = `<div class="take-top"><span><b>${body.speaker}</b> · T=${body.class_temperature} · Speed=${body.speed}× · ${d.sec}s</span><span>${d.took}s</span></div><div>${d.spoken_text}</div><audio controls src="${d.audio_url}"></audio>`;
+    const top = document.createElement('div'), who = document.createElement('span'), took = document.createElement('span');
+    const name = document.createElement('b'), said = document.createElement('div'), audio = document.createElement('audio');
+    top.className = 'take-top';
+    name.textContent = $('speakerSel').selectedOptions[0]?.text || body.speaker;
+    who.append(name, ` · T=${body.class_temperature} · Speed=${body.speed}× · ${d.sec}s`);
+    took.textContent = `${d.took}s`;
+    top.append(who, took);
+    said.textContent = d.spoken_text;
+    audio.controls = true; audio.src = d.audio_url;
+    card.append(top, said, audio);
     if ($('takesList').querySelector('.sub')) $('takesList').innerHTML = '';
     $('takesList').prepend(card);
   } catch (e) {
@@ -531,11 +548,24 @@ class StudioHandler(http.server.BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def _read_json(self):
+        """The request body as JSON, or None after answering: a caller that isn't this page, or too big."""
+        origin = self.headers.get("Origin")
+        if origin and origin not in (f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}") or not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            self._json({"error": "Requests must come from the Voice Studio page."}, 403)
+            return None
+        ln = int(self.headers.get("Content-Length", "0"))
+        if ln > MAX_BODY:
+            self._json({"error": "That recording is too large. Use 90 seconds or less."}, 413)
+            return None
+        return json.loads(self.rfile.read(ln).decode("utf-8"))
+
     def do_POST(self):
         if self.path == "/api/enroll":
             try:
-                ln = int(self.headers.get("Content-Length", "0"))
-                req = json.loads(self.rfile.read(ln).decode("utf-8"))
+                req = self._read_json()
+                if req is None:
+                    return
                 self._json(enroll_voice(req.get("name") or "", base64.b64decode(req.get("wav_b64") or ""), req.get("text") or ""))
             except ValueError as e:
                 self._json({"error": str(e)}, 400)
@@ -547,8 +577,9 @@ class StudioHandler(http.server.BaseHTTPRequestHandler):
             return
         tmp_ref = None
         try:
-            ln = int(self.headers.get("Content-Length", "0"))
-            req = json.loads(self.rfile.read(ln).decode("utf-8"))
+            req = self._read_json()
+            if req is None:
+                return
             text = normalize_brand_names((req.get("text") or "").strip(), req.get("brand_safe", True))
             if not text:
                 self._json({"error": "Enter a paragraph first."}, 400)

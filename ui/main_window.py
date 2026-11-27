@@ -1546,7 +1546,8 @@ class MainWindow(QMainWindow):
     C_NUM, C_START, C_END, C_SPEAKER, C_CPS, C_TEXT = range(6)
 
     def _create_tools_tab(self) -> QWidget:
-        self._media_path, self._project_path, self._duration = "", "", 0.0
+        self._media_path, self._project_path, self._duration, self._missing_media = "", "", 0.0, ""
+        self._generating = False  # lines from a run that was replaced (new file, new run) are dropped
         self._cues, self._undo, self._redo = [], [], []  # history holds whole cue lists
         self._dirty, self._playing_row, self._fix, self._gen_started = False, -1, None, 0.0
 
@@ -1939,7 +1940,7 @@ class MainWindow(QMainWindow):
 
     def _keep_edits(self, question: str) -> bool:
         """True when it's fine to drop the current lines: nothing unsaved, or the user says so."""
-        if not (self._dirty and self._cues):
+        if not self._dirty:
             return True
         return QMessageBox.question(self, "Unsaved Subtitles", question,
                                     QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
@@ -1947,7 +1948,7 @@ class MainWindow(QMainWindow):
 
     def _set_media(self, path: str):
         """Point the player and waveform at a file ('' = none) without touching the lines."""
-        self._media_path, self._duration = path, 0.0
+        self._media_path, self._duration, self._missing_media = path, 0.0, ""
         name = os.path.basename(path) if path else "No media"
         self._studio_file_lbl.setText(self._studio_file_lbl.fontMetrics().elidedText(name, Qt.TextElideMode.ElideMiddle, 320))
         self._studio_file_lbl.setToolTip(path)
@@ -1960,6 +1961,9 @@ class MainWindow(QMainWindow):
         self._set_studio_badge("Ready" if path else "No media", "accent" if path else "plain")
 
     def _show_lines(self, cues, note: str = ""):
+        self._generating = False  # whatever was running belongs to the lines being replaced
+        self._studio_start_btn.setText("Generate Subtitles")
+        self._gen_bar.hide()
         self._cues, self._undo, self._redo, self._dirty = cues, [], [], False
         self._fix_bar.hide()
         self._render_cues()
@@ -2006,7 +2010,7 @@ class MainWindow(QMainWindow):
         if not self._keep_edits("Opening this project replaces your unsaved edits. Continue?"):
             return
         self._set_media(media if media and os.path.exists(media) else "")
-        self._project_path = path
+        self._project_path, self._missing_media = path, "" if self._media_path else media
         moved = media and not self._media_path
         self._show_lines(cues, "The media file has moved. Open it again to play along." if moved
                          else f"Opened {os.path.basename(path)}.")
@@ -2022,9 +2026,12 @@ class MainWindow(QMainWindow):
                 return
             if not out.lower().endswith(PROJECT_EXT):
                 out = os.path.splitext(out)[0] + PROJECT_EXT
-        try:
-            with open(out, "w", encoding="utf-8") as fh:
-                json.dump({"version": 1, "media": self._media_path, "cues": self._cues}, fh, ensure_ascii=False, indent=1)
+        tmp = out + ".tmp"
+        try:  # write beside it, then swap: a crash mid-write never leaves a half project
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump({"version": 1, "media": self._media_path or self._missing_media, "cues": self._cues},
+                          fh, ensure_ascii=False, indent=1)
+            os.replace(tmp, out)
         except OSError as e:
             QMessageBox.warning(self, "Couldn't Save Project", f"{e.strerror or e}. Choose another folder and try again.")
             return
@@ -2187,28 +2194,33 @@ class MainWindow(QMainWindow):
         if not 0 <= r < len(self._cues) or c not in (self.C_START, self.C_END, self.C_SPEAKER, self.C_TEXT):
             return
         val = self._cue_table.item(r, c).text()
-        new = [list(x) for x in self._cues]
         old = self._cues[r][2]
         if c == self.C_TEXT:
-            new[r][2] = " ".join(val.split())
-            if new[r][2] == old:
+            field, value = 2, " ".join(val.split())
+            if value == old:
                 return
         elif c == self.C_SPEAKER:
-            new[r][3] = val.strip()
+            field, value = 3, val.strip()
         else:
-            t = parse_ts(val)
-            if t is None:
+            field, value = c - self.C_START, parse_ts(val)
+            if value is None:
                 self._cue_table.blockSignals(True)
                 self._cue_row(r)
                 self._cue_table.blockSignals(False)
                 self._note("Type a time like 00:01:02,500 or 62.5.")
                 return
-            new[r][c - self.C_START] = t
-        # re-rendering inside cellChanged would delete the item whose editor is still closing
-        QTimer.singleShot(0, lambda: self._commit(new))
+
+        def apply():  # runs after cellChanged: re-rendering inside it would delete the item whose editor is closing
+            if r < len(self._cues):
+                new = [list(x) for x in self._cues]
+                new[r][field] = value
+                self._commit(new)
+        QTimer.singleShot(0, apply)
         if c == self.C_TEXT and old:
-            self._offer_fix(old, new[r][2], r, new)
-            self.sig_subtitle_corrected.emit(new[r][0], new[r][1], old, new[r][2], self._media_path)
+            cues = [list(x) for x in self._cues]
+            cues[r][2] = value
+            self._offer_fix(old, value, r, cues)
+            self.sig_subtitle_corrected.emit(cues[r][0], cues[r][1], old, value, self._media_path)
 
     def _offer_fix(self, old: str, text: str, row: int, cues):
         swaps = word_swaps(old, text)
@@ -2457,6 +2469,7 @@ class MainWindow(QMainWindow):
         self._studio_start_btn.setText("Generating…")
         self._set_studio_badge("Generating", "active")
         self._gen_started = time.monotonic()
+        self._generating = True
         self._gen_bar.setValue(0)
         self._gen_bar.show()
         self._note("Listening… lines appear as they're heard.")
@@ -2470,6 +2483,8 @@ class MainWindow(QMainWindow):
 
     def add_subtitle_segment(self, start_s: float, end_s: float, speaker: str, text: str):
         """A line heard while generating: appended live, editable at once."""
+        if not self._generating:
+            return  # ponytail: from a run the user replaced; a job id from main.py would also catch a restart mid-run
         # ponytail: streamed lines bypass history, so undo resets; an old snapshot would drop lines heard since
         self._undo.clear()
         self._redo.clear()
@@ -2493,6 +2508,9 @@ class MainWindow(QMainWindow):
         self._update_cue_footer()
 
     def finish_media_transcribe(self, default_srt_path: str):
+        if not self._generating:
+            return
+        self._generating = False
         self._gen_started = 0.0
         self._gen_bar.hide()
         self._studio_start_btn.setText("Generate Again")
@@ -2520,9 +2538,10 @@ class MainWindow(QMainWindow):
         except OSError as e:
             QMessageBox.warning(self, "Couldn't Export", f"{e.strerror or e}. Choose another folder and try again.")
             return
-        self._dirty = False
+        if not self._project_path:
+            self._dirty = False
         self._update_cue_footer()
-        self._note(f"Exported {os.path.basename(out)}.")
+        self._note(f"Exported {os.path.basename(out)}." + (" Save the project to keep these edits in it." if self._dirty else ""))
 
     def set_live_running(self, running: bool):
         """Mirrors the tray's "Transcribe What's Playing" check mark."""
