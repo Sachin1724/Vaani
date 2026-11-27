@@ -749,6 +749,28 @@ class Transcriber:
             if contains_arabic_script(full_text):
                 full_text = clean_arabic_script(full_text)
 
+            # Odia rescue in Auto mode: Whisper has no 'or' token and frequently mislabels Odia as
+            # Japanese ('ja'), Bengali ('bn'), Nepali ('ne'), etc. Route to local Odia IndicConformer when cached.
+            det = getattr(info, "language", "") if info else ""
+            prob = getattr(info, "language_probability", 1.0) or 1.0
+            if lang in ("auto", "") and (det in ("bn", "ne", "as", "si") or (det in ("ja", "ko", "my") and prob < 0.90)):
+                odia_path = model_manager.cached_path("odia")
+                if odia_path:
+                    try:
+                        if getattr(self, "_odia_rescue", None) is None:
+                            from .indic_asr import IndicCTC
+                            self._odia_rescue = IndicCTC(os.path.join(odia_path, "or"), threads=_THREADS)
+                        odia_raw = self._odia_rescue.text(audio)
+                        from .odia_mix import to_mixed
+                        odia_text = _drop_loop(to_mixed(odia_raw, getattr(self._odia_rescue, "lm", None)))
+                        if odia_text and len(odia_text.split()) >= 2:
+                            print(f"[Vaani] Auto rescued '{det}' (p={prob:.2f}) -> Odia IndicConformer")
+                            latency_ms = int((time.perf_counter() - start_time) * 1000)
+                            self.last_detected_lang = "or"
+                            return odia_text, duration_seconds, latency_ms, "or"
+                    except Exception as oe:
+                        print(f"[Vaani] Odia auto-rescue skipped ({oe})")
+
         latency_ms = int((time.perf_counter() - start_time) * 1000)
         detected_lang = "en" if lang == "translate" else (getattr(info, "language", "") or lang)
         self.last_detected_lang = detected_lang
