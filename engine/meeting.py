@@ -438,11 +438,16 @@ class MeetingSession:
         try:
             # Keep auto unbiased (an English prompt biases Whisper to output broken English for Odia/Hindi)
             prompt = None if self.language in ("auto", "") else INDIC_MEETING_PROMPT
-            text = self.transcriber.transcribe(
+            text, _, _, det_lang = self.transcriber.transcribe(
                 audio,
                 language=self.language,
                 initial_prompt=prompt,
-            )[0].strip()
+            )
+            text = text.strip()
+            # If an Auto video/call has Odia speech, lock subsequent chunks to 'or-auto' so mixed
+            # Odia+English sentences aren't misclassified as broken English.
+            if self.language in ("auto", "") and det_lang == "or":
+                self.language = "or-auto"
         except Exception as e:
             print(f"[Vaani Meeting] Transcription failed: {e}")
             return
