@@ -1025,8 +1025,9 @@ class OpenFlowApp(QObject):
         self.main_window.load_media_file(path)
         self.show_dashboard()
 
-    def _run_file_transcription(self, path: str):
+    def _run_file_transcription(self, path: str, lang: str = ""):
         name = os.path.basename(path)
+        use_lang = lang or self._meeting_language()
         self.floating_pill.show_message(f"Transcribing {name}…", duration_ms=4000)
 
         def keep_loaded(*_):
@@ -1035,7 +1036,7 @@ class OpenFlowApp(QObject):
         def work():
             try:
                 session = MeetingSession(
-                    self.transcriber, self._meeting_language(), keep_loaded, mic=False,
+                    self.transcriber, use_lang, keep_loaded, mic=False,
                     on_segment=lambda st, en, who, txt: self.bridge.sig_file_segment.emit(st, en, who, txt),
                 )
                 lines = session.transcribe_file(path)

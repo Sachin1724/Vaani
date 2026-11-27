@@ -355,7 +355,7 @@ class MainWindow(QMainWindow):
     sig_capsule_size = pyqtSignal()          # width / height / auto-scale changed; read the values from config
     sig_theme = pyqtSignal(str)              # "light" / "dark": applies at once to the dashboard and the capsule
     sig_transcribe_file = pyqtSignal()       # Tools: same actions as the tray menu
-    sig_start_file_transcribe = pyqtSignal(str)
+    sig_start_file_transcribe = pyqtSignal(str, str)  # (path, language)
     sig_toggle_live = pyqtSignal()
 
     def __init__(self, db: Database, config: dict):
@@ -1322,6 +1322,10 @@ class MainWindow(QMainWindow):
         self._studio_file_lbl = QLabel("No file loaded — click Choose file… above")
         self._studio_file_lbl.setObjectName("Muted")
         top_bar.addWidget(self._studio_file_lbl, 1)
+        self._studio_lang = QComboBox()
+        for code, lbl in [("auto", "Auto"), ("or-auto", "Odia + EN"), ("or", "Odia (ଓଡ଼ିଆ)"), ("hi", "Hindi"), ("en-in", "English (IN)")]:
+            self._studio_lang.addItem(lbl, code)
+        top_bar.addWidget(self._studio_lang)
         self._studio_play_btn = _btn("Play / Pause", small=True, slot=self._toggle_media_play)
         self._studio_play_btn.setEnabled(False)
         self._studio_start_btn = _btn("Start Transcribing", "primary", True, self._start_media_transcribe)
@@ -1405,7 +1409,7 @@ class MainWindow(QMainWindow):
         self._studio_start_btn.setText("Transcribing…")
         if self._media_player is not None:
             self._media_player.play()
-        self.sig_start_file_transcribe.emit(self._media_path)
+        self.sig_start_file_transcribe.emit(self._media_path, self._studio_lang.currentData() or "auto")
 
     def add_subtitle_segment(self, start_s: float, end_s: float, speaker: str, text: str):
         """Append a live transcribed segment to the editable timestamp table."""

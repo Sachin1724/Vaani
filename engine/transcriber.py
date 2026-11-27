@@ -750,10 +750,14 @@ class Transcriber:
                 full_text = clean_arabic_script(full_text)
 
             # Odia rescue in Auto mode: Whisper has no 'or' token and frequently mislabels Odia as
-            # Japanese ('ja'), Bengali ('bn'), Nepali ('ne'), etc. Route to local Odia IndicConformer when cached.
+            # Japanese ('ja'), Bengali ('bn'), Nepali ('ne'), or low-confidence English ('en').
             det = getattr(info, "language", "") if info else ""
             prob = getattr(info, "language_probability", 1.0) or 1.0
-            if lang in ("auto", "") and (det in ("bn", "ne", "as", "si") or (det in ("ja", "ko", "my") and prob < 0.90)):
+            if lang in ("auto", "") and (
+                det in ("bn", "ne", "as", "si")
+                or (det in ("ja", "ko", "my", "tl", "id") and prob < 0.92)
+                or (det == "en" and prob < 0.72)
+            ):
                 odia_path = model_manager.cached_path("odia")
                 if odia_path:
                     try:

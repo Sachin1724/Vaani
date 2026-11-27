@@ -436,11 +436,12 @@ class MeetingSession:
 
     def _caption(self, src: str, audio: np.ndarray, t0: float, speakers: "_Speakers"):
         try:
-            # Prime Whisper with anti-Urdu / Indic biasing prompt so Hindi/Odia speech is never misclassified
+            # Keep auto unbiased (an English prompt biases Whisper to output broken English for Odia/Hindi)
+            prompt = None if self.language in ("auto", "") else INDIC_MEETING_PROMPT
             text = self.transcriber.transcribe(
                 audio,
                 language=self.language,
-                initial_prompt=INDIC_MEETING_PROMPT
+                initial_prompt=prompt,
             )[0].strip()
         except Exception as e:
             print(f"[Vaani Meeting] Transcription failed: {e}")
