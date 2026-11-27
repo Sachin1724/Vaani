@@ -148,7 +148,7 @@ _THREADS = min(8, max(2, _physical_cores()))
 # (Whisper small on CPU: ~1.2 s, 25% of the time). Cancel the decode if that shows up in latency.
 _PREVIEW_BUDGET_S = 0.4
 _PREVIEW_OFF_S = 1.5
-_HUNG_S = 5.0  # a model call holding the lock this long never comes back (seen with CUDA)
+_HUNG_S = 5.0  # a model call this far past its own time budget never comes back (seen with CUDA)
 
 
 def _whisper_args(lang: str) -> dict:
@@ -236,6 +236,7 @@ class Transcriber:
         self._substitute = {}           # wanted model -> downloaded model used instead (no auto-download)
         self._lock = threading.RLock()  # model swaps must not race transcription
         self._abandon_guard = threading.Lock()
+        self._held_until = 0.0  # when the lock holder's call should be done by (see _locked)
         self._holder_loading = False
         self.on_status = None           # optional callback(str) for "downloading/ready" messages
         self._loaded_device = ""
@@ -482,11 +483,19 @@ class Transcriber:
         return stream.result.text.strip()
 
     @contextlib.contextmanager
-    def _locked(self):
+    def _locked(self, budget: float = 0.0):
+        """The model lock. `budget` is how long this call may take (a long file on the CPU is slow, not hung);
+        a waiter only gives up on the holder once it is _HUNG_S past that, or a slow job would ban the GPU."""
         lock = self._lock
         got = lock.acquire(timeout=_HUNG_S)
-        if not got and self._holder_loading:
-            got = lock.acquire()
+        while not got:
+            if self._holder_loading:  # a download can hold the lock for minutes
+                got = lock.acquire()
+                break
+            left = self._held_until + _HUNG_S - time.monotonic()
+            if left <= 0:
+                break
+            got = lock.acquire(timeout=left)
         if not got:
             with self._abandon_guard:  # two waiters timing out together must swap the model once
                 if self._lock is lock:
@@ -494,6 +503,7 @@ class Transcriber:
                 else:
                     lock = self._lock
                     lock.acquire()
+        self._held_until = time.monotonic() + budget
         try:
             yield
         finally:
@@ -668,7 +678,7 @@ class Transcriber:
             return " ".join(seg.text.strip() for seg in segments).strip(), info
 
         if self._current_loaded_name in ("parakeet", "odia"):
-            with self._locked():
+            with self._locked(budget=2.0 * duration_seconds):
                 full_text = self._parakeet_text(audio)
                 if lang in MIX_LANGS:
                     from .odia_mix import to_mixed
@@ -687,7 +697,7 @@ class Transcriber:
             latency_ms = int((time.perf_counter() - start_time) * 1000)
             return _drop_loop(full_text), duration_seconds, latency_ms, lang
 
-        with self._locked():
+        with self._locked(budget=2.0 * duration_seconds):
             try:
                 full_text, info = _run(vad=True)
             except ValueError as ve:

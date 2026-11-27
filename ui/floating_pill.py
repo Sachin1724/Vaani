@@ -2376,6 +2376,13 @@ class FloatingPill(QWidget):
             self._is_snoozed = False
             self._apply_t(0.0)
             self.position_bottom_center()
+            if self.current_state in ("idle", "pasted") and hasattr(self, "btn_stop"):
+                # a resize shows the new size at rest, then settles back: it must not look like it's listening
+                self.visualizer.setVisible(False)
+                self.btn_stop.hide()
+                self.indicator.set_state("idle")
+                self.hide_timer.stop()
+                self.hide_timer.start(1500)
 
     def _fit_capsule(self, wf: float, hf: float):
         """Scale every part by one factor, then drop parts (label, badge, bars) until the rest fits.
