@@ -18,8 +18,8 @@ android {
         applicationId = "app.vaani"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.2.0-beta"
+        versionCode = 5
+        versionName = "0.3.0-beta"
         ndk { abiFilters += "arm64-v8a" }   // the speech runtime ships for 64-bit ARM phones only
     }
     signingConfigs {

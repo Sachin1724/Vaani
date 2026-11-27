@@ -11,13 +11,32 @@ import java.net.URL
 /** One dictated text, kept on the phone so it can be copied again. */
 data class Entry(val id: Long, val ts: Long, val lang: String, val text: String)
 
-/** Dictation history in a tiny SQLite file (no library needed). */
-class Db private constructor(ctx: Context) : SQLiteOpenHelper(ctx, "flow.db", null, 1) {
+/** A recorded call or lecture: one transcript line per sentence. */
+data class Note(val id: Long, val ts: Long, val lang: String, val seconds: Int, val text: String)
+
+/** Dictation history and notes in a tiny SQLite file (no library needed). */
+class Db private constructor(ctx: Context) : SQLiteOpenHelper(ctx, "flow.db", null, 2) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, lang TEXT, text TEXT)")
+        createNotes(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) {}
+    override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) { if (o < 2) createNotes(db) }
+
+    private fun createNotes(db: SQLiteDatabase) =
+        db.execSQL("CREATE TABLE notes (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, lang TEXT, seconds INTEGER, text TEXT)")
+
+    fun addNote(lang: String, seconds: Int, text: String) {
+        if (text.isBlank()) return
+        writableDatabase.insert("notes", null, ContentValues().apply {
+            put("ts", System.currentTimeMillis()); put("lang", lang); put("seconds", seconds); put("text", text.trim()) })
+    }
+
+    fun notes(): List<Note> = readableDatabase.rawQuery("SELECT id, ts, lang, seconds, text FROM notes ORDER BY id DESC", null).use { c ->
+        buildList { while (c.moveToNext()) add(Note(c.getLong(0), c.getLong(1), c.getString(2), c.getInt(3), c.getString(4))) }
+    }
+
+    fun deleteNote(id: Long) { writableDatabase.delete("notes", "id = ?", arrayOf(id.toString())) }
 
     fun add(lang: String, text: String) {
         if (text.isBlank()) return
