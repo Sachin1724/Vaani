@@ -1471,8 +1471,12 @@ class FloatingCaptionBubble(QWidget):
         if not text:
             self.fade_out()
             return
-        if self._ended or not merge:  # a new dictation or a notice never builds on faded-out text
+        if self._ended:  # a new dictation or notice never builds on faded-out text
             self._text, self._shown, self._ended = "", 0.0, False
+            self._cached_layout = None
+        elif not merge:  # a notice replaces the line; only the part that changed types in again
+            keep = next((i for i, (a, b) in enumerate(zip(self._text, text)) if a != b), min(len(self._text), len(text)))
+            self._text, self._shown = "", min(self._shown, float(keep))
             self._cached_layout = None
         merged = merge_preview(self._text, text) if merge else text
         # Cap stored tail on very long paragraphs so layout measurement stays fast
@@ -1536,7 +1540,9 @@ class FloatingCaptionBubble(QWidget):
     def _reposition(self):
         if not self.pill or not self.pill.isVisible():
             return
-        px = self.pill.x() + (self.pill.width() - self.width()) // 2
+        # centre on the visible body: while the capsule morphs, its window is wider than the body
+        cx = self.pill.body_center_x() if hasattr(self.pill, "body_center_x") else self.pill.width() / 2.0  # the island
+        px = self.pill.x() + round(cx - self.width() / 2)
         if getattr(self.pill, "caption_below", False):  # the island sits at the top edge: caption goes underneath
             py = self.pill.y() + self.pill.body_bottom() + 8
         else:
@@ -2678,6 +2684,10 @@ class FloatingPill(QWidget):
     def _body_rect(self) -> QRectF:
         r = self._shape if self._staged else QRectF(self.rect())
         return r.adjusted(0.5, 0.5, -0.5, -0.5)
+
+    def body_center_x(self) -> float:
+        """Horizontal centre of the visible body in window coordinates."""
+        return self._shape.center().x() if self._staged else self.width() / 2.0
 
     def body_top(self) -> int:
         """Top of the visible body in window coordinates (the caption bubble sits above it)."""
