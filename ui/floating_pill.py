@@ -189,9 +189,9 @@ def _bezier(x1, y1, x2, y2) -> QEasingCurve:
     return c
 
 
-SNAP_EASE = _bezier(0.05, 0.6, 0.4, 0.95)  # sharp ease-out for size changes: most of the move lands in the first frames
+SNAP_EASE = _bezier(0.22, 1.0, 0.36, 1.0)  # smooth cubic ease-out for collapse, snooze, and size transitions
 BUBBLE_EASE = QEasingCurve(QEasingCurve.Type.OutBack)
-BUBBLE_EASE.setOvershoot(1.25)  # gentle organic bounce on bubble wake/expand without jarring snap
+BUBBLE_EASE.setOvershoot(1.35)  # organic spring-bounce on bubble wake, HUD morph, and expand
 
 
 @lru_cache(maxsize=1)

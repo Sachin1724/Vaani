@@ -295,6 +295,11 @@ def build_initial_prompt(
             "उर्दू या अरबी लिपि का प्रयोग न करें।"
         )
 
+    # In auto mode, an English initial_prompt biases Whisper's language detector toward 'en'
+    # and causes Hindi/mixed speech to be translated into English. Leave it unbiased.
+    if language in ("auto", ""):
+        return None
+
     # For other non-Hindi regional Indic scripts with their own token, let Whisper priors work
     if language in ("bn", "ta", "te", "ml", "kn", "gu", "mr", "pa"):
         return None
