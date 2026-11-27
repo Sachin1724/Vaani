@@ -614,6 +614,8 @@ section { position: relative; }
 .newshots { margin-top: 72px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .newshots figure { margin: 0; background: #DCD1B6; border-radius: var(--radius); padding: clamp(20px, 2.6vw, 40px); display: grid; align-content: center; justify-items: center; gap: 18px; }
 .newshots img { width: 100%; max-width: 380px; height: auto; }
+.newshots .wide { grid-column: 1 / -1; }
+.newshots .wide img { max-width: 1100px; border-radius: 12px; }
 .newshots figcaption { font-size: 15px; color: var(--soft); text-align: center; max-width: 30ch; }
 
 /* get */
@@ -952,19 +954,17 @@ section[id] { scroll-margin-top: 24px; }
 </section>
 
 <section class="new pad" id="new" aria-labelledby="n-h">
-  <h2 id="n-h" class="rv">New in 1.6.0.</h2>
+  <h2 id="n-h" class="rv">New in 1.7.0.</h2>
   <p class="intro rv" style="--i:1">Out now. Download the latest installer and everything below is included.</p>
   <ul>
-    <li class="rv"><h3>The capsule holds your files.</h3><p>Drop files, folders, images, links or text on the capsule or the Dynamic Island. Hover or click to open them, then drag any one straight into another app, or copy it.</p></li>
-    <li class="rv"><h3>Alerts for your devices.</h3><p>Charger in or out, battery low or full, headphones, Bluetooth earbuds and USB drives appear above the capsule. Never while you are dictating.</p></li>
-    <li class="rv"><h3>Settings at a glance.</h3><p>The capsule opens into one panel: microphone, language, style, model, paste last and retry, each a tap away. The version and update status sit at the top.</p></li>
-    <li class="rv"><h3>Light or dark.</h3><p>Light matches this site. Dark is the Dynamic Island's black, with the white wave and red recording pulse. Switch it in Settings and it changes at once.</p></li>
-    <li class="rv"><h3>Odia to English, without the wait.</h3><p>The translator loads the moment you choose Odia → English, so even your first sentence comes back in about a third of a second.</p></li>
+    <li class="rv"><h3>A subtitle studio.</h3><p>Drop a podcast, interview or video and the subtitles arrive as they're heard. Fix words and timing against a waveform, see who is speaking, then export .srt, .vtt, a transcript or JSON.</p></li>
+    <li class="rv"><h3>Fix a word once, everywhere.</h3><p>Correct a word in one line and the Studio offers to fix it in every other line. Your corrections teach Vaani for next time, and Restore brings back what the model heard.</p></li>
+    <li class="rv"><h3>Subtitles that read well.</h3><p>Lines that read too fast, run too long or overlap are counted, and Next jumps to each one. Save your work as a project and open it later, or open an existing .srt to keep editing.</p></li>
+    <li class="rv"><h3>Settings save themselves.</h3><p>Every change applies at once, with no Save button, and choices you make in the capsule stay put.</p></li>
+    <li class="rv"><h3>Odia, English and Hindi, kept apart.</h3><p>Keep each language as spoken, translate to English, or write Odia only. English words inside Odia speech stay in English, and auto-detect keeps Odia and Hindi as they are.</p></li>
   </ul>
   <div class="newshots">
-    <figure class="rv"><img src="img/hud.png" alt="The capsule's settings panel: microphone and language tiles, style chips with Clean selected, model, paste last and retry, version 1.6.0 up to date" width="720" height="648" loading="lazy"><figcaption>One panel for every setting.</figcaption></figure>
-    <figure class="rv" style="--i:1"><img src="img/capsule-tray.png" alt="The container above the capsule holding a text snippet, a PDF, a screenshot and a folder, each with a Copy button; the capsule shows 4 held items" width="760" height="664" loading="lazy"><figcaption>Held items, ready to drag back out. Sample files shown.</figcaption></figure>
-    <figure class="rv" style="--i:2"><img src="img/capsule-alerts.png" alt="Four dark alerts: a USB drive connected, charging at 80 percent, CMF Buds 2 Plus connected with 85 percent battery, and battery low at 15 percent" width="744" height="460" loading="lazy"><figcaption>Device alerts, in the dark theme.</figcaption></figure>
+    <figure class="rv wide"><img src="img/subtitle-studio.png" alt="The Subtitle Studio: the current line shown large above a waveform with each subtitle shaded on it, a table of lines with start, end, speaker and text, a word-fix bar offering to fix odisa to Odisha in one more place, and a settings panel with quality checks and speakers" width="1366" height="768" loading="lazy"><figcaption>The Subtitle Studio. Sample podcast shown.</figcaption></figure>
   </div>
   <div class="more rv" style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn big light-quiet" href="changelog.html">Every version, in detail</a><a class="btn big light-quiet" href="app.html">See the whole app</a></div>
 </section>
